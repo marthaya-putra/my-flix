@@ -44,40 +44,41 @@ export const fetchPopularMovies = createServerFn({
 export const fetchDiscoverMovies = createServerFn({
   method: "GET",
 })
-  .inputValidator((page: string = "1") => page)
+  .inputValidator(
+    (params: {
+      page: string;
+      with_genres?: string;
+      vote_average_gte?: string;
+      year?: number;
+    }) => params
+  )
   .handler(({ data }) => {
     const today = new Date().toISOString().split("T")[0];
-    return fetchFromTMDB(
-      `/discover/movie?include_adult=true&sort_by=primary_release_date.desc&primary_release_date.lte=${today}&page=${data}`
-    );
-  });
-
-export const fetchFilteredMovies = createServerFn({
-  method: "GET",
-})
-  .inputValidator((params: {
-    page: string;
-    with_genres?: string;
-    vote_average_gte?: string;
-    year?: string;
-  }) => params)
-  .handler(({ data }) => {
     const queryParams = new URLSearchParams();
 
-    queryParams.append('page', data.page);
-    queryParams.append('include_adult', 'true');
-    queryParams.append('sort_by', 'primary_release_date.desc');
+    queryParams.append("page", data.page);
+    queryParams.append("primary_release_date.lte", today);
+    queryParams.append("include_adult", "true");
+    queryParams.append("sort_by", "primary_release_date.desc");
 
-    if (data.with_genres) {
-      queryParams.append('with_genres', data.with_genres);
+    if (
+      data.with_genres &&
+      typeof data.with_genres === "string" &&
+      data.with_genres.trim()
+    ) {
+      queryParams.append("with_genres", data.with_genres);
     }
 
-    if (data.vote_average_gte) {
-      queryParams.append('vote_average.gte', data.vote_average_gte);
+    if (
+      data.vote_average_gte &&
+      typeof data.vote_average_gte === "string" &&
+      data.vote_average_gte.trim()
+    ) {
+      queryParams.append("vote_average.gte", data.vote_average_gte);
     }
 
     if (data.year) {
-      queryParams.append('year', data.year);
+      queryParams.append("year", String(data.year));
     }
 
     return fetchFromTMDB(`/discover/movie?${queryParams.toString()}`);
