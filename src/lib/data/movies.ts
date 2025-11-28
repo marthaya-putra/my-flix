@@ -56,21 +56,21 @@ export const fetchDiscoverMovies = createServerFn({
     const today = new Date().toISOString().split("T")[0];
     const queryParams = new URLSearchParams();
 
-    queryParams.append("page", data.page);
-    queryParams.append("primary_release_date.lte", today);
-    queryParams.append("include_adult", "true");
-    queryParams.append("sort_by", "primary_release_date.desc");
+    queryParams.set("page", data.page);
+    queryParams.set("primary_release_date.lte", today);
+    queryParams.set("include_adult", "true");
+    queryParams.set("sort_by", "primary_release_date.desc");
 
     if (
       data.with_genres &&
       typeof data.with_genres === "string" &&
       data.with_genres.trim()
     ) {
-      queryParams.append("with_genres", data.with_genres);
+      queryParams.set("with_genres", data.with_genres);
     }
 
     if (data.vote_average_gte) {
-      queryParams.append("vote_average.gte", String(data.vote_average_gte));
+      queryParams.set("vote_average.gte", String(data.vote_average_gte));
     }
 
     if (data.year) {
