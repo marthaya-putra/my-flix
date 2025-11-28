@@ -1,6 +1,28 @@
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
+interface PaginationButtonProps {
+  onClick: () => void;
+  disabled: boolean;
+  children: React.ReactNode;
+}
+
+function PaginationButton({ onClick, disabled, children }: PaginationButtonProps) {
+  const isNext = children?.toString().includes("Next");
+
+  return (
+    <Button
+      variant="outline"
+      onClick={onClick}
+      disabled={disabled}
+      className="hover:bg-gray-50/50 transition-colors hover:[&_svg]:animate-sliding"
+      style={{ "--slide-animation-from": isNext ? "-4px" : "4px" } as React.CSSProperties}
+    >
+      {children}
+    </Button>
+  );
+}
+
 interface PaginationProps {
   currentPage: number;
   totalPages: number;
@@ -20,23 +42,19 @@ export default function Pagination({
 }: PaginationProps) {
   return (
     <div className="flex justify-center items-center gap-4">
-      <Button
-        variant="outline"
-        onClick={onPrevPage}
-        disabled={!hasPreviousPage}
-      >
+      <PaginationButton onClick={onPrevPage} disabled={!hasPreviousPage}>
         <ChevronLeft className="w-4 h-4" />
         Previous
-      </Button>
+      </PaginationButton>
 
-      <span className="text-sm text-gray-600">
-        Page {currentPage} of {totalPages}
+      <span className="text-sm text-foreground font-medium">
+        {currentPage} / {totalPages}
       </span>
 
-      <Button variant="outline" onClick={onNextPage} disabled={!hasNextPage}>
+      <PaginationButton onClick={onNextPage} disabled={!hasNextPage}>
         Next
         <ChevronRight className="w-4 h-4" />
-      </Button>
+      </PaginationButton>
     </div>
   );
 }

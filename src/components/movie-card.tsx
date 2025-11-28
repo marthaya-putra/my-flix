@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useState } from "react";
 import { FilmInfo } from "@/lib/types";
+import { PlayLink } from "./play-link";
 
 interface MovieCardProps extends FilmInfo {
   match?: string;
@@ -30,14 +31,14 @@ export default function MovieCard({
   };
 
   return (
-    <div className="group/card relative aspect-[2/3] rounded-md overflow-hidden cursor-pointer transition-all duration-300 hover:z-10 hover:scale-105 hover:shadow-xl shadow-black/50 bg-card">
-      {/* Persistent Rating Overlay - Top Right */}
+    <PlayLink title={title} category={category}>
+      <div className="group/card relative aspect-2/3 rounded-md overflow-hidden cursor-pointer transition-all duration-300 hover:z-10 hover:scale-105 hover:shadow-xl shadow-black/50 bg-card">
       <div className="absolute top-2 right-2 z-10">
-        <div className={`flex items-center gap-2 px-3 py-2 rounded-full border backdrop-blur-sm ${getRatingColor(voteAverage)} bg-black/60`}>
+        <div
+          className={`flex items-center gap-2 px-3 py-2 rounded-full border backdrop-blur-sm ${getRatingColor(voteAverage)} bg-black/60`}
+        >
           <Star className="w-4 h-4 fill-current" />
-          <span className="text-sm font-bold">
-            {voteAverage.toFixed(1)}
-          </span>
+          <span className="text-sm font-bold">{voteAverage.toFixed(1)}</span>
         </div>
       </div>
 
@@ -76,19 +77,9 @@ export default function MovieCard({
                 <TooltipTrigger asChild>
                   <Button
                     size="icon"
-                    asChild
                     className="w-8 h-8 rounded-full bg-white text-black hover:bg-gray-200 hover:text-black"
                   >
-                    <a
-                      href={`https://123movies-official.hair/search?q=${title.replace(
-                        / /g,
-                        "+"
-                      )}&category=${category}`}
-                      target="blank"
-                      className="relative block text-decoration-none color-inherit"
-                    >
-                      <Play className="w-4 h-4 fill-current ml-0.5" />
-                    </a>
+                    <Play className="w-4 h-4 fill-current ml-0.5" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -134,6 +125,7 @@ export default function MovieCard({
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </PlayLink>
   );
 }

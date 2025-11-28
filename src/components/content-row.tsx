@@ -55,8 +55,14 @@ export default function ContentRow({
               </CarouselItem>
             ))}
           </CarouselContent>
-          <CarouselPrevious className="left-2 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 text-white opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black/80 hover:scale-110 disabled:opacity-0 disabled:hover:scale-100 cursor-pointer" />
-          <CarouselNext className="right-2 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 text-white opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black/80 hover:scale-110 disabled:opacity-0 disabled:hover:scale-100 cursor-pointer" />
+          <CarouselPrevious
+            className="left-2 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 text-white opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black/80 hover:scale-110 disabled:opacity-0 disabled:hover:scale-100 cursor-pointer hover:[&_svg]:animate-sliding"
+            style={{ "--slide-animation-from": "-5px" } as React.CSSProperties}
+          />
+          <CarouselNext
+            className="right-2 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 text-white opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black/80 hover:scale-110 disabled:opacity-0 disabled:hover:scale-100 cursor-pointer hover:[&_svg]:animate-sliding"
+            style={{ "--slide-animation-from": "5px" } as React.CSSProperties}
+          />
         </Carousel>
       </div>
     </div>
