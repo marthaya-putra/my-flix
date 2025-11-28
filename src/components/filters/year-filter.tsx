@@ -1,5 +1,7 @@
 import { useSearch, useNavigate } from "@tanstack/react-router";
-import BaseFilter, { type FilterOption } from "./base-filter";
+import BaseFilter from "./base-filter";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
 export default function YearFilter() {
   const search = useSearch({ from: "/movies" });
@@ -21,18 +23,35 @@ export default function YearFilter() {
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 10 }, (_, i) => currentYear - i);
 
-  const yearOptions: FilterOption<number>[] = years.map((year) => ({
-    value: year,
-    label: String(year),
-  }));
-
   return (
     <BaseFilter
       title="Year"
-      placeholder="Select year"
-      options={yearOptions}
-      selectedValue={selectedYear}
-      onSelect={handleYearChange}
-    />
+      triggerText={selectedYear ? `Year ${selectedYear}` : "Year"}
+      variant={selectedYear ? "default" : "secondary"}
+    >
+      {({ close }) => (
+        <RadioGroup
+          value={selectedYear?.toString() || ""}
+          onValueChange={(value) => {
+            handleYearChange(value === "" ? undefined : Number(value));
+            close();
+          }}
+        >
+          <div className="flex items-center space-x-2 cursor-pointer hover:bg-accent/50 p-2 rounded-md transition-colors">
+            <RadioGroupItem value="" id="year-all" />
+            <Label htmlFor="year-all">All Years</Label>
+          </div>
+          {years.map((year) => (
+            <div key={year} className="flex items-center space-x-2 cursor-pointer hover:bg-accent/50 p-2 rounded-md transition-colors">
+              <RadioGroupItem
+                value={year.toString()}
+                id={`year-${year}`}
+              />
+              <Label htmlFor={`year-${year}`}>{year}</Label>
+            </div>
+          ))}
+        </RadioGroup>
+      )}
+    </BaseFilter>
   );
 }

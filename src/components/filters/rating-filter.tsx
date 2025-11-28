@@ -1,6 +1,8 @@
 import { useSearch, useNavigate } from "@tanstack/react-router";
 import { RatingItems } from "@/lib/types";
-import BaseFilter, { type FilterOption } from "./base-filter";
+import BaseFilter from "./base-filter";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
 export default function RatingFilter() {
   const search = useSearch({ from: "/movies" });
@@ -19,18 +21,37 @@ export default function RatingFilter() {
     });
   };
 
-  const ratingOptions: FilterOption<number>[] = RatingItems.map((item) => ({
-    value: item.value,
-    label: item.label,
-  }));
+  const selectedRatingLabel = selectedRating ? RatingItems.find(item => item.value === selectedRating)?.label : undefined;
 
   return (
     <BaseFilter
       title="Rating"
-      placeholder="Select rating"
-      options={ratingOptions}
-      selectedValue={selectedRating}
-      onSelect={handleRatingChange}
-    />
+      triggerText={selectedRatingLabel ? `Rating ${selectedRatingLabel}+` : "Rating"}
+      variant={selectedRating ? "default" : "secondary"}
+    >
+      {({ close }) => (
+        <RadioGroup
+          value={selectedRating?.toString() || ""}
+          onValueChange={(value) => {
+            handleRatingChange(value === "" ? undefined : Number(value));
+            close();
+          }}
+        >
+          <div className="flex items-center space-x-2 cursor-pointer hover:bg-accent/50 p-2 rounded-md transition-colors">
+            <RadioGroupItem value="" id="rating-all" />
+            <Label htmlFor="rating-all">All Ratings</Label>
+          </div>
+          {RatingItems.map((item) => (
+            <div key={item.value} className="flex items-center space-x-2 cursor-pointer hover:bg-accent/50 p-2 rounded-md transition-colors">
+              <RadioGroupItem
+                value={item.value.toString()}
+                id={`rating-${item.value}`}
+              />
+              <Label htmlFor={`rating-${item.value}`}>{item.label}+</Label>
+            </div>
+          ))}
+        </RadioGroup>
+      )}
+    </BaseFilter>
   );
 }
