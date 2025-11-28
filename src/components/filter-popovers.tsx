@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp, Filter } from "lucide-react";
-import GenreFilter from "./filters/GenreFilter";
-import RatingFilter from "./filters/RatingFilter";
-import YearFilter from "./filters/YearFilter";
-import ClearFilters from "./filters/ClearFilters";
+import GenreFilter from "./filters/genre-filter";
+import RatingFilter from "./filters/rating-filter";
+import YearFilter from "./filters/year-filter";
+import ClearFilters from "./filters/clear-filters";
 
 export default function FilterPopovers() {
   const [isCollapsed, setIsCollapsed] = useState(false);

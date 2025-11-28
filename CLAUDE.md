@@ -38,3 +38,8 @@ Server functions use `createServerFn()` with method definitions and handlers. Ex
 
 **Route Components:**
 Routes export a `Route` object with `component` and optional `loader` for data fetching. Use `Route.useLoaderData()` to access loader data in components.
+
+**File Naming Convention:**
+- **Components**: Use kebab-case for all component file names (e.g., `movie-card.tsx`, `content-row.tsx`)
+- **UI Components**: The UI library components (in `src/components/ui/`) follow their existing naming convention
+- **Files**: All files should use lowercase with hyphens for readability
