@@ -10,7 +10,6 @@ export default function FilterPopovers() {
 
   return (
     <div className="bg-card rounded-lg border border-border shadow-lg relative z-40 overflow-hidden transition-all duration-300 mb-8">
-      {/* Header with toggle button */}
       <div className="flex items-center justify-between p-4 border-b border-border">
         <div className="flex items-center gap-2">
           <Filter className="w-4 h-4 text-primary" />
@@ -30,7 +29,6 @@ export default function FilterPopovers() {
         </button>
       </div>
 
-      {/* Collapsible filter content */}
       <div
         className={`transition-all duration-300 ease-in-out ${
           isCollapsed ? "max-h-0 opacity-0" : "max-h-96 opacity-100"
