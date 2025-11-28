@@ -37,18 +37,25 @@ export default function YearFilter() {
             close();
           }}
         >
-          <div className="flex items-center space-x-2 cursor-pointer hover:bg-accent/50 p-2 rounded-md transition-colors">
+          <Label
+            htmlFor="year-all"
+            className="flex items-center space-x-2 cursor-pointer hover:bg-accent/50 p-2 rounded-md transition-colors"
+          >
             <RadioGroupItem value="" id="year-all" />
-            <Label htmlFor="year-all">All Years</Label>
-          </div>
+            <span>All Years</span>
+          </Label>
           {years.map((year) => (
-            <div key={year} className="flex items-center space-x-2 cursor-pointer hover:bg-accent/50 p-2 rounded-md transition-colors">
+            <Label
+              htmlFor={`year-${year}`}
+              key={year}
+              className="flex items-center space-x-2 cursor-pointer hover:bg-accent/50 p-2 rounded-md transition-colors"
+            >
               <RadioGroupItem
                 value={year.toString()}
                 id={`year-${year}`}
               />
-              <Label htmlFor={`year-${year}`}>{year}</Label>
-            </div>
+              <span>{year}</span>
+            </Label>
           ))}
         </RadioGroup>
       )}

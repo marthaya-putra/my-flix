@@ -48,7 +48,7 @@ export const fetchDiscoverMovies = createServerFn({
     (params: {
       page: string;
       with_genres?: string;
-      vote_average_gte?: string;
+      vote_average_gte?: number;
       year?: number;
     }) => params
   )
@@ -69,16 +69,13 @@ export const fetchDiscoverMovies = createServerFn({
       queryParams.append("with_genres", data.with_genres);
     }
 
-    if (
-      data.vote_average_gte &&
-      typeof data.vote_average_gte === "string" &&
-      data.vote_average_gte.trim()
-    ) {
-      queryParams.append("vote_average.gte", data.vote_average_gte);
+    if (data.vote_average_gte) {
+      queryParams.append("vote_average.gte", String(data.vote_average_gte));
     }
 
     if (data.year) {
-      queryParams.append("year", String(data.year));
+      queryParams.set("primary_release_date.gte", `${String(data.year)}-01-01`);
+      queryParams.set("primary_release_date.lte", `${String(data.year)}-12-31`);
     }
 
     return fetchFromTMDB(`/discover/movie?${queryParams.toString()}`);

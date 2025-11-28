@@ -10,7 +10,7 @@ export const Route = createFileRoute("/movies")({
   validateSearch: (search: Record<string, unknown>) => ({
     page: Number(search.page) || 1,
     genres: (search.genres as string) || undefined,
-    rating: (search.rating as string) || undefined,
+    rating: (search.rating as number) || undefined,
     year: (search.year as number) || undefined,
   }),
   loaderDeps: ({ search }) => ({

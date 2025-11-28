@@ -21,12 +21,16 @@ export default function RatingFilter() {
     });
   };
 
-  const selectedRatingLabel = selectedRating ? RatingItems.find(item => item.value === selectedRating)?.label : undefined;
+  const selectedRatingLabel = selectedRating
+    ? RatingItems.find((item) => item.value === selectedRating)?.label
+    : undefined;
 
   return (
     <BaseFilter
       title="Rating"
-      triggerText={selectedRatingLabel ? `Rating ${selectedRatingLabel}+` : "Rating"}
+      triggerText={
+        selectedRatingLabel ? `Rating ${selectedRatingLabel}+` : "Rating"
+      }
       variant={selectedRating ? "default" : "secondary"}
     >
       {({ close }) => (
@@ -37,18 +41,25 @@ export default function RatingFilter() {
             close();
           }}
         >
-          <div className="flex items-center space-x-2 cursor-pointer hover:bg-accent/50 p-2 rounded-md transition-colors">
+          <Label
+            htmlFor="rating-all"
+            className="flex items-center space-x-2 cursor-pointer hover:bg-accent/50 p-2 rounded-md transition-colors"
+          >
             <RadioGroupItem value="" id="rating-all" />
-            <Label htmlFor="rating-all">All Ratings</Label>
-          </div>
+            <span>All Ratings</span>
+          </Label>
           {RatingItems.map((item) => (
-            <div key={item.value} className="flex items-center space-x-2 cursor-pointer hover:bg-accent/50 p-2 rounded-md transition-colors">
+            <Label
+              htmlFor={`rating-${item.value}`}
+              key={item.value}
+              className="flex items-center space-x-2 cursor-pointer hover:bg-accent/50 p-2 rounded-md transition-colors"
+            >
               <RadioGroupItem
                 value={item.value.toString()}
                 id={`rating-${item.value}`}
               />
-              <Label htmlFor={`rating-${item.value}`}>{item.label}+</Label>
-            </div>
+              <span>{item.label}+</span>
+            </Label>
           ))}
         </RadioGroup>
       )}

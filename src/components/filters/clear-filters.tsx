@@ -11,7 +11,7 @@ export default function ClearFilters() {
       search: {
         page: 1,
         genres: "",
-        rating: "",
+        rating: undefined,
         year: undefined,
       },
     });

@@ -1,5 +1,4 @@
-import { Play, Plus, ThumbsUp } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Play, Plus, ThumbsUp, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -23,8 +22,25 @@ export default function MovieCard({
 }: MovieCardProps) {
   const [imgSrc, setImgSrc] = useState(posterPath);
 
+  const getRatingColor = (rating: number) => {
+    if (rating >= 8) return "text-emerald-300 border-emerald-300";
+    if (rating >= 6.5) return "text-blue-300 border-blue-300";
+    if (rating >= 5) return "text-orange-300 border-orange-300";
+    return "text-slate-300 border-slate-300";
+  };
+
   return (
     <div className="group/card relative aspect-[2/3] rounded-md overflow-hidden cursor-pointer transition-all duration-300 hover:z-10 hover:scale-105 hover:shadow-xl shadow-black/50 bg-card">
+      {/* Persistent Rating Overlay - Top Right */}
+      <div className="absolute top-2 right-2 z-10">
+        <div className={`flex items-center gap-2 px-3 py-2 rounded-full border backdrop-blur-sm ${getRatingColor(voteAverage)} bg-black/60`}>
+          <Star className="w-4 h-4 fill-current" />
+          <span className="text-sm font-bold">
+            {voteAverage.toFixed(1)}
+          </span>
+        </div>
+      </div>
+
       <img
         src={imgSrc}
         alt={title}
@@ -49,12 +65,6 @@ export default function MovieCard({
                 {match} Match
               </span>
             )}
-            <Badge
-              variant="outline"
-              className="text-[10px] h-5 px-1.5 border-gray-500 text-gray-300"
-            >
-              {voteAverage.toFixed(1)}
-            </Badge>
             <span className="text-xs text-gray-300">
               {new Date(releaseDate).getFullYear()}
             </span>
