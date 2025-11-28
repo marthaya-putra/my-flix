@@ -12,7 +12,7 @@ export default function ClearFilters() {
         page: 1,
         genres: "",
         rating: "",
-        year: "",
+        year: undefined,
       },
     });
   };

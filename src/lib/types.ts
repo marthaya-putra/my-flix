@@ -6,7 +6,7 @@ export type Genre = {
 export type MovieSearchParam = {
   type?: FilmType;
   genres?: string;
-  rating?: string;
+  rating?: number;
   page?: number;
 };
 
@@ -46,19 +46,19 @@ export const FILM_TYPE_QUERY_STRING = "type";
 
 export const RatingItems = [
   {
-    value: "6",
+    value: 6,
     label: "6+",
   },
   {
-    value: "7",
+    value: 7,
     label: "7+",
   },
   {
-    value: "8",
+    value: 8,
     label: "8+",
   },
   {
-    value: "9",
+    value: 9,
     label: "9+",
   },
 ];
