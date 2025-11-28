@@ -43,3 +43,12 @@ Routes export a `Route` object with `component` and optional `loader` for data f
 - **Components**: Use kebab-case for all component file names (e.g., `movie-card.tsx`, `content-row.tsx`)
 - **UI Components**: The UI library components (in `src/components/ui/`) follow their existing naming convention
 - **Files**: All files should use lowercase with hyphens for readability
+
+**UI Component Usage:**
+- **Always prefer shadcn UI components** over native HTML elements
+- Use `@/components/ui/button` instead of `<button>` elements
+- Use `@/components/ui/checkbox` instead of `<input type="checkbox">`
+- Use `@/components/ui/radio-group` instead of `<input type="radio">`
+- Use `@/components/ui/input` instead of `<input type="text">`
+- Use `@/components/ui/label` instead of `<label>` elements
+- Available components are listed in `src/components/ui/` - always check what's available before using native elements

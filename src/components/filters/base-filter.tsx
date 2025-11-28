@@ -1,4 +1,8 @@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
 export type FilterOption<T = string | number> = {
   value: T;
@@ -47,16 +51,13 @@ export default function BaseFilter<T = string>({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button
-          className={`px-4 py-2 rounded-lg border transition-all duration-200 font-medium ${
-            (isMultiSelect ? selectedValues.length > 0 : selectedValue)
-              ? "bg-primary text-primary-foreground border-primary shadow-lg"
-              : "bg-secondary/50 text-secondary-foreground border-border hover:bg-secondary hover:shadow-md"
-          }`}
+        <Button
+          variant={isMultiSelect ? (selectedValues.length > 0 ? "default" : "secondary") : selectedValue ? "default" : "secondary"}
+          className="font-medium"
         >
           {displayValue}
           <span className="ml-2 text-xs">▼</span>
-        </button>
+        </Button>
       </PopoverTrigger>
 
       <PopoverContent className={`w-${isMultiSelect ? '72' : '56'} p-0`} align="start">
@@ -65,47 +66,45 @@ export default function BaseFilter<T = string>({
         </div>
         <div className="p-4 max-h-64 overflow-y-auto">
           <div className="space-y-1">
-            {!isMultiSelect && (
-              <label
-                className={`flex items-center space-x-3 cursor-pointer hover:bg-accent/50 p-2 rounded-md transition-colors ${
-                  !selectedValue ? "bg-accent/30" : ""
-                }`}
-              >
-                <input
-                  type="radio"
-                  name={`${title.toLowerCase()}-popover`}
-                  checked={!selectedValue}
-                  onChange={() => onSelect?.(undefined)}
-                  className="h-5 w-5 text-primary bg-background focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
-                />
-                <span className="text-base text-foreground">All {title.toLowerCase()}</span>
-              </label>
-            )}
-
             {options.length === 0 ? (
               <div className="text-sm text-muted-foreground p-2 text-center">
                 No {title.toLowerCase()} available
               </div>
             ) : (
-              options.map((option) => (
-                <label
-                  key={String(option.value)}
-                  className={`flex items-center space-x-3 cursor-pointer hover:bg-accent/50 p-2 rounded-md transition-colors ${
-                    (isMultiSelect ? selectedValues.includes(option.value) : selectedValue === option.value)
-                      ? "bg-accent/30"
-                      : ""
-                  }`}
-                >
-                  <input
-                    type={isMultiSelect ? "checkbox" : "radio"}
-                    name={isMultiSelect ? undefined : `${title.toLowerCase()}-popover`}
-                    checked={isMultiSelect ? selectedValues.includes(option.value) : selectedValue === option.value}
-                    onChange={() => isMultiSelect ? handleMultiSelect(option.value) : onSelect?.(option.value)}
-                    className="h-5 w-5 rounded border-border text-primary bg-background focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
-                  />
-                  <span className="text-base text-foreground">{option.label}</span>
-                </label>
-              ))
+              <>
+                {isMultiSelect ? (
+                  // Multi-select mode with checkboxes
+                  <>
+                    {options.map((option) => (
+                      <div key={String(option.value)} className="flex items-center space-x-3 cursor-pointer hover:bg-accent/50 p-2 rounded-md transition-colors">
+                        <Checkbox
+                          id={`${title.toLowerCase()}-${option.value}`}
+                          checked={selectedValues.includes(option.value)}
+                          onCheckedChange={() => handleMultiSelect(option.value)}
+                        />
+                        <Label htmlFor={`${title.toLowerCase()}-${option.value}`}>{option.label}</Label>
+                      </div>
+                    ))}
+                  </>
+                ) : (
+                  // Single-select mode with radio group
+                  <RadioGroup value={selectedValue?.toString() || ""} onValueChange={(value) => onSelect?.(value === "" ? undefined : (value as T))}>
+                    <div className="flex items-center space-x-3 cursor-pointer hover:bg-accent/50 p-2 rounded-md transition-colors">
+                      <RadioGroupItem value="" id={`${title.toLowerCase()}-all`} />
+                      <Label htmlFor={`${title.toLowerCase()}-all`}>All {title.toLowerCase()}</Label>
+                    </div>
+                    {options.map((option) => (
+                      <div key={String(option.value)} className="flex items-center space-x-3 cursor-pointer hover:bg-accent/50 p-2 rounded-md transition-colors">
+                        <RadioGroupItem
+                          value={String(option.value)}
+                          id={`${title.toLowerCase()}-${option.value}`}
+                        />
+                        <Label htmlFor={`${title.toLowerCase()}-${option.value}`}>{option.label}</Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                )}
+              </>
             )}
           </div>
         </div>
