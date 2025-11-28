@@ -19,6 +19,8 @@ export type FilmInfo = {
   voteAverage: number;
   releaseDate: string;
   category: FilmType;
+  genreIds: Array<number>;
+  genres: Array<string>;
 };
 
 export type DiscoverResult = {

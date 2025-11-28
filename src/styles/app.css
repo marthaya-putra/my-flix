@@ -34,6 +34,14 @@
   --radius-xl: calc(var(--radius) + 4px);
   --font-sans: "Inter", sans-serif;
   --font-display: "Outfit", sans-serif;
+
+  --animate-sliding: custom-slide 700ms ease-in-out;
+
+  @keyframes custom-slide {
+    from {
+      transform: translateX(var(--slide-animation-from));
+    }
+  }
 }
 
 :root {
@@ -89,34 +97,50 @@
   h6 {
     @apply font-display font-bold tracking-tight;
   }
-}
 
-.hide-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-
-.hide-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-/* Shimmer animation for skeleton loading */
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
+  button {
+    cursor: pointer;
   }
-  100% {
-    background-position: 200% 0;
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }
 
-.shimmer {
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.1),
-    transparent
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.5s ease-in-out infinite;
+@layer utilities {
+  /* Shimmer animation for skeleton loading */
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.1),
+      transparent
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+
+  /* @keyframes slide {
+    from {
+      transform: translateX(var(--slide-animation-from));
+    }
+  } */
+
+  .sliding {
+    animation: slide 300ms ease-in-out;
+  }
 }

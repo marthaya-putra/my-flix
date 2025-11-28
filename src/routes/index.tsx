@@ -1,29 +1,43 @@
 import { Suspense } from "react";
-import { Await, createFileRoute, useRouter } from "@tanstack/react-router";
-import { fetchTrendingMovies } from "@/lib/data/movies";
-import ContentRow from "@/components/ContentRow";
-import Hero from "@/components/Hero";
-import ContentRowSkeleton from "@/components/ContentRowSkeleton";
+import { Await, createFileRoute } from "@tanstack/react-router";
+import { fetchPopularMovies, fetchTrendingMovies } from "@/lib/data/movies";
+import ContentRow from "@/components/content-row";
+import Hero from "@/components/hero";
+import ContentRowSkeleton from "@/components/content-row-skeleton";
+import { fetchTrendingTvs } from "@/lib/data/tvs";
 
 export const Route = createFileRoute("/")({
   component: Home,
-  loader: () => {
-    return { trendingMovies: fetchTrendingMovies() };
+  loader: async () => {
+    return {
+      popularMovies: await fetchPopularMovies(),
+      trendingMovies: fetchTrendingMovies(),
+      trendingTvs: fetchTrendingTvs(),
+    };
   },
 });
 
 function Home() {
-  const router = useRouter();
-  const { trendingMovies } = Route.useLoaderData();
+  const { popularMovies, trendingMovies, trendingTvs } = Route.useLoaderData();
+  const mostPopularMovie =
+    popularMovies.results.length > 0 ? popularMovies.results[0] : undefined;
 
   return (
-    <div className="relative space-y-8">
-      <Hero />
+    <div className="relative space-y-8 pb-8">
+      {mostPopularMovie && <Hero {...mostPopularMovie} />}
       <Suspense fallback={<ContentRowSkeleton />}>
         <Await
           promise={trendingMovies}
           children={(data) => (
-            <ContentRow title="Trending movies" items={data.results} />
+            <ContentRow title="Trending Movies" items={data.results} />
+          )}
+        />
+      </Suspense>
+      <Suspense fallback={<ContentRowSkeleton />}>
+        <Await
+          promise={trendingTvs}
+          children={(data) => (
+            <ContentRow title="Trending TV Shows" items={data.results} />
           )}
         />
       </Suspense>

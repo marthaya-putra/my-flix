@@ -1,5 +1,5 @@
 import { ChevronRight } from "lucide-react";
-import MovieCard from "./MovieCard";
+import MovieCard from "./movie-card";
 import {
   Carousel,
   CarouselContent,
