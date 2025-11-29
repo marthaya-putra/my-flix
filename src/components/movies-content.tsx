@@ -2,23 +2,27 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import MovieCard from "@/components/movie-card";
 import Pagination from "@/components/pagination";
 import { DiscoverResult } from "@/lib/types";
+import { Route as MoviesRoute } from "@/routes/movies";
+import { Route as TvsRoute } from "@/routes/tvs";
+import { Route as TvsAiringTodayRoute } from "@/routes/tvs-airing-today";
 
 interface MoviesContentProps {
   moviesData: DiscoverResult;
-  routePath?: "/movies" | "/tvs";
+  route: typeof MoviesRoute | typeof TvsRoute | typeof TvsAiringTodayRoute;
 }
 
 export default function MoviesContent({
   moviesData,
-  routePath = "/movies",
+  route,
 }: MoviesContentProps) {
-  const navigate = useNavigate({ from: routePath });
-  const { genres, rating, year } = useSearch({ from: routePath }) as {
-    page: number;
-    genres?: string;
-    rating?: number;
-    year?: number;
-  };
+  const navigate = useNavigate({ from: route.id });
+  const search = useSearch({
+    from: route.id,
+  });
+
+  const genres = "genres" in search ? search.genres : undefined;
+  const rating = "rating" in search ? search.rating : undefined;
+  const year = "year" in search ? search.year : undefined;
 
   const currentPage = moviesData.page;
   const totalPages = moviesData.totalPages;

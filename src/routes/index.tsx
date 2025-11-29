@@ -57,7 +57,11 @@ function Home() {
         <Await
           promise={airingTodayTvs}
           children={(data) => (
-            <ContentRow title="New Episode Today" items={data.results} />
+            <ContentRow
+              title="New Episode Today"
+              items={data.results}
+              exploreAllUrl="/tvs-airing-today"
+            />
           )}
         />
       </Suspense>
@@ -65,7 +69,11 @@ function Home() {
         <Await
           promise={onTheAirTvs}
           children={(data) => (
-            <ContentRow title="New Episode This Week" items={data.results} />
+            <ContentRow
+              title="New Episode This Week"
+              items={data.results}
+              exploreAllUrl="/tvs-airing-this-week"
+            />
           )}
         />
       </Suspense>

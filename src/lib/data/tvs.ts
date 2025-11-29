@@ -32,15 +32,21 @@ export const fetchTrendingTvs = createServerFn({
 export const fetchAiringTodayTvs = createServerFn({
   method: "GET",
 })
-  .handler(() => {
-    return fetchFromTMDB("/tv/airing_today");
+  .inputValidator((page: number = 1) => page)
+  .handler(({ data }) => {
+    const queryParams = new URLSearchParams();
+    queryParams.set("page", String(data));
+    return fetchFromTMDB(`/tv/airing_today?${queryParams.toString()}`);
   });
 
 export const fetchOnTheAirTvs = createServerFn({
   method: "GET",
 })
-  .handler(() => {
-    return fetchFromTMDB("/tv/on_the_air");
+  .inputValidator((page: number = 1) => page)
+  .handler(({ data }) => {
+    const queryParams = new URLSearchParams();
+    queryParams.set("page", String(data));
+    return fetchFromTMDB(`/tv/on_the_air?${queryParams.toString()}`);
   });
 
 export const fetchDiscoverTvs = createServerFn({
@@ -59,7 +65,7 @@ export const fetchDiscoverTvs = createServerFn({
     const today = new Date().toISOString().split("T")[0];
 
     queryParams.set("page", String(data.page));
-    queryParams.set("include_adult", "true");
+    queryParams.set("include_adult", process.env.INCLUDE_ADULT || "false");
     queryParams.set("sort_by", "first_air_date.desc");
     queryParams.set("watch_region", "US");
     queryParams.set("air_date.lte", `${today}`);

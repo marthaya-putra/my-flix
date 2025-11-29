@@ -9,8 +9,15 @@ import GenreFilter from "@/components/filters/genre-filter";
 import RatingFilter from "@/components/filters/rating-filter";
 import YearFilter from "@/components/filters/year-filter";
 import ClearFilters from "@/components/filters/clear-filters";
+import { z } from "zod";
 
 export const Route = createFileRoute("/movies")({
+  validateSearch: z.object({
+    page: z.number().default(1),
+    genres: z.string().optional(),
+    rating: z.number().optional(),
+    year: z.number().optional(),
+  }),
   component: MoviesPage,
   loaderDeps: ({ search }: { search?: MovieRouteSearchParams }) => ({
     page: search?.page || 1,
@@ -60,7 +67,7 @@ function MoviesPage() {
         <Await
           promise={movies}
           children={(moviesData) => (
-            <MoviesContent moviesData={moviesData} routePath="/movies" />
+            <MoviesContent moviesData={moviesData} route={Route} />
           )}
         />
       </Suspense>

@@ -1,4 +1,5 @@
 import { ChevronRight } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import MovieCard from "./movie-card";
 import {
   Carousel,
@@ -30,14 +31,17 @@ export default function ContentRow({
 
   return (
     <div className="px-4 md:px-12 group">
-      <div className="flex items-end gap-2 group/title cursor-pointer justify-between pb-4">
+      <div className="flex items-end gap-2 justify-between pb-4">
         <h2 className="text-xl md:text-2xl font-display font-semibold text-white">
           {title}
         </h2>
         {exploreAllUrl && (
-          <div className="text-sm text-primary font-medium flex items-center mb-1">
-            Explore All <ChevronRight className="w-4 h-4" />
-          </div>
+          <Link
+            to={exploreAllUrl}
+            className="text-sm text-white font-medium flex items-center mb-1 hover:text-primary/90 transition-colors duration-200"
+          >
+            Explore All <ChevronRight className="w-4 h-4 ml-1" />
+          </Link>
         )}
       </div>
 
