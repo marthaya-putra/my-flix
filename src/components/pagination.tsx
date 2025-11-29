@@ -1,27 +1,10 @@
-import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-
-interface PaginationButtonProps {
-  onClick: () => void;
-  disabled: boolean;
-  children: React.ReactNode;
-}
-
-function PaginationButton({ onClick, disabled, children }: PaginationButtonProps) {
-  const isNext = children?.toString().includes("Next");
-
-  return (
-    <Button
-      variant="outline"
-      onClick={onClick}
-      disabled={disabled}
-      className="hover:bg-gray-50/50 transition-colors hover:[&_svg]:animate-sliding"
-      style={{ "--slide-animation-from": isNext ? "-4px" : "4px" } as React.CSSProperties}
-    >
-      {children}
-    </Button>
-  );
-}
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationPrevious,
+  PaginationNext,
+} from "@/components/ui/pagination";
 
 interface PaginationProps {
   currentPage: number;
@@ -32,7 +15,7 @@ interface PaginationProps {
   onNextPage: () => void;
 }
 
-export default function Pagination({
+export default function CustomPagination({
   currentPage,
   totalPages,
   hasNextPage,
@@ -41,20 +24,32 @@ export default function Pagination({
   onNextPage,
 }: PaginationProps) {
   return (
-    <div className="flex justify-center items-center gap-4">
-      <PaginationButton onClick={onPrevPage} disabled={!hasPreviousPage}>
-        <ChevronLeft className="w-4 h-4" />
-        Previous
-      </PaginationButton>
+    <Pagination>
+      <PaginationContent>
+        <PaginationItem>
+          <PaginationPrevious
+            onClick={onPrevPage}
+            className={!hasPreviousPage ? "pointer-events-none opacity-50" : "cursor-pointer hover:[&_svg]:animate-sliding hover:bg-accent hover:text-accent-foreground"}
+            style={{ "--slide-animation-from": "4px" } as React.CSSProperties}
+            size="default"
+          />
+        </PaginationItem>
 
-      <span className="text-sm text-foreground font-medium">
-        {currentPage} / {totalPages}
-      </span>
+        <PaginationItem>
+          <span className="flex h-9 w-20 items-center justify-center text-sm font-medium text-muted-foreground">
+            {currentPage} / {totalPages}
+          </span>
+        </PaginationItem>
 
-      <PaginationButton onClick={onNextPage} disabled={!hasNextPage}>
-        Next
-        <ChevronRight className="w-4 h-4" />
-      </PaginationButton>
-    </div>
+        <PaginationItem>
+          <PaginationNext
+            onClick={onNextPage}
+            className={!hasNextPage ? "pointer-events-none opacity-50" : "cursor-pointer hover:[&_svg]:animate-sliding hover:bg-accent hover:text-accent-foreground"}
+            style={{ "--slide-animation-from": "-4px" } as React.CSSProperties}
+            size="default"
+          />
+        </PaginationItem>
+      </PaginationContent>
+    </Pagination>
   );
 }

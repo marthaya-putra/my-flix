@@ -68,14 +68,14 @@ export default function ContentRow({
               "left-0 -translate-x-1/2 top-1/2 -translate-y-1/2",
               carouselButtonClassName
             )}
-            style={{ "--slide-animation-from": "-5px" } as React.CSSProperties}
+            style={{ "--slide-animation-from": "5px" } as React.CSSProperties}
           />
           <CarouselNext
             className={cn(
               "right-0 translate-x-1/2 top-1/2 -translate-y-1/2",
               carouselButtonClassName
             )}
-            style={{ "--slide-animation-from": "5px" } as React.CSSProperties}
+            style={{ "--slide-animation-from": "-5px" } as React.CSSProperties}
           />
         </Carousel>
       </div>

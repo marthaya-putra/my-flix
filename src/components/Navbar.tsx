@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useLocation } from "@tanstack/react-router";
 import {
   Search,
   Bell,
@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -51,18 +52,36 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground">
             <Link
               to="/"
-              className="text-foreground hover:text-primary transition-colors"
+              className={cn(
+                "transition-colors",
+                location.pathname === "/"
+                  ? "text-primary font-semibold"
+                  : "text-foreground hover:text-primary"
+              )}
             >
               Home
             </Link>
-            <Link to="/movies" className="hover:text-primary transition-colors">
+            <Link
+              to="/movies"
+              className={cn(
+                "transition-colors",
+                location.pathname === "/movies"
+                  ? "text-primary font-semibold"
+                  : "text-foreground hover:text-primary"
+              )}
+            >
               Movies
             </Link>
-            <Link to="/tvs" className="hover:text-primary transition-colors">
+            <Link
+              to="/tvs"
+              className={cn(
+                "transition-colors",
+                location.pathname === "/tvs"
+                  ? "text-primary font-semibold"
+                  : "text-foreground hover:text-primary"
+              )}
+            >
               TV Shows
-            </Link>
-            <Link to="/new" className="hover:text-primary transition-colors">
-              New & Popular
             </Link>
           </div>
         </div>

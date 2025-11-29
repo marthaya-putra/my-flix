@@ -12,7 +12,6 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TvsAiringTodayRouteImport } from './routes/tvs-airing-today'
 import { Route as TvsAiringThisWeekRouteImport } from './routes/tvs-airing-this-week'
 import { Route as TvsRouteImport } from './routes/tvs'
-import { Route as NewRouteImport } from './routes/new'
 import { Route as MoviesRouteImport } from './routes/movies'
 import { Route as IndexRouteImport } from './routes/index'
 
@@ -31,11 +30,6 @@ const TvsRoute = TvsRouteImport.update({
   path: '/tvs',
   getParentRoute: () => rootRouteImport,
 } as any)
-const NewRoute = NewRouteImport.update({
-  id: '/new',
-  path: '/new',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const MoviesRoute = MoviesRouteImport.update({
   id: '/movies',
   path: '/movies',
@@ -50,7 +44,6 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/movies': typeof MoviesRoute
-  '/new': typeof NewRoute
   '/tvs': typeof TvsRoute
   '/tvs-airing-this-week': typeof TvsAiringThisWeekRoute
   '/tvs-airing-today': typeof TvsAiringTodayRoute
@@ -58,7 +51,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/movies': typeof MoviesRoute
-  '/new': typeof NewRoute
   '/tvs': typeof TvsRoute
   '/tvs-airing-this-week': typeof TvsAiringThisWeekRoute
   '/tvs-airing-today': typeof TvsAiringTodayRoute
@@ -67,7 +59,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/movies': typeof MoviesRoute
-  '/new': typeof NewRoute
   '/tvs': typeof TvsRoute
   '/tvs-airing-this-week': typeof TvsAiringThisWeekRoute
   '/tvs-airing-today': typeof TvsAiringTodayRoute
@@ -77,23 +68,15 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/movies'
-    | '/new'
     | '/tvs'
     | '/tvs-airing-this-week'
     | '/tvs-airing-today'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/movies'
-    | '/new'
-    | '/tvs'
-    | '/tvs-airing-this-week'
-    | '/tvs-airing-today'
+  to: '/' | '/movies' | '/tvs' | '/tvs-airing-this-week' | '/tvs-airing-today'
   id:
     | '__root__'
     | '/'
     | '/movies'
-    | '/new'
     | '/tvs'
     | '/tvs-airing-this-week'
     | '/tvs-airing-today'
@@ -102,7 +85,6 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   MoviesRoute: typeof MoviesRoute
-  NewRoute: typeof NewRoute
   TvsRoute: typeof TvsRoute
   TvsAiringThisWeekRoute: typeof TvsAiringThisWeekRoute
   TvsAiringTodayRoute: typeof TvsAiringTodayRoute
@@ -131,13 +113,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TvsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/new': {
-      id: '/new'
-      path: '/new'
-      fullPath: '/new'
-      preLoaderRoute: typeof NewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/movies': {
       id: '/movies'
       path: '/movies'
@@ -158,7 +133,6 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   MoviesRoute: MoviesRoute,
-  NewRoute: NewRoute,
   TvsRoute: TvsRoute,
   TvsAiringThisWeekRoute: TvsAiringThisWeekRoute,
   TvsAiringTodayRoute: TvsAiringTodayRoute,

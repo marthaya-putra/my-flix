@@ -26,7 +26,10 @@ export const Route = createRootRoute({
         title: "MyFlix",
       },
     ],
-    links: [{ rel: "stylesheet", href: appCss }],
+    links: [
+      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+      { rel: "stylesheet", href: appCss }
+    ],
   }),
   component: RootComponent,
   notFoundComponent: NotFound,
