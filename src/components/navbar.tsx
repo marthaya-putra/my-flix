@@ -41,7 +41,7 @@ export default function Navbar() {
           : "bg-linear-to-b from-black/80 to-transparent"
       )}
     >
-      <div className="flex items-center justify-between max-w-7xl mx-auto">
+      <div className="flex items-center justify-between mx-auto">
         <div className="flex items-center gap-8">
           <Link
             to="/"
