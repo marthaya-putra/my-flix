@@ -22,28 +22,30 @@ export default function Hero(filmInfo: FilmInfo) {
             {filmInfo.title}
           </h1>
 
-          <div className="flex flex-wrap gap-2 pt-4">
+          <div className="flex flex-wrap gap-8 pt-4">
             <div className="flex items-center gap-1 text-sm text-yellow-400">
               <Star className="w-5 h-5 fill-current" />
               <span className="text-white font-semibold">
                 {filmInfo.voteAverage.toFixed(1)}
               </span>
             </div>
-            <Badge
-              variant="secondary"
-              className="backdrop-blur-md bg-background/20 border-white/20 text-white"
-            >
-              {getReleasedYear(filmInfo.releaseDate)}
-            </Badge>
-            {filmInfo.genres?.slice(0, 3).map((genre, index) => (
+            <div className="flex flex-wrap gap-2">
               <Badge
-                key={index}
-                variant="outline"
-                className="border-white/30 text-white bg-white/10 backdrop-blur-sm"
+                variant="secondary"
+                className="backdrop-blur-md bg-background/20 border-white/20 text-white"
               >
-                {genre}
+                {getReleasedYear(filmInfo.releaseDate)}
               </Badge>
-            ))}
+              {filmInfo.genres?.slice(0, 3).map((genre, index) => (
+                <Badge
+                  key={index}
+                  variant="outline"
+                  className="border-white/30 text-white bg-white/10 backdrop-blur-sm"
+                >
+                  {genre}
+                </Badge>
+              ))}
+            </div>
           </div>
           <p className="text-lg text-gray-300 leading-relaxed line-clamp-3 md:line-clamp-none max-w-xl drop-shadow-md pt-4">
             {filmInfo.overview}

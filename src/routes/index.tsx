@@ -4,7 +4,11 @@ import { fetchPopularMovies, fetchTrendingMovies } from "@/lib/data/movies";
 import ContentRow from "@/components/content-row";
 import Hero from "@/components/hero";
 import ContentRowSkeleton from "@/components/content-row-skeleton";
-import { fetchTrendingTvs } from "@/lib/data/tvs";
+import {
+  fetchTrendingTvs,
+  fetchAiringTodayTvs,
+  fetchOnTheAirTvs,
+} from "@/lib/data/tvs";
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -13,12 +17,20 @@ export const Route = createFileRoute("/")({
       popularMovies: await fetchPopularMovies(),
       trendingMovies: fetchTrendingMovies(),
       trendingTvs: fetchTrendingTvs(),
+      airingTodayTvs: fetchAiringTodayTvs(),
+      onTheAirTvs: fetchOnTheAirTvs(),
     };
   },
 });
 
 function Home() {
-  const { popularMovies, trendingMovies, trendingTvs } = Route.useLoaderData();
+  const {
+    popularMovies,
+    trendingMovies,
+    trendingTvs,
+    airingTodayTvs,
+    onTheAirTvs,
+  } = Route.useLoaderData();
   const mostPopularMovie =
     popularMovies.results.length > 0 ? popularMovies.results[0] : undefined;
 
@@ -38,6 +50,22 @@ function Home() {
           promise={trendingTvs}
           children={(data) => (
             <ContentRow title="Trending TV Shows" items={data.results} />
+          )}
+        />
+      </Suspense>
+      <Suspense fallback={<ContentRowSkeleton />}>
+        <Await
+          promise={airingTodayTvs}
+          children={(data) => (
+            <ContentRow title="New Episode Today" items={data.results} />
+          )}
+        />
+      </Suspense>
+      <Suspense fallback={<ContentRowSkeleton />}>
+        <Await
+          promise={onTheAirTvs}
+          children={(data) => (
+            <ContentRow title="New Episode This Week" items={data.results} />
           )}
         />
       </Suspense>

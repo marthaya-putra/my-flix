@@ -22,6 +22,7 @@ export default function MovieCard({
   match,
 }: MovieCardProps) {
   const [imgSrc, setImgSrc] = useState(posterPath);
+  const [hasError, setHasError] = useState(!posterPath);
 
   const getRatingColor = (rating: number) => {
     if (rating >= 8) return "text-emerald-300 border-emerald-300";
@@ -35,10 +36,10 @@ export default function MovieCard({
       <div className="group/card relative aspect-2/3 rounded-md overflow-hidden cursor-pointer transition-all duration-300 hover:z-10 hover:scale-105 hover:shadow-xl shadow-black/50 bg-card">
       <div className="absolute top-2 right-2 z-10">
         <div
-          className={`flex items-center gap-2 px-3 py-2 rounded-full border backdrop-blur-sm ${getRatingColor(voteAverage)} bg-black/60`}
+          className={`flex items-center gap-1 px-2 py-1 rounded-full border backdrop-blur-sm ${getRatingColor(voteAverage)} bg-black/60`}
         >
-          <Star className="w-4 h-4 fill-current" />
-          <span className="text-sm font-bold">{voteAverage.toFixed(1)}</span>
+          <Star className="w-3 h-3 fill-current" />
+          <span className="text-xs font-bold">{voteAverage.toFixed(1)}</span>
         </div>
       </div>
 
@@ -46,12 +47,20 @@ export default function MovieCard({
         src={imgSrc}
         alt={title}
         className="w-full h-full object-cover transition-transform duration-500 group-hover/card:brightness-75"
-        onError={() =>
+        onError={() => {
           setImgSrc(
             "https://images.unsplash.com/photo-1598899134739-24c46f58b8c0?auto=format&fit=crop&w=800&q=80"
-          )
-        }
+          );
+          setHasError(true);
+        }}
       />
+
+      {/* Title Overlay */}
+      <div className={`absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent ${hasError ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300 flex flex-col justify-center p-4`}>
+        <h3 className="font-display font-bold text-white text-lg text-center">
+          {title}
+        </h3>
+      </div>
 
       {/* Hover Overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">

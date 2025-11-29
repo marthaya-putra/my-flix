@@ -8,6 +8,7 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel";
 import { FilmInfo } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 interface ContentRowProps {
   title: string;
@@ -24,6 +25,9 @@ export default function ContentRow({
   items,
   exploreAllUrl,
 }: ContentRowProps) {
+  const carouselButtonClassName =
+    "h-15 w-15 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-black/80 disabled:opacity-0  cursor-pointer group-hover:[&_svg]:animate-sliding group-hover:[&_svg]:delay-300";
+
   return (
     <div className="px-4 md:px-12 group">
       <div className="flex items-end gap-2 group/title cursor-pointer justify-between pb-4">
@@ -43,7 +47,7 @@ export default function ContentRow({
             align: "start",
             dragFree: true,
           }}
-          className="w-full"
+          className="w-full group"
         >
           <CarouselContent className="-ml-4">
             {items.map((item, index) => (
@@ -56,11 +60,17 @@ export default function ContentRow({
             ))}
           </CarouselContent>
           <CarouselPrevious
-            className="left-2 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 text-white opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black/80 hover:scale-110 disabled:opacity-0 disabled:hover:scale-100 cursor-pointer hover:[&_svg]:animate-sliding"
+            className={cn(
+              "left-0 -translate-x-1/2 top-1/2 -translate-y-1/2",
+              carouselButtonClassName
+            )}
             style={{ "--slide-animation-from": "-5px" } as React.CSSProperties}
           />
           <CarouselNext
-            className="right-2 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 text-white opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black/80 hover:scale-110 disabled:opacity-0 disabled:hover:scale-100 cursor-pointer hover:[&_svg]:animate-sliding"
+            className={cn(
+              "right-0 translate-x-1/2 top-1/2 -translate-y-1/2",
+              carouselButtonClassName
+            )}
             style={{ "--slide-animation-from": "5px" } as React.CSSProperties}
           />
         </Carousel>

@@ -29,6 +29,20 @@ export const fetchTrendingTvs = createServerFn({
     return fetchFromTMDB(`/trending/tv/${data}`);
   });
 
+export const fetchAiringTodayTvs = createServerFn({
+  method: "GET",
+})
+  .handler(() => {
+    return fetchFromTMDB("/tv/airing_today");
+  });
+
+export const fetchOnTheAirTvs = createServerFn({
+  method: "GET",
+})
+  .handler(() => {
+    return fetchFromTMDB("/tv/on_the_air");
+  });
+
 export const fetchDiscoverTvs = createServerFn({
   method: "GET",
 })
