@@ -9,14 +9,14 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TvRouteImport } from './routes/tv'
+import { Route as TvsRouteImport } from './routes/tvs'
 import { Route as NewRouteImport } from './routes/new'
 import { Route as MoviesRouteImport } from './routes/movies'
 import { Route as IndexRouteImport } from './routes/index'
 
-const TvRoute = TvRouteImport.update({
-  id: '/tv',
-  path: '/tv',
+const TvsRoute = TvsRouteImport.update({
+  id: '/tvs',
+  path: '/tvs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NewRoute = NewRouteImport.update({
@@ -39,43 +39,43 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/movies': typeof MoviesRoute
   '/new': typeof NewRoute
-  '/tv': typeof TvRoute
+  '/tvs': typeof TvsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/movies': typeof MoviesRoute
   '/new': typeof NewRoute
-  '/tv': typeof TvRoute
+  '/tvs': typeof TvsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/movies': typeof MoviesRoute
   '/new': typeof NewRoute
-  '/tv': typeof TvRoute
+  '/tvs': typeof TvsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/movies' | '/new' | '/tv'
+  fullPaths: '/' | '/movies' | '/new' | '/tvs'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/movies' | '/new' | '/tv'
-  id: '__root__' | '/' | '/movies' | '/new' | '/tv'
+  to: '/' | '/movies' | '/new' | '/tvs'
+  id: '__root__' | '/' | '/movies' | '/new' | '/tvs'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   MoviesRoute: typeof MoviesRoute
   NewRoute: typeof NewRoute
-  TvRoute: typeof TvRoute
+  TvsRoute: typeof TvsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/tv': {
-      id: '/tv'
-      path: '/tv'
-      fullPath: '/tv'
-      preLoaderRoute: typeof TvRouteImport
+    '/tvs': {
+      id: '/tvs'
+      path: '/tvs'
+      fullPath: '/tvs'
+      preLoaderRoute: typeof TvsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/new': {
@@ -106,7 +106,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   MoviesRoute: MoviesRoute,
   NewRoute: NewRoute,
-  TvRoute: TvRoute,
+  TvsRoute: TvsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

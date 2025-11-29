@@ -67,7 +67,7 @@ export default function Navbar() {
             >
               Movies
             </Link>
-            <Link to="/tv" className="hover:text-primary transition-colors">
+            <Link to="/tvs" className="hover:text-primary transition-colors">
               TV Shows
             </Link>
             <Link to="/new" className="hover:text-primary transition-colors">
