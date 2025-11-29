@@ -4,9 +4,18 @@ import BaseFilter from "./base-filter";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 
-export default function RatingFilter() {
-  const search = useSearch({ from: "/movies" });
-  const navigate = useNavigate({ from: "/movies" });
+interface RatingFilterProps {
+  routePath?: "/movies" | "/tvs";
+}
+
+export default function RatingFilter({ routePath = "/movies" }: RatingFilterProps) {
+  const search = useSearch({ from: routePath }) as {
+    page: number;
+    genres?: string;
+    rating?: number;
+    year?: number;
+  };
+  const navigate = useNavigate({ from: routePath });
 
   const selectedRating = search.rating;
 

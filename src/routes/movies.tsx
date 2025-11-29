@@ -4,6 +4,10 @@ import { fetchDiscoverMovies } from "@/lib/data/movies";
 import MoviesSkeleton from "@/components/movies-skeleton";
 import MoviesContent from "@/components/movies-content";
 import FilterPopovers from "@/components/filter-popovers";
+import GenreFilter from "@/components/filters/genre-filter";
+import RatingFilter from "@/components/filters/rating-filter";
+import YearFilter from "@/components/filters/year-filter";
+import ClearFilters from "@/components/filters/clear-filters";
 
 export const Route = createFileRoute("/movies")({
   component: MoviesPage,
@@ -40,14 +44,27 @@ function MoviesPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Browse Movies</h1>
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold text-foreground mb-2">Movies</h1>
+        <p className="text-muted-foreground">Discover and explore movies from around the world</p>
+      </div>
 
-      <FilterPopovers />
+      <FilterPopovers>
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
+            <GenreFilter />
+            <RatingFilter routePath="/movies" />
+            <YearFilter routePath="/movies" />
+          </div>
+
+          <ClearFilters routePath="/movies" />
+        </div>
+      </FilterPopovers>
 
       <Suspense fallback={<MoviesSkeleton />}>
         <Await
           promise={movies}
-          children={(moviesData) => <MoviesContent moviesData={moviesData} />}
+          children={(moviesData) => <MoviesContent moviesData={moviesData} routePath="/movies" />}
         />
       </Suspense>
     </div>

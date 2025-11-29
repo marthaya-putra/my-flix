@@ -3,9 +3,18 @@ import BaseFilter from "./base-filter";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 
-export default function YearFilter() {
-  const search = useSearch({ from: "/movies" });
-  const navigate = useNavigate({ from: "/movies" });
+interface YearFilterProps {
+  routePath?: "/movies" | "/tvs";
+}
+
+export default function YearFilter({ routePath = "/movies" }: YearFilterProps) {
+  const search = useSearch({ from: routePath }) as {
+    page: number;
+    genres?: string;
+    rating?: number;
+    year?: number;
+  };
+  const navigate = useNavigate({ from: routePath });
 
   const selectedYear = search.year;
 

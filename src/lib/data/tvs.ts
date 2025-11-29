@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { fetchFromTMDB } from "./tmdb";
+import { DiscoverResult } from "../types";
 
 export const genres: Record<number, string> = {
   10759: "Action & Adventure",
@@ -26,4 +27,47 @@ export const fetchTrendingTvs = createServerFn({
   .inputValidator((timeWindow: "day" | "week" = "week") => timeWindow)
   .handler(({ data }) => {
     return fetchFromTMDB(`/trending/tv/${data}`);
+  });
+
+export const fetchDiscoverTvs = createServerFn({
+  method: "GET",
+})
+  .inputValidator(
+    (params: {
+      page: string;
+      with_genres?: string;
+      vote_average_gte?: number;
+      year?: number;
+    }) => params
+  )
+  .handler(({ data }) => {
+    const queryParams = new URLSearchParams();
+    const today = new Date().toISOString().split("T")[0];
+
+    queryParams.set("page", data.page);
+    queryParams.set("include_adult", "true");
+    queryParams.set("sort_by", "first_air_date.desc");
+    queryParams.set("watch_region", "US");
+    queryParams.set("air_date.lte", `${today}`);
+
+    if (
+      data.with_genres &&
+      typeof data.with_genres === "string" &&
+      data.with_genres.trim()
+    ) {
+      queryParams.set("with_genres", data.with_genres);
+    }
+
+    if (data.vote_average_gte) {
+      queryParams.set("vote_average.gte", String(data.vote_average_gte));
+    }
+
+    if (data.year) {
+      queryParams.set("air_date.gte", `${String(data.year)}-01-01`);
+      queryParams.set("air_date.lte", `${String(data.year)}-12-31`);
+    }
+
+    return fetchFromTMDB(
+      `/discover/tv?${queryParams.toString()}`
+    ) as Promise<DiscoverResult>;
   });

@@ -57,6 +57,8 @@ export const fetchDiscoverMovies = createServerFn({
     const queryParams = new URLSearchParams();
 
     queryParams.set("page", data.page);
+    queryParams.set("include_adult", "true");
+    queryParams.set("region", "US");
     queryParams.set("primary_release_date.lte", today);
     queryParams.set("include_adult", "true");
     queryParams.set("sort_by", "primary_release_date.desc");
@@ -78,7 +80,5 @@ export const fetchDiscoverMovies = createServerFn({
       queryParams.set("primary_release_date.lte", `${String(data.year)}-12-31`);
     }
 
-    return fetchFromTMDB(
-      `/discover/movie?include_adult=true&region=US&${queryParams.toString()}`
-    );
+    return fetchFromTMDB(`/discover/movie?${queryParams.toString()}`);
   });

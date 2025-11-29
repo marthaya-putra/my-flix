@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp, Filter } from "lucide-react";
-import GenreFilter from "./filters/genre-filter";
-import RatingFilter from "./filters/rating-filter";
-import YearFilter from "./filters/year-filter";
-import ClearFilters from "./filters/clear-filters";
+import { ReactNode } from "react";
 
-export default function FilterPopovers() {
+interface FilterPopoversProps {
+  children: ReactNode;
+}
+
+export default function FilterPopovers({ children }: FilterPopoversProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
@@ -35,15 +36,7 @@ export default function FilterPopovers() {
         }`}
       >
         <div className="p-6">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-4 flex-wrap">
-              <GenreFilter />
-              <RatingFilter />
-              <YearFilter />
-            </div>
-
-            <ClearFilters />
-          </div>
+          {children}
         </div>
       </div>
     </div>

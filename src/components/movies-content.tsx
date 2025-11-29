@@ -5,11 +5,20 @@ import { DiscoverResult } from "@/lib/types";
 
 interface MoviesContentProps {
   moviesData: DiscoverResult;
+  routePath?: "/movies" | "/tvs";
 }
 
-export default function MoviesContent({ moviesData }: MoviesContentProps) {
-  const navigate = useNavigate({ from: "/movies" });
-  const { page, genres, rating, year } = useSearch({ from: "/movies" });
+export default function MoviesContent({
+  moviesData,
+  routePath = "/movies",
+}: MoviesContentProps) {
+  const navigate = useNavigate({ from: routePath });
+  const { genres, rating, year } = useSearch({ from: routePath }) as {
+    page: number;
+    genres?: string;
+    rating?: number;
+    year?: number;
+  };
 
   const currentPage = moviesData.page;
   const totalPages = moviesData.totalPages;
