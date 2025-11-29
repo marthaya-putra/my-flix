@@ -7,7 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import Navbar from "../components/navbar";
+import Navbar from "../components/nav-bar";
 import NotFound from "../components/not-found";
 import appCss from "../styles/app.css?url";
 import { TooltipProvider } from "@/components/ui/tooltip";
