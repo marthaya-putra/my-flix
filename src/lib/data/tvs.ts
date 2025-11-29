@@ -48,7 +48,7 @@ export const fetchDiscoverTvs = createServerFn({
 })
   .inputValidator(
     (params: {
-      page: string;
+      page: number;
       with_genres?: string;
       vote_average_gte?: number;
       year?: number;
@@ -58,7 +58,7 @@ export const fetchDiscoverTvs = createServerFn({
     const queryParams = new URLSearchParams();
     const today = new Date().toISOString().split("T")[0];
 
-    queryParams.set("page", data.page);
+    queryParams.set("page", String(data.page));
     queryParams.set("include_adult", "true");
     queryParams.set("sort_by", "first_air_date.desc");
     queryParams.set("watch_region", "US");

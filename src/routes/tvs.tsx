@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { Await, createFileRoute } from "@tanstack/react-router";
 import { fetchDiscoverTvs } from "@/lib/data/tvs";
+import { type MovieRouteSearchParams } from "@/lib/types";
 import MoviesSkeleton from "@/components/movies-skeleton";
 import MoviesContent from "@/components/movies-content";
 import FilterPopovers from "@/components/filter-popovers";
@@ -11,25 +12,17 @@ import ClearFilters from "@/components/filters/clear-filters";
 
 export const Route = createFileRoute("/tvs")({
   component: TVsPage,
-  validateSearch: (search?: Record<string, unknown>) => {
-    return {
-      page: search?.page ? Number(search.page) : 1,
-      genres: search?.genres as string || undefined,
-      rating: search?.rating as number || undefined,
-      year: search?.year as number || undefined,
-    };
-  },
-  loaderDeps: ({ search }) => ({
-    page: search.page,
-    genres: search.genres,
-    rating: search.rating,
-    year: search.year,
+  loaderDeps: ({ search }: { search?: MovieRouteSearchParams }) => ({
+    page: search?.page || 1,
+    genres: search?.genres,
+    rating: search?.rating,
+    year: search?.year,
   }),
   loader: async ({ deps }) => {
     return {
       movies: fetchDiscoverTvs({
         data: {
-          page: String(deps.page),
+          page: deps.page,
           with_genres: deps.genres,
           vote_average_gte: deps.rating,
           year: deps.year,
@@ -46,7 +39,9 @@ function TVsPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
         <h1 className="text-4xl font-bold text-foreground mb-2">TV Shows</h1>
-        <p className="text-muted-foreground">Discover and explore TV series from around the world</p>
+        <p className="text-muted-foreground">
+          Discover and explore TV series from around the world
+        </p>
       </div>
 
       <FilterPopovers>

@@ -34,10 +34,10 @@ export const fetchTrendingMovies = createServerFn({
 export const fetchPopularMovies = createServerFn({
   method: "GET",
 })
-  .inputValidator((page: string = "1") => page)
+  .inputValidator((page: number = 1) => page)
   .handler(({ data }) => {
     return fetchFromTMDB(
-      `/movie/popular?language=en-US&region=US&page=${data}`
+      `/movie/popular?language=en-US&region=US&page=${String(data)}`
     );
   });
 
@@ -46,7 +46,7 @@ export const fetchDiscoverMovies = createServerFn({
 })
   .inputValidator(
     (params: {
-      page: string;
+      page: number;
       with_genres?: string;
       vote_average_gte?: number;
       year?: number;
@@ -56,7 +56,7 @@ export const fetchDiscoverMovies = createServerFn({
     const today = new Date().toISOString().split("T")[0];
     const queryParams = new URLSearchParams();
 
-    queryParams.set("page", data.page);
+    queryParams.set("page", String(data.page));
     queryParams.set("include_adult", "true");
     queryParams.set("region", "US");
     queryParams.set("primary_release_date.lte", today);
