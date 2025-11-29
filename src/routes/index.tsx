@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { Await, createFileRoute } from "@tanstack/react-router";
 import { fetchPopularMovies, fetchTrendingMovies } from "@/lib/data/movies";
 import ContentRow from "@/components/content-row";
-import Hero from "@/components/hero";
+import Hero from "@/components/hero2";
 import ContentRowSkeleton from "@/components/content-row-skeleton";
 import {
   fetchTrendingTvs,
