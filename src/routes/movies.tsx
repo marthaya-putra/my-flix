@@ -10,19 +10,17 @@ export const Route = createFileRoute("/movies")({
   validateSearch: (search?: Record<string, unknown>) => {
     return {
       page: search?.page ? Number(search.page) : 1,
-      genres: search?.genres as string,
-      rating: search?.rating as number,
-      year: search?.year as number,
+      genres: search?.genres as string || undefined,
+      rating: search?.rating as number || undefined,
+      year: search?.year as number || undefined,
     };
   },
-  loaderDeps: ({ search }) => {
-    return {
-      page: search.page,
-      genres: search.genres,
-      rating: search.rating,
-      year: search.year,
-    };
-  },
+  loaderDeps: ({ search }) => ({
+    page: search.page,
+    genres: search.genres,
+    rating: search.rating,
+    year: search.year,
+  }),
   loader: async ({ deps }) => {
     return {
       movies: fetchDiscoverMovies({

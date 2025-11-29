@@ -55,7 +55,16 @@ export default function Navbar() {
             >
               Home
             </Link>
-            <Link to="/movies" className="hover:text-primary transition-colors">
+            <Link
+              to="/movies"
+              search={{
+                page: 1,
+                genres: undefined,
+                rating: undefined,
+                year: undefined,
+              }}
+              className="hover:text-primary transition-colors"
+            >
               Movies
             </Link>
             <Link to="/tv" className="hover:text-primary transition-colors">
