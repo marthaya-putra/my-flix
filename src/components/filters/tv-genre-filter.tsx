@@ -3,10 +3,11 @@ import { genres } from "@/lib/data/tvs";
 import BaseFilter from "./base-filter";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Route } from "@/routes/tvs.index";
 
 export default function TvGenreFilter() {
-  const search = useSearch({ from: "/tvs/" });
-  const navigate = useNavigate({ from: "/tvs/" });
+  const search = useSearch({ from: Route.id });
+  const navigate = useNavigate({ from: Route.id });
 
   const selectedGenres =
     typeof search.genres === "string" && search.genres

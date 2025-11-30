@@ -1,31 +1,48 @@
-import { useSearch, useNavigate } from "@tanstack/react-router";
-import { genres } from "@/lib/data/movies";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import { genres as movieGenres } from "@/lib/data/movies";
 import BaseFilter from "./base-filter";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Route as MoviesRoute } from "@/routes/movies.index";
+import { Route as TvsRoute } from "@/routes/tvs.index";
+import { Route as TvsAiringTodayRoute } from "@/routes/tvs.airing-today";
+import { Route as MoviesSearchRoute } from "@/routes/movies.search";
 
-export default function GenreFilter() {
-  const search = useSearch({ from: "/movies/" });
-  const navigate = useNavigate({ from: "/movies/" });
+interface GenreFilterProps {
+  route:
+    | typeof MoviesRoute
+    | typeof TvsRoute
+    | typeof TvsAiringTodayRoute
+    | typeof MoviesSearchRoute;
+}
 
+export default function GenreFilter({ route }: GenreFilterProps) {
+  const navigate = useNavigate({ from: route.id } as any);
+  const search = useSearch({ from: route.id });
+
+  const genres = "genres" in search ? search.genres : undefined;
   const selectedGenres =
-    typeof search.genres === "string" && search.genres
-      ? search.genres.split(",")
+    typeof genres === "string" && genres
+      ? genres.split(",")
       : [];
 
   const handleGenreToggle = (genreId: string) => {
     const newGenres = selectedGenres.includes(genreId)
-      ? selectedGenres.filter((g) => g !== genreId)
+      ? selectedGenres.filter((g: string) => g !== genreId)
       : [...selectedGenres, genreId];
 
-    navigate({
-      search: {
-        page: 1,
-        genres: newGenres.length > 0 ? newGenres.join(",") : undefined,
-        rating: search.rating,
-        year: search.year,
-      },
-    });
+    if ("query" in search) {
+      return;
+    } else {
+      navigate({
+        search: {
+          page: "page" in search ? search.page : 1,
+          genres: newGenres.length > 0 ? newGenres.join(",") : undefined,
+          rating: "rating" in search ? search.rating : undefined,
+          year: "year" in search ? search.year : undefined,
+        },
+      });
+    }
   };
 
   return (
@@ -36,7 +53,7 @@ export default function GenreFilter() {
     >
       {() => (
         <div className="space-y-2">
-          {Object.entries(genres).map(([id, name]) => (
+          {Object.entries(movieGenres).map(([id, name]) => (
             <Label
               htmlFor={`genre-${id}`}
               key={id}

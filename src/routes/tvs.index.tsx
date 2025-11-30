@@ -55,11 +55,11 @@ function TVsPage() {
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-4 flex-wrap">
             <TvGenreFilter />
-            <RatingFilter routePath="/tvs/" />
-            <YearFilter routePath="/tvs/" />
+            <RatingFilter route={Route} />
+            <YearFilter route={Route} />
           </div>
 
-          <ClearFilters routePath="/tvs/" />
+          <ClearFilters route={Route} />
         </div>
       </FilterPopovers>
 

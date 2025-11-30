@@ -1,26 +1,44 @@
-import { useSearch, useNavigate } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import { Route as MoviesRoute } from "@/routes/movies.index";
+import { Route as TvsRoute } from "@/routes/tvs.index";
+import { Route as TvsAiringTodayRoute } from "@/routes/tvs.airing-today";
+import { Route as MoviesSearchRoute } from "@/routes/movies.search";
 
 interface ClearFiltersProps {
-  routePath?: "/movies/" | "/tvs/";
+  route:
+    | typeof MoviesRoute
+    | typeof TvsRoute
+    | typeof TvsAiringTodayRoute
+    | typeof MoviesSearchRoute;
 }
 
-export default function ClearFilters({
-  routePath = "/movies/",
-}: ClearFiltersProps) {
-  const search = useSearch({ from: routePath });
-  const navigate = useNavigate({ from: routePath });
+export default function ClearFilters({ route }: ClearFiltersProps) {
+  const navigate = useNavigate({ from: route.id } as any);
+  const search = useSearch({ from: route.id });
 
-  const hasActiveFilters = search.genres || search.rating || search.year;
+  const genres = "genres" in search ? search.genres : undefined;
+  const rating = "rating" in search ? search.rating : undefined;
+  const year = "year" in search ? search.year : undefined;
+
+  const hasActiveFilters = genres || rating || year;
 
   const handleClearAll = () => {
-    navigate({
-      search: {
-        page: 1,
-        genres: "",
-        rating: undefined,
-        year: undefined,
-      },
-    });
+    if ("query" in search) {
+      navigate({
+        search: {
+          query: search.query,
+        }
+      });
+    } else {
+      navigate({
+        search: {
+          page: "page" in search ? search.page : undefined,
+          genres: undefined,
+          rating: undefined,
+          year: undefined,
+        }
+      });
+    }
   };
 
   if (!hasActiveFilters) {

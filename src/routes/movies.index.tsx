@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { Await, createFileRoute } from "@tanstack/react-router";
+import { Await, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { fetchDiscoverMovies } from "@/lib/data/movies";
 import { type MovieRouteSearchParams } from "@/lib/types";
 import MoviesSkeleton from "@/components/movies-skeleton";
@@ -41,6 +41,7 @@ export const Route = createFileRoute("/movies/")({
 
 function MoviesPage() {
   const { movies } = Route.useLoaderData();
+  const navigate = useNavigate();
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -54,12 +55,12 @@ function MoviesPage() {
       <FilterPopovers>
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-4 flex-wrap">
-            <GenreFilter />
-            <RatingFilter routePath="/movies" />
-            <YearFilter routePath="/movies" />
+            <GenreFilter route={Route} />
+            <RatingFilter route={Route} />
+            <YearFilter route={Route} />
           </div>
 
-          <ClearFilters routePath="/movies" />
+          <ClearFilters route={Route} />
         </div>
       </FilterPopovers>
 

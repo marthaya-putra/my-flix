@@ -2,33 +2,38 @@ import { useSearch, useNavigate } from "@tanstack/react-router";
 import BaseFilter from "./base-filter";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Route as MoviesRoute } from "@/routes/movies.index";
+import { Route as TvsRoute } from "@/routes/tvs.index";
+import { Route as TvsAiringTodayRoute } from "@/routes/tvs.airing-today";
+import { Route as MoviesSearchRoute } from "@/routes/movies.search";
 
 interface YearFilterProps {
-  routePath?: "/movies/" | "/tvs/";
+  route:
+    | typeof MoviesRoute
+    | typeof TvsRoute
+    | typeof TvsAiringTodayRoute
+    | typeof MoviesSearchRoute;
 }
 
-export default function YearFilter({
-  routePath = "/movies/",
-}: YearFilterProps) {
-  const search = useSearch({ from: routePath }) as {
-    page: number;
-    genres?: string;
-    rating?: number;
-    year?: number;
-  };
-  const navigate = useNavigate({ from: routePath });
+export default function YearFilter({ route }: YearFilterProps) {
+  const search = useSearch({ from: route.id });
+  const navigate = useNavigate({ from: route.id } as any);
 
-  const selectedYear = search.year;
+  const selectedYear = "year" in search ? search.year : undefined;
 
   const handleYearChange = (newYear?: number) => {
-    navigate({
-      search: {
-        page: 1,
-        genres: search.genres,
-        rating: search.rating,
-        year: newYear,
-      },
-    });
+    if ("query" in search) {
+      return;
+    } else {
+      navigate({
+        search: {
+          page: "page" in search ? search.page : 1,
+          genres: "genres" in search ? search.genres : undefined,
+          rating: "rating" in search ? search.rating : undefined,
+          year: newYear,
+        },
+      });
+    }
   };
 
   const currentYear = new Date().getFullYear();
