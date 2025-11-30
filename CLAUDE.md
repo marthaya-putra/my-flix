@@ -52,3 +52,9 @@ Routes export a `Route` object with `component` and optional `loader` for data f
 - Use `@/components/ui/input` instead of `<input type="text">`
 - Use `@/components/ui/label` instead of `<label>` elements
 - Available components are listed in `src/components/ui/` - always check what's available before using native elements
+
+**Environment Variables:**
+- `INCLUDE_ADULT_CONTENT` - Controls whether adult content is included in TMDB search results (default: false)
+  - Set to `true` to include adult content in search results
+  - Set to `false` or omit to exclude adult content
+  - Used in: `src/lib/data/search.ts` for TMDB multi-search API calls

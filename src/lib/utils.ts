@@ -2,6 +2,7 @@ import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { DiscoverResult, FilmType } from "./types";
 import { genres } from "./data/movies";
+import { TMDB_IMAGE_BASE } from "./data/tmdb";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -12,8 +13,8 @@ export function convertToDiscoverResult(data: any): DiscoverResult {
     page: data.page,
     results: data.results.map((res: any) => ({
       id: res.id,
-      backdropPath: `https://image.tmdb.org/t/p/w500${res.backdrop_path}`,
-      posterPath: `https://image.tmdb.org/t/p/w500${res.poster_path}`,
+      backdropPath: `${TMDB_IMAGE_BASE}${res.backdrop_path}`,
+      posterPath: `${TMDB_IMAGE_BASE}${res.poster_path}`,
       title: res.title || res.name,
       overview: res.overview,
       voteAverage: res.vote_average,

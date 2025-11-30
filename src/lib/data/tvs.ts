@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { fetchFromTMDB } from "./tmdb";
-import { DiscoverResult } from "../types";
+import { convertToDiscoverResult } from "../utils";
 
 export const genres: Record<number, string> = {
   10759: "Action & Adventure",
@@ -25,28 +25,31 @@ export const fetchTrendingTvs = createServerFn({
   method: "GET",
 })
   .inputValidator((timeWindow: "day" | "week" = "week") => timeWindow)
-  .handler(({ data }) => {
-    return fetchFromTMDB(`/trending/tv/${data}`);
+  .handler(async ({ data }) => {
+    const result = await fetchFromTMDB(`/trending/tv/${data}`);
+    return convertToDiscoverResult(result);
   });
 
 export const fetchAiringTodayTvs = createServerFn({
   method: "GET",
 })
   .inputValidator((page: number = 1) => page)
-  .handler(({ data }) => {
+  .handler(async ({ data }) => {
     const queryParams = new URLSearchParams();
     queryParams.set("page", String(data));
-    return fetchFromTMDB(`/tv/airing_today?${queryParams.toString()}`);
+    const result = await fetchFromTMDB(`/tv/airing_today?${queryParams.toString()}`);
+    return convertToDiscoverResult(result);
   });
 
 export const fetchOnTheAirTvs = createServerFn({
   method: "GET",
 })
   .inputValidator((page: number = 1) => page)
-  .handler(({ data }) => {
+  .handler(async ({ data }) => {
     const queryParams = new URLSearchParams();
     queryParams.set("page", String(data));
-    return fetchFromTMDB(`/tv/on_the_air?${queryParams.toString()}`);
+    const result = await fetchFromTMDB(`/tv/on_the_air?${queryParams.toString()}`);
+    return convertToDiscoverResult(result);
   });
 
 export const fetchDiscoverTvs = createServerFn({
@@ -60,7 +63,7 @@ export const fetchDiscoverTvs = createServerFn({
       year?: number;
     }) => params
   )
-  .handler(({ data }) => {
+  .handler(async ({ data }) => {
     const queryParams = new URLSearchParams();
     const today = new Date().toISOString().split("T")[0];
 
@@ -87,7 +90,8 @@ export const fetchDiscoverTvs = createServerFn({
       queryParams.set("air_date.lte", `${String(data.year)}-12-31`);
     }
 
-    return fetchFromTMDB(
+    const result = await fetchFromTMDB(
       `/discover/tv?${queryParams.toString()}`
-    ) as Promise<DiscoverResult>;
+    );
+    return convertToDiscoverResult(result);
   });

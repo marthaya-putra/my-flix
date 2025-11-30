@@ -19,9 +19,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import SearchModal from "./search-modal";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
@@ -90,6 +92,7 @@ export default function Navbar() {
           <Button
             variant="ghost"
             size="icon"
+            onClick={() => setIsSearchOpen(true)}
             className="text-foreground hover:text-primary hover:bg-transparent"
           >
             <Search className="w-5 h-5" />
@@ -134,6 +137,8 @@ export default function Navbar() {
           </DropdownMenu>
         </div>
       </div>
+
+      <SearchModal open={isSearchOpen} onOpenChange={setIsSearchOpen} />
     </nav>
   );
 }

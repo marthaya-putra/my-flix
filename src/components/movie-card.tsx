@@ -33,7 +33,7 @@ export default function MovieCard({
 
   return (
     <PlayLink title={title} category={category}>
-      <div className="group/card relative aspect-2/3 rounded-md overflow-hidden cursor-pointer transition-all duration-300 hover:z-10 hover:scale-105 hover:shadow-xl shadow-black/50 bg-card">
+      <div className="group/card relative aspect-[3/4] w-full rounded-md overflow-hidden cursor-pointer transition-all duration-300 hover:z-10 hover:scale-105 hover:shadow-xl shadow-black/50 bg-card">
       <div className="absolute top-2 right-2 z-10">
         <div
           className={`flex items-center gap-1 px-2 py-1 rounded-full border backdrop-blur-sm ${getRatingColor(voteAverage)} bg-black/60`}

@@ -2,11 +2,12 @@ import { DiscoverResult } from "../types";
 import { convertToDiscoverResult } from "../utils";
 
 const TMDB_URL = "https://api.themoviedb.org/3";
+export const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
 
 export async function fetchFromTMDB(
   path: URL | RequestInfo,
   options?: RequestInit
-): Promise<DiscoverResult> {
+): Promise<any> {
   let headers = {
     accept: "application/json",
     authorization: `Bearer ${process.env.TMDB_TOKEN}`,
@@ -26,5 +27,5 @@ export async function fetchFromTMDB(
   });
 
   const data = await res.json();
-  return convertToDiscoverResult(data);
+  return data;
 }

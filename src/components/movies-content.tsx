@@ -5,10 +5,15 @@ import { DiscoverResult } from "@/lib/types";
 import { Route as MoviesRoute } from "@/routes/movies";
 import { Route as TvsRoute } from "@/routes/tvs";
 import { Route as TvsAiringTodayRoute } from "@/routes/tvs-airing-today";
+import { Route as MoviesSearchRoute } from "@/routes/movies-search";
 
 interface MoviesContentProps {
   moviesData: DiscoverResult;
-  route: typeof MoviesRoute | typeof TvsRoute | typeof TvsAiringTodayRoute;
+  route:
+    | typeof MoviesRoute
+    | typeof TvsRoute
+    | typeof TvsAiringTodayRoute
+    | typeof MoviesSearchRoute;
 }
 
 export default function MoviesContent({
@@ -23,6 +28,7 @@ export default function MoviesContent({
   const genres = "genres" in search ? search.genres : undefined;
   const rating = "rating" in search ? search.rating : undefined;
   const year = "year" in search ? search.year : undefined;
+  const query = "query" in search ? search.query : undefined;
 
   const currentPage = moviesData.page;
   const totalPages = moviesData.totalPages;
@@ -30,25 +36,43 @@ export default function MoviesContent({
   const hasPreviousPage = currentPage > 1;
 
   const nextPage = () => {
-    navigate({
-      search: {
-        page: currentPage + 1,
-        genres,
-        rating,
-        year,
-      },
-    });
+    if (query) {
+      navigate({
+        search: {
+          query,
+          page: currentPage + 1,
+        },
+      });
+    } else {
+      navigate({
+        search: {
+          page: currentPage + 1,
+          genres,
+          rating,
+          year,
+        },
+      });
+    }
   };
 
   const prevPage = () => {
-    navigate({
-      search: {
-        page: currentPage - 1,
-        genres,
-        rating,
-        year,
-      },
-    });
+    if (query) {
+      navigate({
+        search: {
+          query,
+          page: currentPage - 1,
+        },
+      });
+    } else {
+      navigate({
+        search: {
+          page: currentPage - 1,
+          genres,
+          rating,
+          year,
+        },
+      });
+    }
   };
 
   return (
@@ -62,7 +86,7 @@ export default function MoviesContent({
         onNextPage={nextPage}
       />
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 my-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 my-8">
         {moviesData.results.map((movie) => (
           <MovieCard key={movie.id} {...movie} />
         ))}

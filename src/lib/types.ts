@@ -36,6 +36,30 @@ export type DiscoverResult = {
   totalPages: number;
 };
 
+export type SearchResult = {
+  page: number;
+  movies: Array<FilmInfo>;
+  tvShows: Array<FilmInfo>;
+  actors: Array<Person>;
+  totalPages: {
+    movies: number;
+    tvShows: number;
+    actors: number;
+  };
+};
+
+export type Actor = {
+  id: number;
+  name: string;
+  profileImageUrl: string;
+  profile_path?: string;
+  popularity: number;
+  known_for_department?: string;
+  adult?: boolean;
+  gender?: number;
+  knownFor?: Array<FilmInfo>;
+};
+
 export type Person = {
   id: number;
   name: string;
@@ -43,7 +67,18 @@ export type Person = {
   popularity: number;
   imdbId?: string;
   biography?: string;
+  knownFor?: Array<FilmInfo>;
 };
+
+// TMDB API specific types
+export type TMDBMultiSearchResult = {
+  page: number;
+  results: Array<TMDBSearchItem>;
+  total_pages: number;
+  total_results: number;
+};
+
+export type TMDBSearchItem = (FilmInfo & { media_type: 'movie' | 'tv' }) | (Actor & { media_type: 'person' });
 
 export type ActorSearchParams = {
   searchTerm?: string;

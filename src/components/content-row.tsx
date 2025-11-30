@@ -12,29 +12,35 @@ import { FilmInfo } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 interface ContentRowProps {
-  title: string;
+  title: React.ReactNode;
   items: Array<
     FilmInfo & {
       match?: string;
     }
   >;
   exploreAllUrl?: string;
+  className?: string;
 }
 
 export default function ContentRow({
   title,
   items,
   exploreAllUrl,
+  className,
 }: ContentRowProps) {
   const carouselButtonClassName =
     "h-15 w-15 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-black/80 disabled:opacity-0  cursor-pointer group-hover:[&_svg]:animate-sliding group-hover:[&_svg]:delay-300";
 
   return (
-    <div className="px-4 md:px-12 group max-w-7xl mx-auto">
-      <div className="flex items-end gap-2 justify-between pb-4">
-        <h2 className="text-xl md:text-2xl font-display font-semibold text-white">
-          {title}
-        </h2>
+    <div className={cn("px-4 md:px-8 group max-w-7xl mx-auto", className)}>
+      <div className="flex items-end gap-2 justify-between pb-2">
+        {typeof title === "string" ? (
+          <h2 className="text-lg md:text-xl font-display font-semibold text-white">
+            {title}
+          </h2>
+        ) : (
+          title
+        )}
         {exploreAllUrl && (
           <Link
             to={exploreAllUrl}

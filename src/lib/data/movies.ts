@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { fetchFromTMDB } from "./tmdb";
+import { convertToDiscoverResult } from "../utils";
 
 export const genres: Record<number, string> = {
   28: "Action",
@@ -27,18 +28,20 @@ export const fetchTrendingMovies = createServerFn({
   method: "GET",
 })
   .inputValidator((timeWindow: "day" | "week" = "week") => timeWindow)
-  .handler(({ data }) => {
-    return fetchFromTMDB(`/trending/movie/${data}`);
+  .handler(async ({ data }) => {
+    const result = await fetchFromTMDB(`/trending/movie/${data}`);
+    return convertToDiscoverResult(result);
   });
 
 export const fetchPopularMovies = createServerFn({
   method: "GET",
 })
   .inputValidator((page: number = 1) => page)
-  .handler(({ data }) => {
-    return fetchFromTMDB(
+  .handler(async ({ data }) => {
+    const result = await fetchFromTMDB(
       `/movie/popular?language=en-US&region=US&page=${String(data)}`
     );
+    return convertToDiscoverResult(result);
   });
 
 export const fetchDiscoverMovies = createServerFn({
@@ -52,7 +55,7 @@ export const fetchDiscoverMovies = createServerFn({
       year?: number;
     }) => params
   )
-  .handler(({ data }) => {
+  .handler(async ({ data }) => {
     const today = new Date().toISOString().split("T")[0];
     const queryParams = new URLSearchParams();
 
@@ -80,5 +83,6 @@ export const fetchDiscoverMovies = createServerFn({
       queryParams.set("primary_release_date.lte", `${String(data.year)}-12-31`);
     }
 
-    return fetchFromTMDB(`/discover/movie?${queryParams.toString()}`);
+    const result = await fetchFromTMDB(`/discover/movie?${queryParams.toString()}`);
+    return convertToDiscoverResult(result);
   });
