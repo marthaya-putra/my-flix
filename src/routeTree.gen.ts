@@ -9,187 +9,187 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TvsSearchRouteImport } from './routes/tvs-search'
-import { Route as TvsAiringTodayRouteImport } from './routes/tvs-airing-today'
-import { Route as TvsAiringThisWeekRouteImport } from './routes/tvs-airing-this-week'
-import { Route as TvsRouteImport } from './routes/tvs'
-import { Route as MoviesSearchRouteImport } from './routes/movies-search'
-import { Route as MoviesRouteImport } from './routes/movies'
-import { Route as ActorsSearchRouteImport } from './routes/actors-search'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TvsIndexRouteImport } from './routes/tvs.index'
+import { Route as MoviesIndexRouteImport } from './routes/movies.index'
+import { Route as TvsSearchRouteImport } from './routes/tvs.search'
+import { Route as TvsAiringTodayRouteImport } from './routes/tvs.airing-today'
+import { Route as TvsAiringThisWeekRouteImport } from './routes/tvs.airing-this-week'
+import { Route as MoviesSearchRouteImport } from './routes/movies.search'
+import { Route as ActorsSearchRouteImport } from './routes/actors.search'
 
-const TvsSearchRoute = TvsSearchRouteImport.update({
-  id: '/tvs-search',
-  path: '/tvs-search',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TvsAiringTodayRoute = TvsAiringTodayRouteImport.update({
-  id: '/tvs-airing-today',
-  path: '/tvs-airing-today',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TvsAiringThisWeekRoute = TvsAiringThisWeekRouteImport.update({
-  id: '/tvs-airing-this-week',
-  path: '/tvs-airing-this-week',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TvsRoute = TvsRouteImport.update({
-  id: '/tvs',
-  path: '/tvs',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MoviesSearchRoute = MoviesSearchRouteImport.update({
-  id: '/movies-search',
-  path: '/movies-search',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MoviesRoute = MoviesRouteImport.update({
-  id: '/movies',
-  path: '/movies',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ActorsSearchRoute = ActorsSearchRouteImport.update({
-  id: '/actors-search',
-  path: '/actors-search',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TvsIndexRoute = TvsIndexRouteImport.update({
+  id: '/tvs/',
+  path: '/tvs/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MoviesIndexRoute = MoviesIndexRouteImport.update({
+  id: '/movies/',
+  path: '/movies/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TvsSearchRoute = TvsSearchRouteImport.update({
+  id: '/tvs/search',
+  path: '/tvs/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TvsAiringTodayRoute = TvsAiringTodayRouteImport.update({
+  id: '/tvs/airing-today',
+  path: '/tvs/airing-today',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TvsAiringThisWeekRoute = TvsAiringThisWeekRouteImport.update({
+  id: '/tvs/airing-this-week',
+  path: '/tvs/airing-this-week',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MoviesSearchRoute = MoviesSearchRouteImport.update({
+  id: '/movies/search',
+  path: '/movies/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ActorsSearchRoute = ActorsSearchRouteImport.update({
+  id: '/actors/search',
+  path: '/actors/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/actors-search': typeof ActorsSearchRoute
-  '/movies': typeof MoviesRoute
-  '/movies-search': typeof MoviesSearchRoute
-  '/tvs': typeof TvsRoute
-  '/tvs-airing-this-week': typeof TvsAiringThisWeekRoute
-  '/tvs-airing-today': typeof TvsAiringTodayRoute
-  '/tvs-search': typeof TvsSearchRoute
+  '/actors/search': typeof ActorsSearchRoute
+  '/movies/search': typeof MoviesSearchRoute
+  '/tvs/airing-this-week': typeof TvsAiringThisWeekRoute
+  '/tvs/airing-today': typeof TvsAiringTodayRoute
+  '/tvs/search': typeof TvsSearchRoute
+  '/movies': typeof MoviesIndexRoute
+  '/tvs': typeof TvsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/actors-search': typeof ActorsSearchRoute
-  '/movies': typeof MoviesRoute
-  '/movies-search': typeof MoviesSearchRoute
-  '/tvs': typeof TvsRoute
-  '/tvs-airing-this-week': typeof TvsAiringThisWeekRoute
-  '/tvs-airing-today': typeof TvsAiringTodayRoute
-  '/tvs-search': typeof TvsSearchRoute
+  '/actors/search': typeof ActorsSearchRoute
+  '/movies/search': typeof MoviesSearchRoute
+  '/tvs/airing-this-week': typeof TvsAiringThisWeekRoute
+  '/tvs/airing-today': typeof TvsAiringTodayRoute
+  '/tvs/search': typeof TvsSearchRoute
+  '/movies': typeof MoviesIndexRoute
+  '/tvs': typeof TvsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/actors-search': typeof ActorsSearchRoute
-  '/movies': typeof MoviesRoute
-  '/movies-search': typeof MoviesSearchRoute
-  '/tvs': typeof TvsRoute
-  '/tvs-airing-this-week': typeof TvsAiringThisWeekRoute
-  '/tvs-airing-today': typeof TvsAiringTodayRoute
-  '/tvs-search': typeof TvsSearchRoute
+  '/actors/search': typeof ActorsSearchRoute
+  '/movies/search': typeof MoviesSearchRoute
+  '/tvs/airing-this-week': typeof TvsAiringThisWeekRoute
+  '/tvs/airing-today': typeof TvsAiringTodayRoute
+  '/tvs/search': typeof TvsSearchRoute
+  '/movies/': typeof MoviesIndexRoute
+  '/tvs/': typeof TvsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/actors-search'
+    | '/actors/search'
+    | '/movies/search'
+    | '/tvs/airing-this-week'
+    | '/tvs/airing-today'
+    | '/tvs/search'
     | '/movies'
-    | '/movies-search'
     | '/tvs'
-    | '/tvs-airing-this-week'
-    | '/tvs-airing-today'
-    | '/tvs-search'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/actors-search'
+    | '/actors/search'
+    | '/movies/search'
+    | '/tvs/airing-this-week'
+    | '/tvs/airing-today'
+    | '/tvs/search'
     | '/movies'
-    | '/movies-search'
     | '/tvs'
-    | '/tvs-airing-this-week'
-    | '/tvs-airing-today'
-    | '/tvs-search'
   id:
     | '__root__'
     | '/'
-    | '/actors-search'
-    | '/movies'
-    | '/movies-search'
-    | '/tvs'
-    | '/tvs-airing-this-week'
-    | '/tvs-airing-today'
-    | '/tvs-search'
+    | '/actors/search'
+    | '/movies/search'
+    | '/tvs/airing-this-week'
+    | '/tvs/airing-today'
+    | '/tvs/search'
+    | '/movies/'
+    | '/tvs/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ActorsSearchRoute: typeof ActorsSearchRoute
-  MoviesRoute: typeof MoviesRoute
   MoviesSearchRoute: typeof MoviesSearchRoute
-  TvsRoute: typeof TvsRoute
   TvsAiringThisWeekRoute: typeof TvsAiringThisWeekRoute
   TvsAiringTodayRoute: typeof TvsAiringTodayRoute
   TvsSearchRoute: typeof TvsSearchRoute
+  MoviesIndexRoute: typeof MoviesIndexRoute
+  TvsIndexRoute: typeof TvsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/tvs-search': {
-      id: '/tvs-search'
-      path: '/tvs-search'
-      fullPath: '/tvs-search'
-      preLoaderRoute: typeof TvsSearchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/tvs-airing-today': {
-      id: '/tvs-airing-today'
-      path: '/tvs-airing-today'
-      fullPath: '/tvs-airing-today'
-      preLoaderRoute: typeof TvsAiringTodayRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/tvs-airing-this-week': {
-      id: '/tvs-airing-this-week'
-      path: '/tvs-airing-this-week'
-      fullPath: '/tvs-airing-this-week'
-      preLoaderRoute: typeof TvsAiringThisWeekRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/tvs': {
-      id: '/tvs'
-      path: '/tvs'
-      fullPath: '/tvs'
-      preLoaderRoute: typeof TvsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/movies-search': {
-      id: '/movies-search'
-      path: '/movies-search'
-      fullPath: '/movies-search'
-      preLoaderRoute: typeof MoviesSearchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/movies': {
-      id: '/movies'
-      path: '/movies'
-      fullPath: '/movies'
-      preLoaderRoute: typeof MoviesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/actors-search': {
-      id: '/actors-search'
-      path: '/actors-search'
-      fullPath: '/actors-search'
-      preLoaderRoute: typeof ActorsSearchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tvs/': {
+      id: '/tvs/'
+      path: '/tvs'
+      fullPath: '/tvs'
+      preLoaderRoute: typeof TvsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/movies/': {
+      id: '/movies/'
+      path: '/movies'
+      fullPath: '/movies'
+      preLoaderRoute: typeof MoviesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tvs/search': {
+      id: '/tvs/search'
+      path: '/tvs/search'
+      fullPath: '/tvs/search'
+      preLoaderRoute: typeof TvsSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tvs/airing-today': {
+      id: '/tvs/airing-today'
+      path: '/tvs/airing-today'
+      fullPath: '/tvs/airing-today'
+      preLoaderRoute: typeof TvsAiringTodayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tvs/airing-this-week': {
+      id: '/tvs/airing-this-week'
+      path: '/tvs/airing-this-week'
+      fullPath: '/tvs/airing-this-week'
+      preLoaderRoute: typeof TvsAiringThisWeekRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/movies/search': {
+      id: '/movies/search'
+      path: '/movies/search'
+      fullPath: '/movies/search'
+      preLoaderRoute: typeof MoviesSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/actors/search': {
+      id: '/actors/search'
+      path: '/actors/search'
+      fullPath: '/actors/search'
+      preLoaderRoute: typeof ActorsSearchRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -198,12 +198,12 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ActorsSearchRoute: ActorsSearchRoute,
-  MoviesRoute: MoviesRoute,
   MoviesSearchRoute: MoviesSearchRoute,
-  TvsRoute: TvsRoute,
   TvsAiringThisWeekRoute: TvsAiringThisWeekRoute,
   TvsAiringTodayRoute: TvsAiringTodayRoute,
   TvsSearchRoute: TvsSearchRoute,
+  MoviesIndexRoute: MoviesIndexRoute,
+  TvsIndexRoute: TvsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

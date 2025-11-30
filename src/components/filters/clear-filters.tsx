@@ -1,16 +1,13 @@
 import { useSearch, useNavigate } from "@tanstack/react-router";
 
 interface ClearFiltersProps {
-  routePath?: "/movies" | "/tvs";
+  routePath?: "/movies/" | "/tvs/";
 }
 
-export default function ClearFilters({ routePath = "/movies" }: ClearFiltersProps) {
-  const search = useSearch({ from: routePath }) as {
-    page: number;
-    genres?: string;
-    rating?: number;
-    year?: number;
-  };
+export default function ClearFilters({
+  routePath = "/movies/",
+}: ClearFiltersProps) {
+  const search = useSearch({ from: routePath });
   const navigate = useNavigate({ from: routePath });
 
   const hasActiveFilters = search.genres || search.rating || search.year;

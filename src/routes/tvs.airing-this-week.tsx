@@ -6,7 +6,7 @@ import MoviesSkeleton from "@/components/movies-skeleton";
 import MoviesContent from "@/components/movies-content";
 import { z } from "zod";
 
-export const Route = createFileRoute("/tvs-airing-this-week")({
+export const Route = createFileRoute("/tvs/airing-this-week")({
   validateSearch: z.object({
     page: z.number().default(1),
   }),

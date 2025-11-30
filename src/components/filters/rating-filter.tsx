@@ -5,16 +5,13 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 
 interface RatingFilterProps {
-  routePath?: "/movies" | "/tvs";
+  routePath?: "/movies/" | "/tvs/";
 }
 
-export default function RatingFilter({ routePath = "/movies" }: RatingFilterProps) {
-  const search = useSearch({ from: routePath }) as {
-    page: number;
-    genres?: string;
-    rating?: number;
-    year?: number;
-  };
+export default function RatingFilter({
+  routePath = "/movies/",
+}: RatingFilterProps) {
+  const search = useSearch({ from: routePath });
   const navigate = useNavigate({ from: routePath });
 
   const selectedRating = search.rating;

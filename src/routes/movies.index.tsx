@@ -1,33 +1,33 @@
 import { Suspense } from "react";
 import { Await, createFileRoute } from "@tanstack/react-router";
-import { fetchDiscoverTvs } from "@/lib/data/tvs";
+import { fetchDiscoverMovies } from "@/lib/data/movies";
 import { type MovieRouteSearchParams } from "@/lib/types";
 import MoviesSkeleton from "@/components/movies-skeleton";
 import MoviesContent from "@/components/movies-content";
 import FilterPopovers from "@/components/filter-popovers";
-import TvGenreFilter from "@/components/filters/tv-genre-filter";
+import GenreFilter from "@/components/filters/genre-filter";
 import RatingFilter from "@/components/filters/rating-filter";
 import YearFilter from "@/components/filters/year-filter";
 import ClearFilters from "@/components/filters/clear-filters";
 import { z } from "zod";
 
-export const Route = createFileRoute("/tvs")({
+export const Route = createFileRoute("/movies/")({
   validateSearch: z.object({
     page: z.number().default(1),
     genres: z.string().optional(),
     rating: z.number().optional(),
     year: z.number().optional(),
   }),
-  component: TVsPage,
+  component: MoviesPage,
   loaderDeps: ({ search }: { search?: MovieRouteSearchParams }) => ({
     page: search?.page || 1,
-    genres: search?.genres,
+    genres: search?.genres ? search.genres : "",
     rating: search?.rating,
     year: search?.year,
   }),
   loader: async ({ deps }) => {
     return {
-      movies: fetchDiscoverTvs({
+      movies: fetchDiscoverMovies({
         data: {
           page: deps.page,
           with_genres: deps.genres,
@@ -39,36 +39,37 @@ export const Route = createFileRoute("/tvs")({
   },
 });
 
-function TVsPage() {
+function MoviesPage() {
   const { movies } = Route.useLoaderData();
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-foreground mb-2">TV Shows</h1>
+        <h1 className="text-4xl font-bold text-foreground mb-2">Movies</h1>
         <p className="text-muted-foreground">
-          Discover and explore TV series from around the world
+          Discover and explore movies from around the world
         </p>
       </div>
 
       <FilterPopovers>
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-4 flex-wrap">
-            <TvGenreFilter />
-            <RatingFilter routePath="/tvs" />
-            <YearFilter routePath="/tvs" />
+            <GenreFilter />
+            <RatingFilter routePath="/movies" />
+            <YearFilter routePath="/movies" />
           </div>
 
-          <ClearFilters routePath="/tvs" />
+          <ClearFilters routePath="/movies" />
         </div>
       </FilterPopovers>
 
       <Suspense fallback={<MoviesSkeleton />}>
-        <Await promise={movies}>
-          {(moviesData) => (
+        <Await
+          promise={movies}
+          children={(moviesData) => (
             <MoviesContent moviesData={moviesData} route={Route} />
           )}
-        </Await>
+        />
       </Suspense>
     </div>
   );

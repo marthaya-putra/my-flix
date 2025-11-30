@@ -5,7 +5,7 @@ import ActorsSkeleton from "@/components/actors-skeleton";
 import ActorsContent from "@/components/actors-content";
 import { z } from "zod";
 
-export const Route = createFileRoute("/actors-search")({
+export const Route = createFileRoute("/actors/search")({
   validateSearch: z.object({
     query: z.string(),
     page: z.number().default(1),

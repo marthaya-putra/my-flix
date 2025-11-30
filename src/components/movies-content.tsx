@@ -2,10 +2,10 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import MovieCard from "@/components/movie-card";
 import Pagination from "@/components/pagination";
 import { DiscoverResult } from "@/lib/types";
-import { Route as MoviesRoute } from "@/routes/movies";
-import { Route as TvsRoute } from "@/routes/tvs";
-import { Route as TvsAiringTodayRoute } from "@/routes/tvs-airing-today";
-import { Route as MoviesSearchRoute } from "@/routes/movies-search";
+import { Route as MoviesRoute } from "@/routes/movies.index";
+import { Route as TvsRoute } from "@/routes/tvs.index";
+import { Route as TvsAiringTodayRoute } from "@/routes/tvs.airing-today";
+import { Route as MoviesSearchRoute } from "@/routes/movies.search";
 
 interface MoviesContentProps {
   moviesData: DiscoverResult;

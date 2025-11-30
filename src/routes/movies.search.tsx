@@ -5,7 +5,7 @@ import MoviesSkeleton from "@/components/movies-skeleton";
 import MoviesContent from "@/components/movies-content";
 import { z } from "zod";
 
-export const Route = createFileRoute("/movies-search")({
+export const Route = createFileRoute("/movies/search")({
   validateSearch: z.object({
     query: z.string(),
     page: z.number().default(1),

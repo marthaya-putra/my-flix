@@ -4,10 +4,12 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 
 interface YearFilterProps {
-  routePath?: "/movies" | "/tvs";
+  routePath?: "/movies/" | "/tvs/";
 }
 
-export default function YearFilter({ routePath = "/movies" }: YearFilterProps) {
+export default function YearFilter({
+  routePath = "/movies/",
+}: YearFilterProps) {
   const search = useSearch({ from: routePath }) as {
     page: number;
     genres?: string;
@@ -59,10 +61,7 @@ export default function YearFilter({ routePath = "/movies" }: YearFilterProps) {
               key={year}
               className="flex items-center space-x-2 cursor-pointer hover:bg-accent/50 p-2 rounded-md transition-colors"
             >
-              <RadioGroupItem
-                value={year.toString()}
-                id={`year-${year}`}
-              />
+              <RadioGroupItem value={year.toString()} id={`year-${year}`} />
               <span>{year}</span>
             </Label>
           ))}

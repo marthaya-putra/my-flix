@@ -67,7 +67,7 @@ export default function Navbar() {
               to="/movies"
               className={cn(
                 "transition-colors",
-                location.pathname === "/movies"
+                location.pathname === "/movies/"
                   ? "text-primary font-semibold"
                   : "text-foreground hover:text-primary"
               )}
@@ -78,7 +78,7 @@ export default function Navbar() {
               to="/tvs"
               className={cn(
                 "transition-colors",
-                location.pathname === "/tvs"
+                location.pathname === "/tvs/"
                   ? "text-primary font-semibold"
                   : "text-foreground hover:text-primary"
               )}

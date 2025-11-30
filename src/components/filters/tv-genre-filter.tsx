@@ -5,8 +5,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
 export default function TvGenreFilter() {
-  const search = useSearch({ from: "/tvs" });
-  const navigate = useNavigate({ from: "/tvs" });
+  const search = useSearch({ from: "/tvs/" });
+  const navigate = useNavigate({ from: "/tvs/" });
 
   const selectedGenres =
     typeof search.genres === "string" && search.genres
