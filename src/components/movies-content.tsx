@@ -20,7 +20,7 @@ export default function MoviesContent({
   moviesData,
   route,
 }: MoviesContentProps) {
-  const navigate = useNavigate({ from: route.id } as any);
+  const navigate = useNavigate({ from: route.path });
   const search = useSearch({
     from: route.id,
   });

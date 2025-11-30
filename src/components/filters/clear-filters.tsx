@@ -13,7 +13,7 @@ interface ClearFiltersProps {
 }
 
 export default function ClearFilters({ route }: ClearFiltersProps) {
-  const navigate = useNavigate({ from: route.id } as any);
+  const navigate = useNavigate({ from: route.path });
   const search = useSearch({ from: route.id });
 
   const genres = "genres" in search ? search.genres : undefined;
@@ -27,7 +27,7 @@ export default function ClearFilters({ route }: ClearFiltersProps) {
       navigate({
         search: {
           query: search.query,
-        }
+        },
       });
     } else {
       navigate({
@@ -36,7 +36,7 @@ export default function ClearFilters({ route }: ClearFiltersProps) {
           genres: undefined,
           rating: undefined,
           year: undefined,
-        }
+        },
       });
     }
   };
