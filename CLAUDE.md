@@ -10,17 +10,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Architecture Overview
 
 **Framework Stack:**
+
 - TanStack Start with React 19 and TypeScript
 - Vite with SSR support via TanStack Start plugin
 - File-based routing with automatic type generation
 
 **Key Architecture Patterns:**
+
 - **File-based routing**: Routes are defined in `src/routes/` using `createFileRoute()`
 - **Server functions**: Use `createServerFn()` for server-side operations (file I/O, API calls)
 - **Route tree generation**: `routeTree.gen.ts` is auto-generated from route files
 - **SSR-ready**: Root layout in `__root.tsx` provides HTML structure with `HeadContent` and `Scripts`
 
 **Project Structure:**
+
 ```
 src/
 ├── routes/
@@ -32,6 +35,7 @@ src/
 
 **Server Function Pattern:**
 Server functions use `createServerFn()` with method definitions and handlers. Example pattern from counter:
+
 - GET functions for data retrieval
 - POST functions with input validators for mutations
 - File system operations for state persistence
@@ -40,11 +44,13 @@ Server functions use `createServerFn()` with method definitions and handlers. Ex
 Routes export a `Route` object with `component` and optional `loader` for data fetching. Use `Route.useLoaderData()` to access loader data in components.
 
 **File Naming Convention:**
+
 - **Components**: Use kebab-case for all component file names (e.g., `movie-card.tsx`, `content-row.tsx`)
 - **UI Components**: The UI library components (in `src/components/ui/`) follow their existing naming convention
 - **Files**: All files should use lowercase with hyphens for readability
 
 **UI Component Usage:**
+
 - **Always prefer shadcn UI components** over native HTML elements
 - Use `@/components/ui/button` instead of `<button>` elements
 - Use `@/components/ui/checkbox` instead of `<input type="checkbox">`
@@ -54,7 +60,19 @@ Routes export a `Route` object with `component` and optional `loader` for data f
 - Available components are listed in `src/components/ui/` - always check what's available before using native elements
 
 **Environment Variables:**
+
 - `INCLUDE_ADULT_CONTENT` - Controls whether adult content is included in TMDB search results (default: false)
   - Set to `true` to include adult content in search results
   - Set to `false` or omit to exclude adult content
   - Used in: `src/lib/data/search.ts` for TMDB multi-search API calls
+
+## ULTRATHINK PROMPT
+
+For complex tasks, always activate ULTRATHINK mode:
+
+1. **Analysis**: Understand the requirements and constraints.
+2. **Planning**: Break down the task into manageable steps.
+3. **Execution**: Implement each step with precision.
+4. **Review**: Evaluate the solution for completeness and efficiency.
+
+Use ULTRATHINK to ensure the best possible outcomes for challenging problems.
