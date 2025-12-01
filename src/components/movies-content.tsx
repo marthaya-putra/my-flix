@@ -36,43 +36,21 @@ export default function MoviesContent({
   const hasPreviousPage = currentPage > 1;
 
   const nextPage = () => {
-    if (query) {
-      navigate({
-        search: {
-          query,
-          page: currentPage + 1,
-        },
-      });
-    } else {
-      navigate({
-        search: {
-          page: currentPage + 1,
-          genres,
-          rating,
-          year,
-        },
-      });
-    }
+    navigate({
+      search: {
+        ...search,
+        page: currentPage + 1,
+      },
+    });
   };
 
   const prevPage = () => {
-    if (query) {
-      navigate({
-        search: {
-          query,
-          page: currentPage - 1,
-        },
-      });
-    } else {
-      navigate({
-        search: {
-          page: currentPage - 1,
-          genres,
-          rating,
-          year,
-        },
-      });
-    }
+    navigate({
+      search: {
+        ...search,
+        page: currentPage - 1,
+      },
+    });
   };
 
   return (

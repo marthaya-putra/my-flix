@@ -43,10 +43,7 @@ function TvAiringTodayPage() {
       <Suspense fallback={<MoviesSkeleton />}>
         <Await promise={movies}>
           {(moviesData) => (
-            <MoviesContent
-              moviesData={moviesData}
-              route={Route}
-            />
+            <MoviesContent moviesData={moviesData} route={Route} />
           )}
         </Await>
       </Suspense>
