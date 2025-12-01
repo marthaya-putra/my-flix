@@ -18,7 +18,7 @@ export default function Hero(filmInfo: FilmInfo) {
 
       <div className="relative h-full flex px-4 md:px-12 max-w-7xl mx-auto">
         <div className="max-w-2xl flex flex-col justify-center">
-          <h1 className="text-5xl md:text-7xl font-display font-black text-white leading-none tracking-tight drop-shadow-2xl uppercase">
+          <h1 className="text-3xl md:text-5xl font-display font-black text-white leading-none tracking-tight drop-shadow-2xl uppercase">
             {filmInfo.title}
           </h1>
 
@@ -47,7 +47,7 @@ export default function Hero(filmInfo: FilmInfo) {
               ))}
             </div>
           </div>
-          <p className="text-lg text-gray-300 leading-relaxed line-clamp-3 md:line-clamp-none max-w-xl drop-shadow-md pt-4">
+          <p className="text-base text-gray-300 leading-relaxed line-clamp-3 md:line-clamp-none max-w-xl drop-shadow-md pt-4">
             {filmInfo.overview}
           </p>
 
