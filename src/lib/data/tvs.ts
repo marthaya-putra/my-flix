@@ -41,7 +41,6 @@ export const fetchAiringTodayTvs = createServerFn({
       queryParams.set("timezone", data.timezone);
     }
 
-    console.log({ queryParams });
     const result = await fetchFromTMDB(
       `/tv/airing_today?${queryParams.toString()}`
     );
@@ -58,7 +57,6 @@ export const fetchOnTheAirTvs = createServerFn({
     if (data?.timezone) {
       queryParams.set("timezone", data.timezone);
     }
-    console.log({ queryParams });
     const result = await fetchFromTMDB(
       `/tv/on_the_air?${queryParams.toString()}`
     );
