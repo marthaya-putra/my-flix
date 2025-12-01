@@ -5,6 +5,7 @@ import { DiscoverResult } from "@/lib/types";
 import { Route as MoviesRoute } from "@/routes/movies.index";
 import { Route as TvsRoute } from "@/routes/tvs.index";
 import { Route as TvsAiringTodayRoute } from "@/routes/tvs.airing-today";
+import { Route as TvsAiringThisWeekRoute } from "@/routes/tvs.airing-this-week";
 import { Route as MoviesSearchRoute } from "@/routes/movies.search";
 
 interface MoviesContentProps {
@@ -13,6 +14,7 @@ interface MoviesContentProps {
     | typeof MoviesRoute
     | typeof TvsRoute
     | typeof TvsAiringTodayRoute
+    | typeof TvsAiringThisWeekRoute
     | typeof MoviesSearchRoute;
 }
 

@@ -13,7 +13,7 @@ export const Route = createFileRoute("/tvs/airing-today")({
     timezone: z.string().optional(),
   }),
   component: TvAiringTodayPage,
-  loaderDeps: ({ search }) => ({
+  loaderDeps: ({ search }: { search?: MovieRouteSearchParams & { timezone?: string } }) => ({
     page: search?.page || 1,
     timezone: search?.timezone || getUserTimezone(), // Auto-detect fallback
   }),

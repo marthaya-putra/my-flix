@@ -12,7 +12,11 @@ export const Route = createFileRoute("/tvs/airing-this-week")({
     timezone: z.string().optional(),
   }),
   component: TvAiringThisWeekPage,
-  loaderDeps: ({ search }) => ({
+  loaderDeps: ({
+    search,
+  }: {
+    search?: { page?: number; timezone?: string };
+  }) => ({
     page: search?.page || 1,
     timezone: search?.timezone || getUserTimezone(), // Auto-detect fallback
   }),
