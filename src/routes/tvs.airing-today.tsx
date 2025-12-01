@@ -4,20 +4,23 @@ import { fetchAiringTodayTvs } from "@/lib/data/tvs";
 import { type MovieRouteSearchParams } from "@/lib/types";
 import MoviesSkeleton from "@/components/movies-skeleton";
 import MoviesContent from "@/components/movies-content";
+import { getUserTimezone } from "@/lib/utils/timezone";
 import { z } from "zod";
 
 export const Route = createFileRoute("/tvs/airing-today")({
   validateSearch: z.object({
     page: z.number().default(1),
+    timezone: z.string().optional(),
   }),
   component: TvAiringTodayPage,
-  loaderDeps: ({ search }: { search?: MovieRouteSearchParams }) => ({
+  loaderDeps: ({ search }) => ({
     page: search?.page || 1,
+    timezone: search?.timezone || getUserTimezone(), // Auto-detect fallback
   }),
   loader: async ({ deps }) => {
     return {
       movies: fetchAiringTodayTvs({
-        data: deps.page,
+        data: deps,
       }),
     };
   },

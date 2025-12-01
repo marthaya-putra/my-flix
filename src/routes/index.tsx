@@ -60,7 +60,7 @@ function Home() {
             <ContentRow
               title="New Episode Today"
               items={data.results}
-              exploreAllUrl="/tvs-airing-today"
+              exploreAllUrl="/tvs/airing-today"
             />
           )}
         />
@@ -72,7 +72,7 @@ function Home() {
             <ContentRow
               title="New Episode This Week"
               items={data.results}
-              exploreAllUrl="/tvs-airing-this-week"
+              exploreAllUrl="/tvs/airing-this-week"
             />
           )}
         />

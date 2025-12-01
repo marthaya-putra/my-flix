@@ -33,22 +33,35 @@ export const fetchTrendingTvs = createServerFn({
 export const fetchAiringTodayTvs = createServerFn({
   method: "GET",
 })
-  .inputValidator((page: number = 1) => page)
+  .inputValidator((params?: { page?: number; timezone?: string }) => params)
   .handler(async ({ data }) => {
     const queryParams = new URLSearchParams();
-    queryParams.set("page", String(data));
-    const result = await fetchFromTMDB(`/tv/airing_today?${queryParams.toString()}`);
+    queryParams.set("page", String(data?.page || 1));
+    if (data?.timezone) {
+      queryParams.set("timezone", data.timezone);
+    }
+
+    console.log({ queryParams });
+    const result = await fetchFromTMDB(
+      `/tv/airing_today?${queryParams.toString()}`
+    );
     return convertToDiscoverResult(result);
   });
 
 export const fetchOnTheAirTvs = createServerFn({
   method: "GET",
 })
-  .inputValidator((page: number = 1) => page)
+  .inputValidator((params?: { page?: number; timezone?: string }) => params)
   .handler(async ({ data }) => {
     const queryParams = new URLSearchParams();
-    queryParams.set("page", String(data));
-    const result = await fetchFromTMDB(`/tv/on_the_air?${queryParams.toString()}`);
+    queryParams.set("page", String(data?.page || 1));
+    if (data?.timezone) {
+      queryParams.set("timezone", data.timezone);
+    }
+    console.log({ queryParams });
+    const result = await fetchFromTMDB(
+      `/tv/on_the_air?${queryParams.toString()}`
+    );
     return convertToDiscoverResult(result);
   });
 
