@@ -1,0 +1,223 @@
+import { createServerFn } from '@tanstack/react-start';
+import { z } from 'zod';
+import { db, userPreferences, UserPreference, NewUserPreference } from '@/lib/db';
+import { eq, and, desc, ilike } from 'drizzle-orm';
+
+// Input validation schemas
+const addPreferenceSchema = z.object({
+  userId: z.string().min(1, 'User ID is required'),
+  title: z.string().min(1, 'Title is required'),
+  category: z.enum(['movie', 'tv-series'], {
+    errorMap: () => ({ message: 'Category must be either movie or tv-series' })
+  }),
+  genres: z.string().optional(),
+});
+
+const updatePreferenceSchema = z.object({
+  id: z.number().positive(),
+  userId: z.string().min(1, 'User ID is required'),
+  title: z.string().min(1, 'Title is required'),
+  category: z.enum(['movie', 'tv-series']),
+  genres: z.string().optional(),
+});
+
+const removePreferenceSchema = z.object({
+  id: z.number().positive(),
+  userId: z.string().min(1, 'User ID is required'),
+});
+
+const getUserPreferencesSchema = z.object({
+  userId: z.string().min(1, 'User ID is required'),
+  category: z.enum(['movie', 'tv-series']).optional(),
+  limit: z.number().positive().max(100).default(50),
+  offset: z.number().nonnegative().default(0),
+});
+
+// Server functions for user preferences
+export const addUserPreference = createServerFn({
+  method: 'POST',
+})
+.inputValidator(addPreferenceSchema)
+.handler(async ({ data }) => {
+  try {
+    // Check if preference already exists
+    const existing = await db
+      .select()
+      .from(userPreferences)
+      .where(
+        and(
+          eq(userPreferences.userId, data.userId),
+          eq(userPreferences.title, data.title),
+          eq(userPreferences.category, data.category)
+        )
+      )
+      .limit(1);
+
+    if (existing.length > 0) {
+      throw new Error('This preference already exists');
+    }
+
+    // Insert new preference
+    const newPreference: NewUserPreference = {
+      userId: data.userId,
+      title: data.title,
+      category: data.category,
+      genres: data.genres || null,
+    };
+
+    const result = await db
+      .insert(userPreferences)
+      .values(newPreference)
+      .returning();
+
+    return {
+      success: true,
+      preference: result[0],
+    };
+  } catch (error) {
+    console.error('Failed to add user preference:', error);
+    throw new Error(
+      error instanceof Error ? error.message : 'Failed to add preference'
+    );
+  }
+});
+
+export const getUserPreferences = createServerFn({
+  method: 'GET',
+})
+.inputValidator(getUserPreferencesSchema)
+.handler(async ({ data }) => {
+  try {
+    const whereConditions = [eq(userPreferences.userId, data.userId)];
+
+    if (data.category) {
+      whereConditions.push(eq(userPreferences.category, data.category));
+    }
+
+    const preferences = await db
+      .select()
+      .from(userPreferences)
+      .where(and(...whereConditions))
+      .orderBy(desc(userPreferences.updatedAt))
+      .limit(data.limit)
+      .offset(data.offset);
+
+    return {
+      success: true,
+      preferences,
+      hasMore: preferences.length === data.limit,
+    };
+  } catch (error) {
+    console.error('Failed to get user preferences:', error);
+    throw new Error('Failed to fetch preferences');
+  }
+});
+
+export const updateUserPreference = createServerFn({
+  method: 'PUT',
+})
+.inputValidator(updatePreferenceSchema)
+.handler(async ({ data }) => {
+  try {
+    const result = await db
+      .update(userPreferences)
+      .set({
+        title: data.title,
+        category: data.category,
+        genres: data.genres || null,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(userPreferences.id, data.id),
+          eq(userPreferences.userId, data.userId)
+        )
+      )
+      .returning();
+
+    if (result.length === 0) {
+      throw new Error('Preference not found or access denied');
+    }
+
+    return {
+      success: true,
+      preference: result[0],
+    };
+  } catch (error) {
+    console.error('Failed to update user preference:', error);
+    throw new Error(
+      error instanceof Error ? error.message : 'Failed to update preference'
+    );
+  }
+});
+
+export const removeUserPreference = createServerFn({
+  method: 'DELETE',
+})
+.inputValidator(removePreferenceSchema)
+.handler(async ({ data }) => {
+  try {
+    const result = await db
+      .delete(userPreferences)
+      .where(
+        and(
+          eq(userPreferences.id, data.id),
+          eq(userPreferences.userId, data.userId)
+        )
+      )
+      .returning();
+
+    if (result.length === 0) {
+      throw new Error('Preference not found or access denied');
+    }
+
+    return {
+      success: true,
+      deletedPreference: result[0],
+    };
+  } catch (error) {
+    console.error('Failed to remove user preference:', error);
+    throw new Error(
+      error instanceof Error ? error.message : 'Failed to remove preference'
+    );
+  }
+});
+
+export const searchUserPreferences = createServerFn({
+  method: 'GET',
+})
+.inputValidator(
+  z.object({
+    userId: z.string().min(1, 'User ID is required'),
+    query: z.string().min(1, 'Search query is required'),
+    category: z.enum(['movie', 'tv-series']).optional(),
+    limit: z.number().positive().max(50).default(20),
+  })
+)
+.handler(async ({ data }) => {
+  try {
+    const whereConditions = [
+      eq(userPreferences.userId, data.userId),
+      ilike(userPreferences.title, `%${data.query}%`)
+    ];
+
+    if (data.category) {
+      whereConditions.push(eq(userPreferences.category, data.category));
+    }
+
+    const preferences = await db
+      .select()
+      .from(userPreferences)
+      .where(and(...whereConditions))
+      .orderBy(desc(userPreferences.updatedAt))
+      .limit(data.limit);
+
+    return {
+      success: true,
+      preferences,
+    };
+  } catch (error) {
+    console.error('Failed to search user preferences:', error);
+    throw new Error('Failed to search preferences');
+  }
+});

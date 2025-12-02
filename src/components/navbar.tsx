@@ -6,6 +6,7 @@ import {
   LogOut,
   Settings,
   User as UserIcon,
+  Heart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -84,6 +85,20 @@ export default function Navbar() {
               )}
             >
               TV Shows
+            </Link>
+            <Link
+              to="/preferences"
+              className={cn(
+                "transition-colors",
+                location.pathname === "/preferences"
+                  ? "text-primary font-semibold"
+                  : "text-foreground hover:text-primary"
+              )}
+            >
+              <div className="flex items-center gap-2">
+                <Heart className="w-4 h-4" />
+                <span>Preferences</span>
+              </div>
             </Link>
           </div>
         </div>

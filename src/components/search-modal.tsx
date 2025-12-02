@@ -46,7 +46,7 @@ export default function SearchModal({ open, onOpenChange }: SearchModalProps) {
 
     setIsLoading(true);
     try {
-      const results = await searchContent({ data: query });
+      const results = await searchContent(query);
       setSearchResults(results);
     } catch (error) {
       console.error("Search failed:", error);
@@ -117,7 +117,7 @@ export default function SearchModal({ open, onOpenChange }: SearchModalProps) {
             <div className="space-y-3 h-full">
               {movies.length > 0 && (
                 <div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 items-start">
                     {movies.map((movie) => (
                       <PlayLink
                         key={`movie-${movie.id}`}
@@ -155,7 +155,7 @@ export default function SearchModal({ open, onOpenChange }: SearchModalProps) {
               {/* TV Shows Row */}
               {tvShows.length > 0 && (
                 <div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 items-start">
                     {tvShows.map((tvShow) => (
                       <PlayLink
                         key={`tv-${tvShow.id}`}
@@ -193,7 +193,7 @@ export default function SearchModal({ open, onOpenChange }: SearchModalProps) {
               {/* Actors Row */}
               {actors.length > 0 && (
                 <div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 items-start">
                     {actors.map((actor) => (
                       <Card
                         key={`actor-${actor.id}`}

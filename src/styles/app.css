@@ -87,7 +87,7 @@
       radial-gradient(at 100% 100%, hsl(215 20% 18%) 0px, transparent 50%),
       radial-gradient(at 0% 100%, hsl(190 60% 15%) 0px, transparent 50%);
     background-attachment: fixed;
-    min-height: 100vh;
+    min-height: 100%;
   }
   h1,
   h2,
@@ -144,4 +144,33 @@
     animation: slide 300ms ease-in-out;
   }
 
+  /* Line clamp utility for text truncation */
+  .line-clamp-1 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
   }
+
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  /* Mobile-first responsive utilities */
+  @media (max-width: 640px) {
+    .container {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+  }
+}

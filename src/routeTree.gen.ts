@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as PreferencesRouteImport } from './routes/preferences'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TvsIndexRouteImport } from './routes/tvs.index'
 import { Route as MoviesIndexRouteImport } from './routes/movies.index'
@@ -18,6 +19,11 @@ import { Route as TvsAiringThisWeekRouteImport } from './routes/tvs.airing-this-
 import { Route as MoviesSearchRouteImport } from './routes/movies.search'
 import { Route as ActorsSearchRouteImport } from './routes/actors.search'
 
+const PreferencesRoute = PreferencesRouteImport.update({
+  id: '/preferences',
+  path: '/preferences',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -61,6 +67,7 @@ const ActorsSearchRoute = ActorsSearchRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/preferences': typeof PreferencesRoute
   '/actors/search': typeof ActorsSearchRoute
   '/movies/search': typeof MoviesSearchRoute
   '/tvs/airing-this-week': typeof TvsAiringThisWeekRoute
@@ -71,6 +78,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/preferences': typeof PreferencesRoute
   '/actors/search': typeof ActorsSearchRoute
   '/movies/search': typeof MoviesSearchRoute
   '/tvs/airing-this-week': typeof TvsAiringThisWeekRoute
@@ -82,6 +90,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/preferences': typeof PreferencesRoute
   '/actors/search': typeof ActorsSearchRoute
   '/movies/search': typeof MoviesSearchRoute
   '/tvs/airing-this-week': typeof TvsAiringThisWeekRoute
@@ -94,6 +103,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/preferences'
     | '/actors/search'
     | '/movies/search'
     | '/tvs/airing-this-week'
@@ -104,6 +114,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/preferences'
     | '/actors/search'
     | '/movies/search'
     | '/tvs/airing-this-week'
@@ -114,6 +125,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/preferences'
     | '/actors/search'
     | '/movies/search'
     | '/tvs/airing-this-week'
@@ -125,6 +137,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  PreferencesRoute: typeof PreferencesRoute
   ActorsSearchRoute: typeof ActorsSearchRoute
   MoviesSearchRoute: typeof MoviesSearchRoute
   TvsAiringThisWeekRoute: typeof TvsAiringThisWeekRoute
@@ -136,6 +149,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/preferences': {
+      id: '/preferences'
+      path: '/preferences'
+      fullPath: '/preferences'
+      preLoaderRoute: typeof PreferencesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -197,6 +217,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  PreferencesRoute: PreferencesRoute,
   ActorsSearchRoute: ActorsSearchRoute,
   MoviesSearchRoute: MoviesSearchRoute,
   TvsAiringThisWeekRoute: TvsAiringThisWeekRoute,

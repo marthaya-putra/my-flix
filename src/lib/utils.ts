@@ -31,3 +31,30 @@ export function convertToDiscoverResult(data: any): DiscoverResult {
 export function getReleasedYear(releaseDate: string) {
   return releaseDate.split("-")[0];
 }
+
+// Utility functions for preferences
+export function getPreferenceIcon(type: 'movie' | 'tv' | 'person') {
+  switch (type) {
+    case 'movie':
+      return '🎬';
+    case 'tv':
+      return '📺';
+    case 'person':
+      return '🎭';
+    default:
+      return '⭐';
+  }
+}
+
+export function formatPreferenceLabel(type: 'movie' | 'tv' | 'person') {
+  switch (type) {
+    case 'movie':
+      return 'Movie';
+    case 'tv':
+      return 'TV Show';
+    case 'person':
+      return 'Actor';
+    default:
+      return 'Content';
+  }
+}
