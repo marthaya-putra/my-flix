@@ -62,11 +62,11 @@ export default function SearchModal({ open, onOpenChange }: SearchModalProps) {
 
   const movies = searchResults?.movies.slice(0, 5) || [];
   const tvShows = searchResults?.tvShows.slice(0, 5) || [];
-  const actors = searchResults?.actors.slice(0, 5) || [];
+  const people = searchResults?.people.slice(0, 5) || [];
 
   const hasMoreMovies = (searchResults?.movies.length || 0) > 5;
   const hasMoreTvShows = (searchResults?.tvShows.length || 0) > 5;
-  const hasMoreActors = (searchResults?.actors.length || 0) > 5;
+  const hasMorePeople = (searchResults?.people.length || 0) > 5;
 
   const handleMoreClick = () => {
     onOpenChange(false);
@@ -82,7 +82,7 @@ export default function SearchModal({ open, onOpenChange }: SearchModalProps) {
 
         <DialogHeader className=" pb-4 pt-2">
           <DialogTitle className="sr-only">
-            Search Movies, TV Shows, and Actors
+            Search Movies, TV Shows, and People
           </DialogTitle>
           <div className="flex items-center gap-4 pr-14">
             <div className="relative flex-1">
@@ -90,7 +90,7 @@ export default function SearchModal({ open, onOpenChange }: SearchModalProps) {
               <Input
                 ref={inputRef}
                 autoFocus
-                placeholder="Search by title or actor..."
+                placeholder="Search by title or person..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-12 pr-4 py-3 bg-gray-900/50 border-gray-700 text-white placeholder-gray-400 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500 rounded-full h-12 text-base w-full"
@@ -109,7 +109,7 @@ export default function SearchModal({ open, onOpenChange }: SearchModalProps) {
           {!isLoading && !searchQuery && (
             <div className="flex flex-col items-center justify-center h-full text-gray-400">
               <Search className="w-16 h-16 mb-4 opacity-50" />
-              <p className="text-lg">Search by title or actor</p>
+              <p className="text-lg">Search by title or person</p>
             </div>
           )}
 
@@ -190,15 +190,15 @@ export default function SearchModal({ open, onOpenChange }: SearchModalProps) {
                 </div>
               )}
 
-              {/* Actors Row */}
-              {actors.length > 0 && (
+              {/* People Row */}
+              {people.length > 0 && (
                 <div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 items-start">
-                    {actors.map((actor) => (
+                    {people.map((person) => (
                       <Card
-                        key={`actor-${actor.id}`}
-                        imageUrl={actor.profileImageUrl}
-                        title={actor.name}
+                        key={`person-${person.id}`}
+                        imageUrl={person.profileImageUrl}
+                        title={person.name}
                         badge={
                           <div className="bg-purple-500/90 backdrop-blur-sm p-2 rounded-full">
                             <User className="w-3 h-3 text-white" />
@@ -206,10 +206,10 @@ export default function SearchModal({ open, onOpenChange }: SearchModalProps) {
                         }
                       />
                     ))}
-                    {hasMoreActors && (
+                    {hasMorePeople && (
                       <div className="flex items-center justify-center">
                         <Link
-                          to="/actors-search"
+                          to="/person/search"
                           search={{ query: searchQuery }}
                           className="text-sm text-purple-400 hover:text-purple-300 transition-colors font-medium"
                           onClick={handleMoreClick}
@@ -225,7 +225,7 @@ export default function SearchModal({ open, onOpenChange }: SearchModalProps) {
               {/* No Results */}
               {movies.length === 0 &&
                 tvShows.length === 0 &&
-                actors.length === 0 && (
+                people.length === 0 && (
                   <div className="flex flex-col items-center justify-center h-full text-gray-400">
                     <Search className="w-16 h-16 mb-4 opacity-50" />
                     <p className="text-lg">No results found</p>

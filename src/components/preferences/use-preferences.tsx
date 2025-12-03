@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react';
 import { createServerFn } from '@tanstack/react-start';
 import { FilmInfo, Person } from '@/lib/types';
+import {
+  addMoviePreference,
+  addPersonPreference,
+  removeMoviePreference,
+  removePersonPreference,
+  fetchUserPreferences,
+} from '@/lib/data/preferences';
 
 // Types for user preferences
 export interface UserPreferences {
@@ -8,7 +15,7 @@ export interface UserPreferences {
   userId?: string;
   movies: FilmInfo[];
   tvShows: FilmInfo[];
-  actors: Person[];
+  people: Person[];
   favoriteGenres: string[];
   minRating: number;
   preferredContent: {
@@ -20,53 +27,16 @@ export interface UserPreferences {
   updatedAt?: string;
 }
 
-// Server function to save preferences
-export const savePreferences = createServerFn({
-  method: 'POST',
-})
-  .inputValidator((data: UserPreferences) => data)
-  .handler(async ({ data }) => {
-    // In a real app, you would save this to a database
-    // For now, we'll just simulate saving
-    console.log('Saving preferences:', data);
-
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    return {
-      success: true,
-      preferences: {
-        ...data,
-        id: 'user-prefs-1',
-        updatedAt: new Date().toISOString(),
-      }
-    };
-  });
-
-// Server function to load preferences
+// Server function to load preferences from database
 export const loadPreferences = createServerFn({
   method: 'GET',
 })
   .handler(async () => {
-    // In a real app, you would fetch this from a database
-    // For now, we'll return mock data
-    const mockPreferences: UserPreferences = {
-      id: 'user-prefs-1',
-      movies: [],
-      tvShows: [],
-      actors: [],
-      favoriteGenres: ['Comedy', 'Drama', 'Action'],
-      minRating: 6.5,
-      preferredContent: {
-        movie: true,
-        tv: true,
-      },
-      notes: '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    return mockPreferences;
+    const result = await fetchUserPreferences();
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to load preferences');
+    }
+    return result.data;
   });
 
 // Hook for managing preferences
@@ -74,7 +44,7 @@ export function usePreferences() {
   const [preferences, setPreferences] = useState<UserPreferences>({
     movies: [],
     tvShows: [],
-    actors: [],
+    people: [],
     favoriteGenres: [],
     minRating: 6,
     preferredContent: {
@@ -92,7 +62,9 @@ export function usePreferences() {
     const loadPrefs = async () => {
       try {
         setIsLoading(true);
+        console.log('Loading preferences from database...');
         const savedPrefs = await loadPreferences();
+        console.log('Loaded preferences:', savedPrefs);
         setPreferences(savedPrefs);
       } catch (err) {
         setError('Failed to load preferences');
@@ -108,48 +80,64 @@ export function usePreferences() {
   // Add a movie/TV show to preferences
   const addPreference = async (content: FilmInfo | Person) => {
     try {
-      let newPreferences: UserPreferences;
-
-      if (content.knownFor !== undefined) {
+      if ('knownFor' in content) {
         // It's a person/actor
-        const existingIndex = preferences.actors.findIndex(a => a.id === content.id);
-        if (existingIndex >= 0) {
-          // Already exists, don't add duplicate
+        const person = content as Person;
+        const personType = person.category === 'director' ? 'director' : 'actor';
+
+        const result = await addPersonPreference({
+          data: {
+            personName: person.name,
+            personType: person.category === 'director' ? 'director' : 'actor',
+            profilePath: person.profileImageUrl,
+          }
+        });
+
+        if (!result.success) {
+          setError(result.error || 'Failed to add person preference');
           return;
         }
-        newPreferences = {
-          ...preferences,
-          actors: [...preferences.actors, content as Person],
-        };
+
+        // Update local state
+        setPreferences(prev => ({
+          ...prev,
+          people: [...prev.people, person],
+        }));
       } else {
         // It's a movie or TV show
         const film = content as FilmInfo;
-        if (film.category === 'movie') {
-          const existingIndex = preferences.movies.findIndex(m => m.id === content.id);
-          if (existingIndex >= 0) {
-            // Already exists, don't add duplicate
-            return;
+
+        const category = film.category === 'tv' ? 'tv-series' : 'movie';
+        const genres = film.genres.join(', ');
+
+        const result = await addMoviePreference({
+          data: {
+            title: film.title,
+            category,
+            genres: genres || undefined,
+            posterPath: film.posterPath,
           }
-          newPreferences = {
-            ...preferences,
-            movies: [...preferences.movies, film],
-          };
+        });
+
+        if (!result.success) {
+          setError(result.error || 'Failed to add film preference');
+          return;
+        }
+
+        // Update local state
+        if (film.category === 'movie') {
+          setPreferences(prev => ({
+            ...prev,
+            movies: [...prev.movies, film],
+          }));
         } else {
           // TV show
-          const existingIndex = preferences.tvShows.findIndex(t => t.id === content.id);
-          if (existingIndex >= 0) {
-            // Already exists, don't add duplicate
-            return;
-          }
-          newPreferences = {
-            ...preferences,
-            tvShows: [...preferences.tvShows, film],
-          };
+          setPreferences(prev => ({
+            ...prev,
+            tvShows: [...prev.tvShows, film],
+          }));
         }
       }
-
-      await savePreferences(newPreferences);
-      setPreferences(newPreferences);
     } catch (err) {
       setError('Failed to add preference');
       console.error('Error adding preference:', err);
@@ -159,35 +147,67 @@ export function usePreferences() {
   // Remove a preference
   const removePreference = async (id: number, type: 'movie' | 'tv' | 'person') => {
     try {
-      let newPreferences: UserPreferences;
+      let result;
 
       if (type === 'person') {
-        newPreferences = {
-          ...preferences,
-          actors: preferences.actors.filter(a => a.id !== id),
-        };
+        // Remove from user people table
+        const personType = preferences.people.find(p => p.id === id)?.category === 'director' ? 'director' : 'actor';
+        result = await removePersonPreference({
+          data: {
+            id,
+            personType,
+          },
+        });
+
+        if (result.success) {
+          setPreferences(prev => ({
+            ...prev,
+            people: prev.people.filter(p => p.id !== id),
+          }));
+        }
       } else if (type === 'movie') {
-        newPreferences = {
-          ...preferences,
-          movies: preferences.movies.filter(m => m.id !== id),
-        };
+        // Remove from user preferences table
+        result = await removeMoviePreference({
+          data: {
+            id,
+            type: 'movie',
+          },
+        });
+
+        if (result.success) {
+          setPreferences(prev => ({
+            ...prev,
+            movies: prev.movies.filter(m => m.id !== id),
+          }));
+        }
       } else {
         // TV show
-        newPreferences = {
-          ...preferences,
-          tvShows: preferences.tvShows.filter(t => t.id !== id),
-        };
+        result = await removeMoviePreference({
+          data: {
+            id,
+            type: 'tv-series',
+          },
+        });
+
+        if (result.success) {
+          setPreferences(prev => ({
+            ...prev,
+            tvShows: prev.tvShows.filter(t => t.id !== id),
+          }));
+        }
       }
 
-      await savePreferences(newPreferences);
-      setPreferences(newPreferences);
+      if (!result?.success) {
+        setError(result?.error || 'Failed to remove preference');
+        return;
+      }
     } catch (err) {
       setError('Failed to remove preference');
       console.error('Error removing preference:', err);
     }
   };
 
-  // Update general preferences
+  // Update general preferences (non-critical data like favorite genres, ratings, etc.)
   const updatePreferences = async (updates: Partial<UserPreferences>) => {
     try {
       setIsSaving(true);
@@ -197,7 +217,9 @@ export function usePreferences() {
         updatedAt: new Date().toISOString(),
       };
 
-      await savePreferences(newPreferences);
+      // For now, we'll just update local state since we don't have a dedicated table
+      // for general preferences like favorite genres, minRating, etc.
+      // These could be stored in a separate user_settings table in the future
       setPreferences(newPreferences);
     } catch (err) {
       setError('Failed to update preferences');
@@ -210,10 +232,12 @@ export function usePreferences() {
   // Clear all preferences
   const clearPreferences = async () => {
     try {
+      // For now, we'll just clear local state
+      // In a future version, we could add server functions to clear all database records
       const newPreferences: UserPreferences = {
         movies: [],
         tvShows: [],
-        actors: [],
+        people: [],
         favoriteGenres: [],
         minRating: 6,
         preferredContent: {
@@ -223,7 +247,6 @@ export function usePreferences() {
         notes: '',
       };
 
-      await savePreferences(newPreferences);
       setPreferences(newPreferences);
     } catch (err) {
       setError('Failed to clear preferences');
@@ -235,15 +258,15 @@ export function usePreferences() {
   const getStats = () => ({
     totalMovies: preferences.movies.length,
     totalTVShows: preferences.tvShows.length,
-    totalActors: preferences.actors.length,
-    totalFavorites: preferences.movies.length + preferences.tvShows.length + preferences.actors.length,
+    totalPeople: preferences.people.length,
+    totalFavorites: preferences.movies.length + preferences.tvShows.length + preferences.people.length,
     genreCount: preferences.favoriteGenres.length,
   });
 
   // Check if an item is already in preferences
   const isInPreferences = (id: number, type: 'movie' | 'tv' | 'person') => {
     if (type === 'person') {
-      return preferences.actors.some(a => a.id === id);
+      return preferences.people.some(a => a.id === id);
     } else if (type === 'movie') {
       return preferences.movies.some(m => m.id === id);
     } else {
@@ -258,7 +281,7 @@ export function usePreferences() {
     return {
       movies: [],
       tvShows: [],
-      actors: [],
+      people: [],
     };
   };
 

@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Film, Tv, Users, Star, Heart, TrendingUp, ChevronDown, ChevronUp, Plus } from "lucide-react";
+import { Film, Tv, Users, Star, Heart, TrendingUp, ChevronDown, ChevronUp, Plus, Camera } from "lucide-react";
 import { UserPreferences } from "./use-preferences";
 
 interface MobilePreferenceSummaryProps {
@@ -21,7 +21,13 @@ export function MobilePreferenceSummary({
   className,
 }: MobilePreferenceSummaryProps) {
   const [isOpen, setIsOpen] = React.useState(true);
-  const totalFavorites = preferences.movies.length + preferences.tvShows.length + preferences.actors.length;
+  const totalFavorites = preferences.movies.length + preferences.tvShows.length + preferences.people.length;
+
+  // Count person categories
+  const personCategories = preferences.people.reduce((acc, person) => {
+    acc[person.category] = (acc[person.category] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
 
   const getProfileStrength = () => {
     let score = 0;
@@ -29,7 +35,7 @@ export function MobilePreferenceSummary({
 
     score += Math.min(preferences.movies.length * 5, 25);
     score += Math.min(preferences.tvShows.length * 5, 25);
-    score += Math.min(preferences.actors.length * 4, 20);
+    score += Math.min(preferences.people.length * 4, 20);
     score += Math.min(preferences.favoriteGenres.length * 3, 15);
     score += preferences.minRating > 0 ? 15 : 0;
 
@@ -91,13 +97,46 @@ export function MobilePreferenceSummary({
               </div>
               <div className="p-2 bg-muted/30 rounded">
                 <Users className="h-3 w-3 mx-auto mb-1 text-green-500" />
-                <div className="text-xs font-bold">{preferences.actors.length}</div>
+                <div className="text-xs font-bold">{preferences.people.length}</div>
               </div>
               <div className="p-2 bg-primary/10 rounded">
                 <Star className="h-3 w-3 mx-auto mb-1 text-yellow-500" />
                 <div className="text-xs font-bold">{preferences.minRating}+</div>
               </div>
             </div>
+
+            {/* Person Categories Breakdown */}
+            {preferences.people.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-medium">Person Categories</span>
+                  <span className="text-muted-foreground">{preferences.people.length} total</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {(personCategories.actor > 0) && (
+                    <div className="p-2 bg-blue-50 dark:bg-blue-950 rounded text-center">
+                      <Film className="h-3 w-3 mx-auto mb-1 text-blue-600 dark:text-blue-400" />
+                      <div className="text-xs font-bold text-blue-600 dark:text-blue-400">{personCategories.actor}</div>
+                      <div className="text-xs text-blue-500 dark:text-blue-300">Actors</div>
+                    </div>
+                  )}
+                  {(personCategories.director > 0) && (
+                    <div className="p-2 bg-green-50 dark:bg-green-950 rounded text-center">
+                      <Camera className="h-3 w-3 mx-auto mb-1 text-green-600 dark:text-green-400" />
+                      <div className="text-xs font-bold text-green-600 dark:text-green-400">{personCategories.director}</div>
+                      <div className="text-xs text-green-500 dark:text-green-300">Directors</div>
+                    </div>
+                  )}
+                  {(personCategories.other > 0) && (
+                    <div className="p-2 bg-gray-50 dark:bg-gray-950 rounded text-center">
+                      <Star className="h-3 w-3 mx-auto mb-1 text-gray-600 dark:text-gray-400" />
+                      <div className="text-xs font-bold text-gray-600 dark:text-gray-400">{personCategories.other}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-300">Other</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Genres */}
             {preferences.favoriteGenres.length > 0 && (

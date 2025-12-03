@@ -71,7 +71,7 @@ export function PreferencesPage() {
             <CardHeader>
               <CardTitle>Your Favorites</CardTitle>
               <CardDescription>
-                Add movies, TV shows, and actors you love
+                Add movies, TV shows, and people you love
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -90,11 +90,11 @@ export function PreferencesPage() {
                     TV Shows
                   </TabsTrigger>
                   <TabsTrigger
-                    value="actors"
+                    value="people"
                     className="flex items-center gap-2"
                   >
                     <Users className="h-4 w-4" />
-                    Actors
+                    People
                   </TabsTrigger>
                 </TabsList>
 
@@ -118,10 +118,10 @@ export function PreferencesPage() {
                         onAdd={() => handleAddContent("tv")}
                       />
                     )}
-                    {preferences.actors.length > 0 && (
+                    {preferences.people.length > 0 && (
                       <ContentSection
-                        title="Actors"
-                        items={preferences.actors}
+                        title="People"
+                        items={preferences.people}
                         type="person"
                         onRemove={(id) => handleRemovePreference(id, "person")}
                         onAdd={() => handleAddContent("person")}
@@ -129,7 +129,7 @@ export function PreferencesPage() {
                     )}
                     {preferences.movies.length === 0 &&
                       preferences.tvShows.length === 0 &&
-                      preferences.actors.length === 0 && (
+                      preferences.people.length === 0 && (
                         <div className="text-center py-12">
                           <p className="text-muted-foreground mb-4">
                             No preferences added yet. Start by adding your
@@ -146,7 +146,7 @@ export function PreferencesPage() {
                             </Button>
                             <Button onClick={() => handleAddContent("person")}>
                               <Plus className="h-4 w-4 mr-2" />
-                              Add Actors
+                              Add People
                             </Button>
                           </div>
                         </div>
@@ -176,10 +176,10 @@ export function PreferencesPage() {
                   />
                 </TabsContent>
 
-                <TabsContent value="actors" className="mt-6">
+                <TabsContent value="people" className="mt-6">
                   <ContentSection
-                    title="Actors"
-                    items={preferences.actors}
+                    title="People"
+                    items={preferences.people}
                     type="person"
                     onRemove={(id) => handleRemovePreference(id, "person")}
                     onAdd={() => handleAddContent("person")}
@@ -194,6 +194,7 @@ export function PreferencesPage() {
 
       <ContentSearchDialog
         open={isSearchOpen}
+        key={searchType}
         onOpenChange={setIsSearchOpen}
         searchType={searchType}
         onContentSelected={handleContentSelected}
@@ -201,7 +202,7 @@ export function PreferencesPage() {
           new Set([
             ...preferences.movies.map((item: any) => item.id),
             ...preferences.tvShows.map((item: any) => item.id),
-            ...preferences.actors.map((item: any) => item.id),
+            ...preferences.people.map((item: any) => item.id),
           ])
         }
       />
@@ -228,11 +229,11 @@ function ContentSection({
 }: ContentSectionProps) {
   return (
     <div>
-      <div className="flex items-center justify-between mb-4 min-h-[400px]">
+      <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold">{title}</h3>
         <Button onClick={onAdd} size="sm" variant="outline">
           <Plus className="h-4 w-4 mr-2" />
-          Add {title.slice(0, -1)}
+          Add {title}
         </Button>
       </div>
 

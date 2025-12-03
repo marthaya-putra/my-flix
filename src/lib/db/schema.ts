@@ -9,6 +9,7 @@ export const userPreferences = pgTable(
     title: text('title').notNull(),
     category: text('category').notNull(), // 'movie' | 'tv-series'
     genres: text('genres'), // comma-separated genre names
+    posterPath: text('poster_path'), // TMDB poster path
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
   },
@@ -30,7 +31,8 @@ export const userPeople = pgTable(
     id: serial('id').primaryKey(),
     userId: text('user_id').notNull(),
     personName: text('person_name').notNull(),
-    personType: text('person_type').notNull(), // 'actor' | 'director'
+    personType: text('person_type').notNull(), // 'actor' | 'director' | 'other'
+    profilePath: text('profile_path'), // TMDB profile path
     createdAt: timestamp('created_at').defaultNow(),
   },
   (table) => [

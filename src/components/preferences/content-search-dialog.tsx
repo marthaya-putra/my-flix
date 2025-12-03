@@ -49,6 +49,8 @@ export function ContentSearchDialog({
   const [page, setPage] = useState(1);
   const [activeTab, setActiveTab] = useState(searchType);
 
+  console.log({ activeTab });
+
   const debouncedSearch = useDebouncedCallback(() => {
     if (query.length < 2) {
       setResults(null);
@@ -74,7 +76,7 @@ export function ContentSearchDialog({
     try {
       let searchResults:
         | DiscoverResult
-        | { page: number; actors: Array<Person>; totalPages: number };
+        | { page: number; people: Array<Person>; totalPages: number };
 
       if (activeTab === "movie") {
         searchResults = await searchMovies({ data: { query, page } });
@@ -91,9 +93,9 @@ export function ContentSearchDialog({
           if (activeTab === "person") {
             return {
               ...searchResults,
-              actors: [
-                ...(prev?.actors || []),
-                ...(searchResults as any).actors,
+              people: [
+                ...(prev?.people || []),
+                ...(searchResults as any).people,
               ],
             };
           } else {
@@ -139,7 +141,7 @@ export function ContentSearchDialog({
               ? "Movies"
               : activeTab === "tv"
                 ? "TV Shows"
-                : "Actors"}
+                : "People"}
           </DialogTitle>
           <DialogDescription>
             Find and add your favorite content to your preferences
@@ -152,7 +154,7 @@ export function ContentSearchDialog({
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
-                placeholder={`Search ${activeTab === "movie" ? "movies" : activeTab === "tv" ? "TV shows" : "actors"}...`}
+                placeholder={`Search ${activeTab === "movie" ? "movies" : activeTab === "tv" ? "TV shows" : "people"}...`}
                 value={query}
                 onChange={(e) => {
                   setQuery(e.target.value);
@@ -185,7 +187,7 @@ export function ContentSearchDialog({
                 </TabsTrigger>
                 <TabsTrigger value="person" className="flex items-center gap-2">
                   <Users className="h-4 w-4" />
-                  Actors
+                  People
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -227,7 +229,7 @@ export function ContentSearchDialog({
                   <div className="p-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
                       {(activeTab === "person"
-                        ? results.actors
+                        ? results.people
                         : results.results
                       )
                         ?.filter((item: any) => !existingIds.has(item.id))
@@ -278,12 +280,7 @@ function SearchResultCard({ item, type, onSelect }: SearchResultCardProps) {
       const person = item as Person;
       return {
         title: person.name,
-        subtitle: "Actor",
-        description:
-          person.knownFor
-            ?.slice(0, 3)
-            .map((film) => film.title)
-            .join(", ") || "",
+        subtitle: "Person",
         rating: null,
         date: null,
         imageUrl: person.profileImageUrl,
@@ -294,9 +291,6 @@ function SearchResultCard({ item, type, onSelect }: SearchResultCardProps) {
       return {
         title: film.title,
         subtitle: film.category === "movie" ? "Movie" : "TV Show",
-        description:
-          film.overview?.slice(0, 80) +
-          (film.overview?.length > 80 ? "..." : ""),
         rating: film.voteAverage,
         date: film.releaseDate?.split("-")[0] || null,
         imageUrl: film.posterPath,
@@ -368,13 +362,7 @@ function SearchResultCard({ item, type, onSelect }: SearchResultCardProps) {
               )}
             </div>
 
-            {/* Description */}
-            {info.description && (
-              <p className="text-xs text-muted-foreground line-clamp-2">
-                {info.description}
-              </p>
-            )}
-
+            
             {/* Genres */}
             {info.genres && info.genres.length > 0 && (
               <div className="flex flex-wrap gap-1">

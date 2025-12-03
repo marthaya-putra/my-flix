@@ -12,7 +12,7 @@ interface PreferenceSummaryProps {
 }
 
 export function PreferenceSummary({ preferences, className }: PreferenceSummaryProps) {
-  const totalFavorites = preferences.movies.length + preferences.tvShows.length + preferences.actors.length;
+  const totalFavorites = preferences.movies.length + preferences.tvShows.length + preferences.people.length;
   const maxGenres = 20;
   const genreProgress = (preferences.favoriteGenres.length / maxGenres) * 100;
 
@@ -26,8 +26,8 @@ export function PreferenceSummary({ preferences, className }: PreferenceSummaryP
     // TV Shows (up to 25 points)
     score += Math.min(preferences.tvShows.length * 5, 25);
 
-    // Actors (up to 20 points)
-    score += Math.min(preferences.actors.length * 4, 20);
+    // People (up to 20 points)
+    score += Math.min(preferences.people.length * 4, 20);
 
     // Genres (up to 15 points)
     score += Math.min(preferences.favoriteGenres.length * 3, 15);
@@ -100,13 +100,13 @@ export function PreferenceSummary({ preferences, className }: PreferenceSummaryP
               <div className="text-xs text-muted-foreground">TV Shows</div>
             </div>
 
-            {/* Actors */}
+            {/* People */}
             <div className="text-center p-3 bg-muted/50 rounded-lg">
               <div className="flex items-center justify-center mb-2">
                 <Users className="h-5 w-5 text-green-600" />
               </div>
-              <div className="text-2xl font-bold text-lg">{preferences.actors.length}</div>
-              <div className="text-xs text-muted-foreground">Actors</div>
+              <div className="text-2xl font-bold text-lg">{preferences.people.length}</div>
+              <div className="text-xs text-muted-foreground">People</div>
             </div>
 
             {/* Total */}

@@ -36,15 +36,21 @@ export type DiscoverResult = {
   totalPages: number;
 };
 
+export type PersonSearchResult = {
+  page: number;
+  people: Array<Person>;
+  totalPages: number;
+};
+
 export type SearchResult = {
   page: number;
   movies: Array<FilmInfo>;
   tvShows: Array<FilmInfo>;
-  actors: Array<Person>;
+  people: Array<Person>;
   totalPages: {
     movies: number;
     tvShows: number;
-    actors: number;
+    people: number;
   };
 };
 
@@ -68,6 +74,7 @@ export type Person = {
   imdbId?: string;
   biography?: string;
   knownFor?: Array<FilmInfo>;
+  category: "actor" | "director" | "other";
 };
 
 // TMDB API specific types

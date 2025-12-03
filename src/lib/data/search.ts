@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { SearchResult, FilmInfo, Actor, Person } from "../types";
+import { SearchResult, FilmInfo, Actor, Person, PersonSearchResult } from "../types";
 import { fetchFromTMDB, TMDB_IMAGE_BASE } from "./tmdb";
 import { convertToDiscoverResult } from "../utils";
 import { genres as movieGenres } from "./movies";
@@ -70,40 +70,53 @@ interface TMDBPersonSearchResponse {
 }
 
 export function convertPersonSearchResult(data: TMDBPersonSearchResponse): Array<Person> {
-  return data.results.map((person) => ({
-    id: person.id,
-    name: person.name,
-    profileImageUrl: person.profile_path
-      ? `${TMDB_IMAGE_BASE}${person.profile_path}`
-      : "",
-    popularity: person.popularity,
-    imdbId: undefined, // TMDB doesn't provide IMDB ID in person search
-    biography: undefined, // TMDB doesn't provide biography in person search
-    knownFor: Array.isArray(person.known_for)
-      ? person.known_for.map((film) => ({
-          id: film.id,
-          posterPath: film.poster_path
-            ? `${TMDB_IMAGE_BASE}${film.poster_path}`
-            : "",
-          backdropPath: film.backdrop_path
-            ? `${TMDB_IMAGE_BASE}${film.backdrop_path}`
-            : "",
-          title: film.title || film.name || "",
-          overview: film.overview || "",
-          voteAverage: film.vote_average || 0,
-          releaseDate: film.release_date || film.first_air_date || "",
-          category: film.first_air_date ? "tv" : "movie",
-          genreIds: film.genre_ids || [],
-          genres: [],
-        }))
-      : [],
-  }));
+  return data.results.map((person) => {
+    // Determine category based on known_for_department
+    let category: "actor" | "director" | "other";
+    if (person.known_for_department === "Acting") {
+      category = "actor";
+    } else if (person.known_for_department === "Directing") {
+      category = "director";
+    } else {
+      category = "other";
+    }
+
+    return {
+      id: person.id,
+      name: person.name,
+      profileImageUrl: person.profile_path
+        ? `${TMDB_IMAGE_BASE}${person.profile_path}`
+        : "",
+      popularity: person.popularity,
+      imdbId: undefined, // TMDB doesn't provide IMDB ID in person search
+      biography: undefined, // TMDB doesn't provide biography in person search
+      knownFor: Array.isArray(person.known_for)
+        ? person.known_for.map((film) => ({
+            id: film.id,
+            posterPath: film.poster_path
+              ? `${TMDB_IMAGE_BASE}${film.poster_path}`
+              : "",
+            backdropPath: film.backdrop_path
+              ? `${TMDB_IMAGE_BASE}${film.backdrop_path}`
+              : "",
+            title: film.title || film.name || "",
+            overview: film.overview || "",
+            voteAverage: film.vote_average || 0,
+            releaseDate: film.release_date || film.first_air_date || "",
+            category: film.first_air_date ? "tv" : "movie",
+            genreIds: film.genre_ids || [],
+            genres: [],
+          }))
+        : [],
+      category,
+    };
+  });
 }
 
 export function convertToSearchResult(data: TMDBSearchResponse): SearchResult {
   const movies: Array<FilmInfo> = [];
   const tvShows: Array<FilmInfo> = [];
-  const actors: Array<Actor> = [];
+  const people: Array<Person> = [];
 
   data.results.forEach((item) => {
     if (item.media_type === "movie") {
@@ -149,17 +162,23 @@ export function convertToSearchResult(data: TMDBSearchResponse): SearchResult {
           : [],
       });
     } else if (item.media_type === "person") {
-      actors.push({
+      // Determine category based on known_for_department
+      let category: "actor" | "director" | "other";
+      if (item.known_for_department === "Acting") {
+        category = "actor";
+      } else if (item.known_for_department === "Directing") {
+        category = "director";
+      } else {
+        category = "other";
+      }
+
+      people.push({
         id: item.id,
         name: item.name,
         profileImageUrl: item.profile_path
           ? `${TMDB_IMAGE_BASE}${item.profile_path}`
           : "",
-        profile_path: item.profile_path,
         popularity: item.popularity,
-        known_for_department: item.known_for_department,
-        adult: item.adult,
-        gender: item.gender,
         knownFor: Array.isArray(item.known_for)
           ? item.known_for.map((film) => ({
               id: film.id,
@@ -178,6 +197,7 @@ export function convertToSearchResult(data: TMDBSearchResponse): SearchResult {
               genres: [],
             }))
           : [],
+        category,
       });
     }
   });
@@ -186,11 +206,11 @@ export function convertToSearchResult(data: TMDBSearchResponse): SearchResult {
     page: data.page,
     movies,
     tvShows,
-    actors,
+    people,
     totalPages: {
       movies: data.total_pages,
       tvShows: data.total_pages,
-      actors: data.total_pages,
+      people: data.total_pages,
     },
   };
 }
@@ -247,11 +267,11 @@ export const searchActors = createServerFn({
   method: "GET",
 })
   .inputValidator((params: { query: string; page?: number }) => params)
-  .handler(async ({ data }) => {
+  .handler<PersonSearchResult>(async ({ data }) => {
     if (!data.query || data.query.trim().length < 2) {
       return {
         page: 1,
-        actors: [],
+        people: [],
         totalPages: 0,
       };
     }
@@ -263,12 +283,12 @@ export const searchActors = createServerFn({
 
       return {
         page: result.page,
-        actors: convertPersonSearchResult(result),
+        people: convertPersonSearchResult(result),
         totalPages: result.total_pages,
       };
     } catch (error) {
-      console.error("TMDB actor search error:", error);
-      throw new Error("Failed to fetch actor search results");
+      console.error("TMDB person search error:", error);
+      throw new Error("Failed to fetch person search results");
     }
   });
 
@@ -282,8 +302,8 @@ export const searchContent = createServerFn({
         page: 1,
         movies: [],
         tvShows: [],
-        actors: [],
-        totalPages: { movies: 0, tvShows: 0, actors: 0 },
+        people: [],
+        totalPages: { movies: 0, tvShows: 0, people: 0 },
       } as SearchResult;
     }
 

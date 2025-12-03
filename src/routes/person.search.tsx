@@ -1,23 +1,23 @@
 import { Suspense } from "react";
 import { Await, createFileRoute } from "@tanstack/react-router";
 import { searchActors } from "@/lib/data/search";
-import ActorsSkeleton from "@/components/actors-skeleton";
-import ActorsContent from "@/components/actors-content";
+import PersonSkeleton from "@/components/person-skeleton";
+import PersonContent from "@/components/person-content";
 import { z } from "zod";
 
-export const Route = createFileRoute("/actors/search")({
+export const Route = createFileRoute("/person/search")({
   validateSearch: z.object({
     query: z.string(),
     page: z.number().default(1),
   }),
-  component: ActorsSearchPage,
+  component: PersonSearchPage,
   loaderDeps: ({ search }) => ({
     query: search.query,
     page: search.page || 1,
   }),
   loader: async ({ deps }) => {
     return {
-      actors: searchActors({
+      people: searchActors({
         data: {
           query: deps.query,
           page: deps.page,
@@ -27,23 +27,23 @@ export const Route = createFileRoute("/actors/search")({
   },
 });
 
-function ActorsSearchPage() {
-  const { actors } = Route.useLoaderData();
+function PersonSearchPage() {
+  const { people } = Route.useLoaderData();
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
         <h1 className="text-4xl font-bold text-foreground mb-2">
-          Actor results for "{Route.useSearch().query}"
+          Person results for "{Route.useSearch().query}"
         </h1>
       </div>
 
-      <Suspense fallback={<ActorsSkeleton />}>
+      <Suspense fallback={<PersonSkeleton />}>
         <Await
-          promise={actors}
-          children={(actorsData) => (
-            <ActorsContent
-              actorsData={actorsData}
+          promise={people}
+          children={(personData) => (
+            <PersonContent
+              personData={personData}
             />
           )}
         />

@@ -16,8 +16,8 @@ import { Route as MoviesIndexRouteImport } from './routes/movies.index'
 import { Route as TvsSearchRouteImport } from './routes/tvs.search'
 import { Route as TvsAiringTodayRouteImport } from './routes/tvs.airing-today'
 import { Route as TvsAiringThisWeekRouteImport } from './routes/tvs.airing-this-week'
+import { Route as PersonSearchRouteImport } from './routes/person.search'
 import { Route as MoviesSearchRouteImport } from './routes/movies.search'
-import { Route as ActorsSearchRouteImport } from './routes/actors.search'
 
 const PreferencesRoute = PreferencesRouteImport.update({
   id: '/preferences',
@@ -54,22 +54,22 @@ const TvsAiringThisWeekRoute = TvsAiringThisWeekRouteImport.update({
   path: '/tvs/airing-this-week',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PersonSearchRoute = PersonSearchRouteImport.update({
+  id: '/person/search',
+  path: '/person/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MoviesSearchRoute = MoviesSearchRouteImport.update({
   id: '/movies/search',
   path: '/movies/search',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ActorsSearchRoute = ActorsSearchRouteImport.update({
-  id: '/actors/search',
-  path: '/actors/search',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/preferences': typeof PreferencesRoute
-  '/actors/search': typeof ActorsSearchRoute
   '/movies/search': typeof MoviesSearchRoute
+  '/person/search': typeof PersonSearchRoute
   '/tvs/airing-this-week': typeof TvsAiringThisWeekRoute
   '/tvs/airing-today': typeof TvsAiringTodayRoute
   '/tvs/search': typeof TvsSearchRoute
@@ -79,8 +79,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/preferences': typeof PreferencesRoute
-  '/actors/search': typeof ActorsSearchRoute
   '/movies/search': typeof MoviesSearchRoute
+  '/person/search': typeof PersonSearchRoute
   '/tvs/airing-this-week': typeof TvsAiringThisWeekRoute
   '/tvs/airing-today': typeof TvsAiringTodayRoute
   '/tvs/search': typeof TvsSearchRoute
@@ -91,8 +91,8 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/preferences': typeof PreferencesRoute
-  '/actors/search': typeof ActorsSearchRoute
   '/movies/search': typeof MoviesSearchRoute
+  '/person/search': typeof PersonSearchRoute
   '/tvs/airing-this-week': typeof TvsAiringThisWeekRoute
   '/tvs/airing-today': typeof TvsAiringTodayRoute
   '/tvs/search': typeof TvsSearchRoute
@@ -104,8 +104,8 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/preferences'
-    | '/actors/search'
     | '/movies/search'
+    | '/person/search'
     | '/tvs/airing-this-week'
     | '/tvs/airing-today'
     | '/tvs/search'
@@ -115,8 +115,8 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/preferences'
-    | '/actors/search'
     | '/movies/search'
+    | '/person/search'
     | '/tvs/airing-this-week'
     | '/tvs/airing-today'
     | '/tvs/search'
@@ -126,8 +126,8 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/preferences'
-    | '/actors/search'
     | '/movies/search'
+    | '/person/search'
     | '/tvs/airing-this-week'
     | '/tvs/airing-today'
     | '/tvs/search'
@@ -138,8 +138,8 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   PreferencesRoute: typeof PreferencesRoute
-  ActorsSearchRoute: typeof ActorsSearchRoute
   MoviesSearchRoute: typeof MoviesSearchRoute
+  PersonSearchRoute: typeof PersonSearchRoute
   TvsAiringThisWeekRoute: typeof TvsAiringThisWeekRoute
   TvsAiringTodayRoute: typeof TvsAiringTodayRoute
   TvsSearchRoute: typeof TvsSearchRoute
@@ -198,18 +198,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TvsAiringThisWeekRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/person/search': {
+      id: '/person/search'
+      path: '/person/search'
+      fullPath: '/person/search'
+      preLoaderRoute: typeof PersonSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/movies/search': {
       id: '/movies/search'
       path: '/movies/search'
       fullPath: '/movies/search'
       preLoaderRoute: typeof MoviesSearchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/actors/search': {
-      id: '/actors/search'
-      path: '/actors/search'
-      fullPath: '/actors/search'
-      preLoaderRoute: typeof ActorsSearchRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -218,8 +218,8 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   PreferencesRoute: PreferencesRoute,
-  ActorsSearchRoute: ActorsSearchRoute,
   MoviesSearchRoute: MoviesSearchRoute,
+  PersonSearchRoute: PersonSearchRoute,
   TvsAiringThisWeekRoute: TvsAiringThisWeekRoute,
   TvsAiringTodayRoute: TvsAiringTodayRoute,
   TvsSearchRoute: TvsSearchRoute,
