@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
+import { match } from "ts-pattern";
 import {
   Dialog,
   DialogContent,
@@ -9,30 +10,17 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Search,
-  Plus,
-  Star,
-  Calendar,
-  Film,
-  Tv,
-  Users,
-  Loader2,
-} from "lucide-react";
-import { FilmInfo, Person } from "@/lib/types";
-import { searchMovies, searchTVs, searchActors } from "@/lib/data/search";
-import {
-  BaseContentItem,
-  ContentType,
-  getContentSubtitle,
-  transformMultiSearchResults,
-} from "@/lib/data/search-abstraction";
+import { Search, Film, Tv, Users, Loader2 } from "lucide-react";
+import { FilmInfo, Person, ContentItem } from "@/lib/types";
+import { ContentType } from "@/lib/types";
+import { getContentSubtitle } from "@/lib/utils";
+import { SearchService } from "@/lib/data/search-service";
+import { MovieCard, TVCard, PersonCard } from "@/components/ui/content-cards";
 
 interface ContentSearchDialogProps {
   open: boolean;
@@ -56,7 +44,9 @@ export function ContentSearchDialog({
   existingIds = new Set(),
 }: ContentSearchDialogProps) {
   const [query, setQuery] = useState("");
-  const [searchResponse, setSearchResponse] = useState<BaseContentItem[] | null>(null);
+  const [searchResponse, setSearchResponse] = useState<ContentItem[] | null>(
+    null
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
@@ -67,34 +57,16 @@ export function ContentSearchDialog({
       setSearchResponse(null);
       return;
     }
-    // Perform actual search here
     setIsLoading(true);
     try {
-      if (activeTab === 'movie') {
-        const movieResult = await searchMovies({ data: { query, page } });
-        if (page === 1) {
-          setSearchResponse(movieResult.results || []);
-        } else {
-          setSearchResponse(prev => [...(prev || []), ...(movieResult.results || [])]);
-        }
-        setTotalPages(movieResult.totalPages || 0);
-      } else if (activeTab === 'tv') {
-        const tvResult = await searchTVs({ data: { query, page } });
-        if (page === 1) {
-          setSearchResponse(tvResult.results || []);
-        } else {
-          setSearchResponse(prev => [...(prev || []), ...(tvResult.results || [])]);
-        }
-        setTotalPages(tvResult.totalPages || 0);
-      } else if (activeTab === 'person') {
-        const personResult = await searchActors({ data: { query, page } });
-        if (page === 1) {
-          setSearchResponse(personResult.people || []);
-        } else {
-          setSearchResponse(prev => [...(prev || []), ...(personResult.people || [])]);
-        }
-        setTotalPages(personResult.totalPages || 0);
-      }
+      const { items, totalPages } = await SearchService.search(
+        activeTab,
+        { query, page },
+        searchResponse
+      );
+
+      setSearchResponse(items);
+      setTotalPages(totalPages);
     } catch (error) {
       console.error("Search error:", error);
       setSearchResponse(null);
@@ -120,21 +92,10 @@ export function ContentSearchDialog({
     }
   };
 
-  const handleContentClick = (item: BaseContentItem) => {
-    // Convert BaseContentItem back to proper type
-    if (activeTab === 'movie' || activeTab === 'tv') {
-      onContentSelected(item as FilmInfo);
-    } else {
-      onContentSelected(item as Person);
-    }
+  const handleContentClick = (item: ContentItem) => {
+    onContentSelected(item);
     // Don't close the dialog - allow multiple additions
   };
-
-  const getImageUrl = (item: BaseContentItem) => item.imageUrl;
-  const getTitle = (item: BaseContentItem) => item.title;
-  const getSubtitle = (item: BaseContentItem) => item.subtitle;
-  const getRating = (item: BaseContentItem) => item.rating;
-  const getGenres = (item: BaseContentItem) => item.genres;
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
@@ -231,11 +192,10 @@ export function ContentSearchDialog({
                     {searchResponse
                       ?.filter((item) => !existingIds.has(item.id))
                       .map((item) => (
-                        <SearchResultCard
+                        <ContentCard
                           key={item.id}
                           item={item}
-                          type={activeTab}
-                          onSelect={() => handleContentClick(item)}
+                          onSelect={(content) => handleContentClick(content)}
                         />
                       ))}
                   </div>
@@ -264,98 +224,34 @@ export function ContentSearchDialog({
   );
 }
 
-interface SearchResultCardProps {
-  item: BaseContentItem;
-  type: ContentType;
-  onSelect: () => void;
+interface ContentCardProps {
+  item: ContentItem;
+  onSelect: (content: ContentItem) => void;
 }
 
-function SearchResultCard({ item, type, onSelect }: SearchResultCardProps) {
-  return (
-    <Card
-      className="cursor-pointer hover:shadow-md transition-shadow group h-fit"
-      onClick={onSelect}
-    >
-      <CardContent className="p-3">
-        <div className="flex gap-3">
-          {/* Image */}
-          <div className="shrink-0">
-            {getImageUrl(item) ? (
-              <img
-                src={getImageUrl(item)}
-                alt={getTitle(item)}
-                className="w-16 h-24 object-cover rounded"
-                loading="lazy"
-              />
-            ) : (
-              <div className="w-16 h-24 bg-muted rounded flex items-center justify-center">
-                {type === "person" ? (
-                  <Users className="h-6 w-6 text-muted-foreground" />
-                ) : (
-                  <Film className="h-6 w-6 text-muted-foreground" />
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Content */}
-          <div className="flex-1 min-w-0 flex flex-col h-24 justify-between">
-            <div className="flex items-start justify-between">
-              <div className="min-w-0 flex-1">
-                <h3 className="font-medium text-sm group-hover:text-primary transition-colors truncate leading-tight">
-                  {getTitle(item)}
-                </h3>
-                {getSubtitle(item) && (
-                  <p className="text-xs text-muted-foreground">{getSubtitle(item)}</p>
-                )}
-              </div>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="shrink-0 ml-2 h-8 w-8 p-0"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-
-            {/* Metadata */}
-            <div className="flex items-center gap-2">
-              {getRating(item) && (
-                <div className="flex items-center gap-1">
-                  <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                  <span className="text-xs">{getRating(item)!.toFixed(1)}</span>
-                </div>
-              )}
-              {getSubtitle(item) && (
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  <span className="text-xs">{getSubtitle(item)}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Genres */}
-            {getGenres(item).length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {getGenres(item).slice(0, 2).map((genre) => (
-                  <Badge
-                    key={genre}
-                    variant="secondary"
-                    className="text-xs px-1.5 py-0.5"
-                  >
-                    {genre}
-                  </Badge>
-                ))}
-                {getGenres(item).length > 2 && (
-                  <Badge variant="secondary" className="text-xs px-1.5 py-0.5">
-                    +{getGenres(item).length - 2}
-                  </Badge>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+function ContentCard({ item, onSelect }: ContentCardProps) {
+  // Use pattern matching to render the appropriate card
+  return match(item)
+    .with({ contentType: "movie" }, (movie) => (
+      <MovieCard
+        movie={movie}
+        onAdd={(movie) => onSelect({ ...movie, contentType: "movie" })}
+        isAdded={false}
+      />
+    ))
+    .with({ contentType: "tv" }, (tv) => (
+      <TVCard
+        tvShow={tv}
+        onAdd={() => onSelect({ ...tv, contentType: "tv" })}
+        isAdded={false}
+      />
+    ))
+    .with({ contentType: "person" }, (person) => (
+      <PersonCard
+        person={person}
+        onAdd={() => onSelect({ ...person, contentType: "person" })}
+        isAdded={false}
+      />
+    ))
+    .otherwise(() => null);
 }

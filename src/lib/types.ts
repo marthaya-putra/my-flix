@@ -1,4 +1,5 @@
 export type FilmType = "movie" | "tv";
+export type ContentType = "movie" | "tv" | "person";
 export type Genre = {
   id: number;
   name: string;
@@ -92,6 +93,12 @@ export type ActorSearchParams = {
 };
 
 export const FILM_TYPE_QUERY_STRING = "type";
+
+// New discriminated union for all content types
+export type ContentItem =
+  | (FilmInfo & { contentType: 'movie' })
+  | (FilmInfo & { contentType: 'tv' })
+  | (Person & { contentType: 'person' });
 
 export const RatingItems = [
   {

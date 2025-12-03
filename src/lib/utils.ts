@@ -1,6 +1,19 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { DiscoverResult, FilmType } from "./types";
+
+export function getContentSubtitle(type: 'movie' | 'tv' | 'person'): string {
+  switch (type) {
+    case "movie":
+      return "Movie";
+    case "tv":
+      return "TV Show";
+    case "person":
+      return "Person";
+    default:
+      return "Content";
+  }
+}
 import { genres } from "./data/movies";
 import { TMDB_IMAGE_BASE } from "./data/tmdb";
 
