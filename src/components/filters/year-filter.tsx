@@ -17,7 +17,7 @@ interface YearFilterProps {
 
 export default function YearFilter({ route }: YearFilterProps) {
   const search = useSearch({ from: route.id });
-  const navigate = useNavigate({ from: route.id } as any);
+  const navigate = useNavigate({ from: route.path });
 
   const selectedYear = "year" in search ? search.year : undefined;
 
@@ -26,10 +26,10 @@ export default function YearFilter({ route }: YearFilterProps) {
       return;
     } else {
       navigate({
+        to: ".",
         search: {
-          page: "page" in search ? search.page : 1,
-          genres: "genres" in search ? search.genres : undefined,
-          rating: "rating" in search ? search.rating : undefined,
+          ...search,
+          page: 1,
           year: newYear,
         },
       });

@@ -27,6 +27,7 @@ export default function GenreFilter({ route }: GenreFilterProps) {
       to: ".",
       search: (prev) => ({
         ...prev,
+        page: 1,
         genres: newGenres.length > 0 ? newGenres.join(",") : undefined,
       }),
     });

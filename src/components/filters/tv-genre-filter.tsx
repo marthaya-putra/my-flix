@@ -22,10 +22,9 @@ export default function TvGenreFilter() {
     navigate({
       to: ".",
       search: {
+        ...search,
         page: 1,
         genres: newGenres.length > 0 ? newGenres.join(",") : undefined,
-        rating: search.rating,
-        year: search.year,
       },
     });
   };

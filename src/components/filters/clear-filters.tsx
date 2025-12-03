@@ -23,22 +23,9 @@ export default function ClearFilters({ route }: ClearFiltersProps) {
   const hasActiveFilters = genres || rating || year;
 
   const handleClearAll = () => {
-    if ("query" in search) {
-      navigate({
-        search: {
-          query: search.query,
-        },
-      });
-    } else {
-      navigate({
-        search: {
-          page: "page" in search ? search.page : undefined,
-          genres: undefined,
-          rating: undefined,
-          year: undefined,
-        },
-      });
-    }
+    navigate({
+      search: undefined,
+    });
   };
 
   if (!hasActiveFilters) {
