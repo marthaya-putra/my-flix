@@ -107,9 +107,6 @@ export function PreferenceItem({
 
   const info = getItemInfo();
 
-  console.log({ info });
-  console.log({ compact });
-
   if (compact) {
     return (
       <div

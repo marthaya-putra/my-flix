@@ -25,16 +25,28 @@ import {
   Users,
   Loader2,
 } from "lucide-react";
+import { FilmInfo, Person } from "@/lib/types";
 import { searchMovies, searchTVs, searchActors } from "@/lib/data/search";
-import { FilmInfo, Person, DiscoverResult } from "@/lib/types";
+import {
+  BaseContentItem,
+  ContentType,
+  getContentSubtitle,
+  transformMultiSearchResults,
+} from "@/lib/data/search-abstraction";
 
 interface ContentSearchDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  searchType: "movie" | "tv" | "person";
+  searchType: ContentType;
   onContentSelected: (content: FilmInfo | Person) => void;
   existingIds?: Set<number>;
 }
+
+const tabIcons = {
+  movie: <Film className="h-5 w-5" />,
+  tv: <Tv className="h-5 w-5" />,
+  person: <Users className="h-5 w-5" />,
+};
 
 export function ContentSearchDialog({
   open,
@@ -44,104 +56,93 @@ export function ContentSearchDialog({
   existingIds = new Set(),
 }: ContentSearchDialogProps) {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<any>(null);
+  const [searchResponse, setSearchResponse] = useState<BaseContentItem[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
   const [activeTab, setActiveTab] = useState(searchType);
 
-  console.log({ activeTab });
-
-  const debouncedSearch = useDebouncedCallback(() => {
+  const debouncedSearch = useDebouncedCallback(async () => {
     if (query.length < 2) {
-      setResults(null);
+      setSearchResponse(null);
       return;
     }
-    handleSearch();
+    // Perform actual search here
+    setIsLoading(true);
+    try {
+      if (activeTab === 'movie') {
+        const movieResult = await searchMovies({ data: { query, page } });
+        if (page === 1) {
+          setSearchResponse(movieResult.results || []);
+        } else {
+          setSearchResponse(prev => [...(prev || []), ...(movieResult.results || [])]);
+        }
+        setTotalPages(movieResult.totalPages || 0);
+      } else if (activeTab === 'tv') {
+        const tvResult = await searchTVs({ data: { query, page } });
+        if (page === 1) {
+          setSearchResponse(tvResult.results || []);
+        } else {
+          setSearchResponse(prev => [...(prev || []), ...(tvResult.results || [])]);
+        }
+        setTotalPages(tvResult.totalPages || 0);
+      } else if (activeTab === 'person') {
+        const personResult = await searchActors({ data: { query, page } });
+        if (page === 1) {
+          setSearchResponse(personResult.people || []);
+        } else {
+          setSearchResponse(prev => [...(prev || []), ...(personResult.people || [])]);
+        }
+        setTotalPages(personResult.totalPages || 0);
+      }
+    } catch (error) {
+      console.error("Search error:", error);
+      setSearchResponse(null);
+    } finally {
+      setIsLoading(false);
+    }
   }, 300);
 
   const handleDialogOpenChange = (newOpen: boolean) => {
     if (newOpen) {
       setQuery("");
-      setResults(null);
+      setSearchResponse(null);
       setPage(1);
       setActiveTab(searchType);
     }
     onOpenChange(newOpen);
   };
 
-  const handleSearch = async () => {
-    if (query.length < 2) return;
-
-    setIsLoading(true);
-    try {
-      let searchResults:
-        | DiscoverResult
-        | { page: number; people: Array<Person>; totalPages: number };
-
-      if (activeTab === "movie") {
-        searchResults = await searchMovies({ data: { query, page } });
-      } else if (activeTab === "tv") {
-        searchResults = await searchTVs({ data: { query, page } });
-      } else {
-        searchResults = await searchActors({ data: { query, page } });
-      }
-
-      if (page === 1) {
-        setResults(searchResults);
-      } else {
-        setResults((prev: any) => {
-          if (activeTab === "person") {
-            return {
-              ...searchResults,
-              people: [
-                ...(prev?.people || []),
-                ...(searchResults as any).people,
-              ],
-            };
-          } else {
-            const movieResults = searchResults as DiscoverResult;
-            return {
-              ...(searchResults as DiscoverResult),
-              results: [...(prev?.results || []), ...movieResults.results],
-            };
-          }
-        });
-      }
-    } catch (error) {
-      console.error("Search error:", error);
-      setResults(null);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleLoadMore = () => {
-    if (results && !isLoading && page < results.totalPages) {
+    if (!isLoading && page < totalPages) {
       setPage((prev) => prev + 1);
-      // Trigger search for the next page
       setTimeout(() => debouncedSearch(), 0);
     }
   };
 
-  const handleContentClick = (content: FilmInfo | Person) => {
-    onContentSelected(content);
+  const handleContentClick = (item: BaseContentItem) => {
+    // Convert BaseContentItem back to proper type
+    if (activeTab === 'movie' || activeTab === 'tv') {
+      onContentSelected(item as FilmInfo);
+    } else {
+      onContentSelected(item as Person);
+    }
     // Don't close the dialog - allow multiple additions
   };
+
+  const getImageUrl = (item: BaseContentItem) => item.imageUrl;
+  const getTitle = (item: BaseContentItem) => item.title;
+  const getSubtitle = (item: BaseContentItem) => item.subtitle;
+  const getRating = (item: BaseContentItem) => item.rating;
+  const getGenres = (item: BaseContentItem) => item.genres;
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            {activeTab === "movie" && <Film className="h-5 w-5" />}
-            {activeTab === "tv" && <Tv className="h-5 w-5" />}
-            {activeTab === "person" && <Users className="h-5 w-5" />}
-            Search{" "}
-            {activeTab === "movie"
-              ? "Movies"
-              : activeTab === "tv"
-                ? "TV Shows"
-                : "People"}
+            {tabIcons[activeTab] || tabIcons.movie}
+            Search {getContentSubtitle(activeTab)}s
           </DialogTitle>
           <DialogDescription>
             Find and add your favorite content to your preferences
@@ -154,7 +155,7 @@ export function ContentSearchDialog({
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
-                placeholder={`Search ${activeTab === "movie" ? "movies" : activeTab === "tv" ? "TV shows" : "people"}...`}
+                placeholder={`Search ${getContentSubtitle(activeTab).toLowerCase()}s...`}
                 value={query}
                 onChange={(e) => {
                   setQuery(e.target.value);
@@ -170,7 +171,7 @@ export function ContentSearchDialog({
               onValueChange={(value) => {
                 setActiveTab(value as any);
                 setPage(1);
-                setResults(null);
+                setSearchResponse(null);
                 if (query.length >= 2) {
                   debouncedSearch();
                 }
@@ -207,7 +208,7 @@ export function ContentSearchDialog({
                     </p>
                   </div>
                 </div>
-              ) : isLoading && !results ? (
+              ) : isLoading && !searchResponse ? (
                 <div className="p-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
                     {Array.from({ length: 6 }).map((_, i) => (
@@ -225,40 +226,35 @@ export function ContentSearchDialog({
                   </div>
                 </div>
               ) : (
-                results && (
-                  <div className="p-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-                      {(activeTab === "person"
-                        ? results.people
-                        : results.results
-                      )
-                        ?.filter((item: any) => !existingIds.has(item.id))
-                        .map((item: any) => (
-                          <SearchResultCard
-                            key={item.id}
-                            item={item}
-                            type={activeTab}
-                            onSelect={() => handleContentClick(item)}
-                          />
-                        ))}
-                    </div>
-
-                    {results.page < results.totalPages && (
-                      <div className="flex justify-center mt-6">
-                        <Button
-                          onClick={handleLoadMore}
-                          disabled={isLoading}
-                          variant="outline"
-                        >
-                          {isLoading ? (
-                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                          ) : null}
-                          Load More
-                        </Button>
-                      </div>
-                    )}
+                <div className="p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                    {searchResponse
+                      ?.filter((item) => !existingIds.has(item.id))
+                      .map((item) => (
+                        <SearchResultCard
+                          key={item.id}
+                          item={item}
+                          type={activeTab}
+                          onSelect={() => handleContentClick(item)}
+                        />
+                      ))}
                   </div>
-                )
+
+                  {page < totalPages && (
+                    <div className="flex justify-center mt-6">
+                      <Button
+                        onClick={handleLoadMore}
+                        disabled={isLoading}
+                        variant="outline"
+                      >
+                        {isLoading ? (
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        ) : null}
+                        Load More
+                      </Button>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </ScrollArea>
@@ -269,38 +265,12 @@ export function ContentSearchDialog({
 }
 
 interface SearchResultCardProps {
-  item: FilmInfo | Person;
-  type: "movie" | "tv" | "person";
+  item: BaseContentItem;
+  type: ContentType;
   onSelect: () => void;
 }
 
 function SearchResultCard({ item, type, onSelect }: SearchResultCardProps) {
-  const getDisplayInfo = () => {
-    if (type === "person") {
-      const person = item as Person;
-      return {
-        title: person.name,
-        subtitle: "Person",
-        rating: null,
-        date: null,
-        imageUrl: person.profileImageUrl,
-        genres: [],
-      };
-    } else {
-      const film = item as FilmInfo;
-      return {
-        title: film.title,
-        subtitle: film.category === "movie" ? "Movie" : "TV Show",
-        rating: film.voteAverage,
-        date: film.releaseDate?.split("-")[0] || null,
-        imageUrl: film.posterPath,
-        genres: film.genres,
-      };
-    }
-  };
-
-  const info = getDisplayInfo();
-
   return (
     <Card
       className="cursor-pointer hover:shadow-md transition-shadow group h-fit"
@@ -310,10 +280,10 @@ function SearchResultCard({ item, type, onSelect }: SearchResultCardProps) {
         <div className="flex gap-3">
           {/* Image */}
           <div className="shrink-0">
-            {info.imageUrl ? (
+            {getImageUrl(item) ? (
               <img
-                src={info.imageUrl}
-                alt={info.title}
+                src={getImageUrl(item)}
+                alt={getTitle(item)}
                 className="w-16 h-24 object-cover rounded"
                 loading="lazy"
               />
@@ -333,9 +303,11 @@ function SearchResultCard({ item, type, onSelect }: SearchResultCardProps) {
             <div className="flex items-start justify-between">
               <div className="min-w-0 flex-1">
                 <h3 className="font-medium text-sm group-hover:text-primary transition-colors truncate leading-tight">
-                  {info.title}
+                  {getTitle(item)}
                 </h3>
-                <p className="text-xs text-muted-foreground">{info.subtitle}</p>
+                {getSubtitle(item) && (
+                  <p className="text-xs text-muted-foreground">{getSubtitle(item)}</p>
+                )}
               </div>
               <Button
                 size="sm"
@@ -348,25 +320,24 @@ function SearchResultCard({ item, type, onSelect }: SearchResultCardProps) {
 
             {/* Metadata */}
             <div className="flex items-center gap-2">
-              {info.rating && (
+              {getRating(item) && (
                 <div className="flex items-center gap-1">
                   <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                  <span className="text-xs">{info.rating.toFixed(1)}</span>
+                  <span className="text-xs">{getRating(item)!.toFixed(1)}</span>
                 </div>
               )}
-              {info.date && (
+              {getSubtitle(item) && (
                 <div className="flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
-                  <span className="text-xs">{info.date}</span>
+                  <span className="text-xs">{getSubtitle(item)}</span>
                 </div>
               )}
             </div>
 
-            
             {/* Genres */}
-            {info.genres && info.genres.length > 0 && (
+            {getGenres(item).length > 0 && (
               <div className="flex flex-wrap gap-1">
-                {info.genres.slice(0, 2).map((genre) => (
+                {getGenres(item).slice(0, 2).map((genre) => (
                   <Badge
                     key={genre}
                     variant="secondary"
@@ -375,9 +346,9 @@ function SearchResultCard({ item, type, onSelect }: SearchResultCardProps) {
                     {genre}
                   </Badge>
                 ))}
-                {info.genres.length > 2 && (
+                {getGenres(item).length > 2 && (
                   <Badge variant="secondary" className="text-xs px-1.5 py-0.5">
-                    +{info.genres.length - 2}
+                    +{getGenres(item).length - 2}
                   </Badge>
                 )}
               </div>

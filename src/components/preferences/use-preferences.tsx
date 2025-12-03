@@ -1,13 +1,13 @@
-import { useState, useEffect } from 'react';
-import { createServerFn } from '@tanstack/react-start';
-import { FilmInfo, Person } from '@/lib/types';
+import { useState, useEffect } from "react";
+import { createServerFn } from "@tanstack/react-start";
+import { FilmInfo, Person } from "@/lib/types";
 import {
   addMoviePreference,
   addPersonPreference,
   removeMoviePreference,
   removePersonPreference,
   fetchUserPreferences,
-} from '@/lib/data/preferences';
+} from "@/lib/data/preferences";
 
 // Types for user preferences
 export interface UserPreferences {
@@ -29,15 +29,14 @@ export interface UserPreferences {
 
 // Server function to load preferences from database
 export const loadPreferences = createServerFn({
-  method: 'GET',
-})
-  .handler(async () => {
-    const result = await fetchUserPreferences();
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to load preferences');
-    }
-    return result.data;
-  });
+  method: "GET",
+}).handler(async () => {
+  const result = await fetchUserPreferences();
+  if (!result.success) {
+    throw new Error(result.error || "Failed to load preferences");
+  }
+  return result.data;
+});
 
 // Hook for managing preferences
 export function usePreferences() {
@@ -51,7 +50,7 @@ export function usePreferences() {
       movie: true,
       tv: true,
     },
-    notes: '',
+    notes: "",
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -62,13 +61,11 @@ export function usePreferences() {
     const loadPrefs = async () => {
       try {
         setIsLoading(true);
-        console.log('Loading preferences from database...');
         const savedPrefs = await loadPreferences();
-        console.log('Loaded preferences:', savedPrefs);
         setPreferences(savedPrefs);
       } catch (err) {
-        setError('Failed to load preferences');
-        console.error('Error loading preferences:', err);
+        setError("Failed to load preferences");
+        console.error("Error loading preferences:", err);
       } finally {
         setIsLoading(false);
       }
@@ -80,26 +77,25 @@ export function usePreferences() {
   // Add a movie/TV show to preferences
   const addPreference = async (content: FilmInfo | Person) => {
     try {
-      if ('knownFor' in content) {
+      if ("knownFor" in content) {
         // It's a person/actor
         const person = content as Person;
-        const personType = person.category === 'director' ? 'director' : 'actor';
 
         const result = await addPersonPreference({
           data: {
             personName: person.name,
-            personType: person.category === 'director' ? 'director' : 'actor',
+            personType: person.category,
             profilePath: person.profileImageUrl,
-          }
+          },
         });
 
         if (!result.success) {
-          setError(result.error || 'Failed to add person preference');
+          setError(result.error || "Failed to add person preference");
           return;
         }
 
         // Update local state
-        setPreferences(prev => ({
+        setPreferences((prev) => ({
           ...prev,
           people: [...prev.people, person],
         }));
@@ -107,8 +103,8 @@ export function usePreferences() {
         // It's a movie or TV show
         const film = content as FilmInfo;
 
-        const category = film.category === 'tv' ? 'tv-series' : 'movie';
-        const genres = film.genres.join(', ');
+        const category = film.category === "tv" ? "tv-series" : "movie";
+        const genres = film.genres.join(", ");
 
         const result = await addMoviePreference({
           data: {
@@ -116,42 +112,48 @@ export function usePreferences() {
             category,
             genres: genres || undefined,
             posterPath: film.posterPath,
-          }
+          },
         });
 
         if (!result.success) {
-          setError(result.error || 'Failed to add film preference');
+          setError(result.error || "Failed to add film preference");
           return;
         }
 
         // Update local state
-        if (film.category === 'movie') {
-          setPreferences(prev => ({
+        if (film.category === "movie") {
+          setPreferences((prev) => ({
             ...prev,
             movies: [...prev.movies, film],
           }));
         } else {
           // TV show
-          setPreferences(prev => ({
+          setPreferences((prev) => ({
             ...prev,
             tvShows: [...prev.tvShows, film],
           }));
         }
       }
     } catch (err) {
-      setError('Failed to add preference');
-      console.error('Error adding preference:', err);
+      setError("Failed to add preference");
+      console.error("Error adding preference:", err);
     }
   };
 
   // Remove a preference
-  const removePreference = async (id: number, type: 'movie' | 'tv' | 'person') => {
+  const removePreference = async (
+    id: number,
+    type: "movie" | "tv" | "person"
+  ) => {
     try {
       let result;
 
-      if (type === 'person') {
+      if (type === "person") {
         // Remove from user people table
-        const personType = preferences.people.find(p => p.id === id)?.category === 'director' ? 'director' : 'actor';
+        const personType =
+          preferences.people.find((p) => p.id === id)?.category === "director"
+            ? "director"
+            : "actor";
         result = await removePersonPreference({
           data: {
             id,
@@ -160,24 +162,24 @@ export function usePreferences() {
         });
 
         if (result.success) {
-          setPreferences(prev => ({
+          setPreferences((prev) => ({
             ...prev,
-            people: prev.people.filter(p => p.id !== id),
+            people: prev.people.filter((p) => p.id !== id),
           }));
         }
-      } else if (type === 'movie') {
+      } else if (type === "movie") {
         // Remove from user preferences table
         result = await removeMoviePreference({
           data: {
             id,
-            type: 'movie',
+            type: "movie",
           },
         });
 
         if (result.success) {
-          setPreferences(prev => ({
+          setPreferences((prev) => ({
             ...prev,
-            movies: prev.movies.filter(m => m.id !== id),
+            movies: prev.movies.filter((m) => m.id !== id),
           }));
         }
       } else {
@@ -185,25 +187,25 @@ export function usePreferences() {
         result = await removeMoviePreference({
           data: {
             id,
-            type: 'tv-series',
+            type: "tv-series",
           },
         });
 
         if (result.success) {
-          setPreferences(prev => ({
+          setPreferences((prev) => ({
             ...prev,
-            tvShows: prev.tvShows.filter(t => t.id !== id),
+            tvShows: prev.tvShows.filter((t) => t.id !== id),
           }));
         }
       }
 
       if (!result?.success) {
-        setError(result?.error || 'Failed to remove preference');
+        setError(result?.error || "Failed to remove preference");
         return;
       }
     } catch (err) {
-      setError('Failed to remove preference');
-      console.error('Error removing preference:', err);
+      setError("Failed to remove preference");
+      console.error("Error removing preference:", err);
     }
   };
 
@@ -222,8 +224,8 @@ export function usePreferences() {
       // These could be stored in a separate user_settings table in the future
       setPreferences(newPreferences);
     } catch (err) {
-      setError('Failed to update preferences');
-      console.error('Error updating preferences:', err);
+      setError("Failed to update preferences");
+      console.error("Error updating preferences:", err);
     } finally {
       setIsSaving(false);
     }
@@ -244,13 +246,13 @@ export function usePreferences() {
           movie: true,
           tv: true,
         },
-        notes: '',
+        notes: "",
       };
 
       setPreferences(newPreferences);
     } catch (err) {
-      setError('Failed to clear preferences');
-      console.error('Error clearing preferences:', err);
+      setError("Failed to clear preferences");
+      console.error("Error clearing preferences:", err);
     }
   };
 
@@ -259,18 +261,21 @@ export function usePreferences() {
     totalMovies: preferences.movies.length,
     totalTVShows: preferences.tvShows.length,
     totalPeople: preferences.people.length,
-    totalFavorites: preferences.movies.length + preferences.tvShows.length + preferences.people.length,
+    totalFavorites:
+      preferences.movies.length +
+      preferences.tvShows.length +
+      preferences.people.length,
     genreCount: preferences.favoriteGenres.length,
   });
 
   // Check if an item is already in preferences
-  const isInPreferences = (id: number, type: 'movie' | 'tv' | 'person') => {
-    if (type === 'person') {
-      return preferences.people.some(a => a.id === id);
-    } else if (type === 'movie') {
-      return preferences.movies.some(m => m.id === id);
+  const isInPreferences = (id: number, type: "movie" | "tv" | "person") => {
+    if (type === "person") {
+      return preferences.people.some((a) => a.id === id);
+    } else if (type === "movie") {
+      return preferences.movies.some((m) => m.id === id);
     } else {
-      return preferences.tvShows.some(t => t.id === id);
+      return preferences.tvShows.some((t) => t.id === id);
     }
   };
 

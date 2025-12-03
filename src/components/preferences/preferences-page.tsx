@@ -233,7 +233,7 @@ function ContentSection({
         <h3 className="text-lg font-semibold">{title}</h3>
         <Button onClick={onAdd} size="sm" variant="outline">
           <Plus className="h-4 w-4 mr-2" />
-          Add {title}
+          Add
         </Button>
       </div>
 
