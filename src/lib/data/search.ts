@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { SearchResult, FilmInfo, Actor, Person, PersonSearchResult } from "../types";
+import { SearchResult, FilmInfo, Actor, Person } from "../types";
 import { fetchFromTMDB, TMDB_IMAGE_BASE } from "./tmdb";
 import { convertToDiscoverResult } from "../utils";
 import { genres as movieGenres } from "./movies";
@@ -218,7 +218,7 @@ export function convertToSearchResult(data: TMDBSearchResponse): SearchResult {
 export const searchMovies = createServerFn({
   method: "GET",
 })
-  .inputValidator((params: { query: string; page?: number }) => params)
+  .inputValidator((params: { query: string; page?: number; primaryReleaseYear?: number }) => params)
   .handler(async ({ data }) => {
     if (!data.query || data.query.trim().length < 2) {
       return {
@@ -230,7 +230,17 @@ export const searchMovies = createServerFn({
 
     try {
       const includeAdult = process.env.INCLUDE_ADULT_CONTENT === "true";
-      const searchPath = `/search/movie?query=${encodeURIComponent(data.query)}&include_adult=${includeAdult}&page=${data.page || 1}`;
+      const params = new URLSearchParams({
+        query: data.query,
+        include_adult: includeAdult.toString(),
+        page: (data.page || 1).toString(),
+      });
+
+      if (data.primaryReleaseYear) {
+        params.append('primary_release_year', data.primaryReleaseYear.toString());
+      }
+
+      const searchPath = `/search/movie?${params.toString()}`;
       const result = await fetchFromTMDB(searchPath);
       return convertToDiscoverResult(result);
     } catch (error) {
@@ -242,7 +252,7 @@ export const searchMovies = createServerFn({
 export const searchTVs = createServerFn({
   method: "GET",
 })
-  .inputValidator((params: { query: string; page?: number }) => params)
+  .inputValidator((params: { query: string; page?: number; firstAirDateYear?: number }) => params)
   .handler(async ({ data }) => {
     if (!data.query || data.query.trim().length < 2) {
       return {
@@ -254,7 +264,17 @@ export const searchTVs = createServerFn({
 
     try {
       const includeAdult = process.env.INCLUDE_ADULT_CONTENT === "true";
-      const searchPath = `/search/tv?query=${encodeURIComponent(data.query)}&include_adult=${includeAdult}&page=${data.page || 1}`;
+      const params = new URLSearchParams({
+        query: data.query,
+        include_adult: includeAdult.toString(),
+        page: (data.page || 1).toString(),
+      });
+
+      if (data.firstAirDateYear) {
+        params.append('first_air_date_year', data.firstAirDateYear.toString());
+      }
+
+      const searchPath = `/search/tv?${params.toString()}`;
       const result = await fetchFromTMDB(searchPath);
       return convertToDiscoverResult(result);
     } catch (error) {
@@ -267,7 +287,7 @@ export const searchActors = createServerFn({
   method: "GET",
 })
   .inputValidator((params: { query: string; page?: number }) => params)
-  .handler<PersonSearchResult>(async ({ data }) => {
+  .handler(async ({ data }) => {
     if (!data.query || data.query.trim().length < 2) {
       return {
         page: 1,
