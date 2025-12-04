@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, uniqueIndex, index } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, timestamp, uniqueIndex, index, integer } from 'drizzle-orm/pg-core';
 
 // User preferences for movies and TV series
 export const userPreferences = pgTable(
@@ -6,6 +6,7 @@ export const userPreferences = pgTable(
   {
     id: serial('id').primaryKey(),
     userId: text('user_id').notNull(),
+    preferenceId: integer('preference_id').notNull(), // TMDB ID
     title: text('title').notNull(),
     category: text('category').notNull(), // 'movie' | 'tv-series'
     genres: text('genres'), // comma-separated genre names
@@ -15,11 +16,11 @@ export const userPreferences = pgTable(
   },
   (table) => [
     index('user_preferences_user_id_idx').on(table.userId),
+    index('user_preferences_preference_id_idx').on(table.preferenceId),
     index('user_preferences_category_idx').on(table.category),
-    uniqueIndex('user_preferences_user_id_title_category_unique').on(
+    uniqueIndex('user_preferences_user_id_preference_id_unique').on(
       table.userId,
-      table.title,
-      table.category
+      table.preferenceId
     ),
   ]
 );
@@ -30,6 +31,7 @@ export const userPeople = pgTable(
   {
     id: serial('id').primaryKey(),
     userId: text('user_id').notNull(),
+    personId: integer('person_id').notNull(), // TMDB ID
     personName: text('person_name').notNull(),
     personType: text('person_type').notNull(), // 'actor' | 'director' | 'other'
     profilePath: text('profile_path'), // TMDB profile path
@@ -37,11 +39,11 @@ export const userPeople = pgTable(
   },
   (table) => [
     index('user_people_user_id_idx').on(table.userId),
+    index('user_people_person_id_idx').on(table.personId),
     index('user_people_type_idx').on(table.personType),
-    uniqueIndex('user_people_user_id_person_name_type_unique').on(
+    uniqueIndex('user_people_user_id_person_id_unique').on(
       table.userId,
-      table.personName,
-      table.personType
+      table.personId
     ),
   ]
 );

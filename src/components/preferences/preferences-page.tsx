@@ -55,6 +55,12 @@ export function PreferencesPage() {
     );
   }
 
+  const existingIds = new Set([
+    ...preferences.movies.map((item: any) => item.id),
+    ...preferences.tvShows.map((item: any) => item.id),
+    ...preferences.people.map((item: any) => item.id),
+  ]);
+
   return (
     <div className="container mx-auto p-4 max-w-6xl">
       <div className="mb-8">
@@ -198,13 +204,7 @@ export function PreferencesPage() {
         onOpenChange={setIsSearchOpen}
         searchType={searchType}
         onContentSelected={handleContentSelected}
-        existingIds={
-          new Set([
-            ...preferences.movies.map((item: any) => item.id),
-            ...preferences.tvShows.map((item: any) => item.id),
-            ...preferences.people.map((item: any) => item.id),
-          ])
-        }
+        existingIds={existingIds}
       />
     </div>
   );
@@ -229,7 +229,7 @@ function ContentSection({
 }: ContentSectionProps) {
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-semibold">{title}</h3>
         <Button onClick={onAdd} size="sm" variant="outline">
           <Plus className="h-4 w-4 mr-2" />
@@ -250,7 +250,7 @@ function ContentSection({
           </div>
         )
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 ">
+        <div className="flex flex-wrap gap-3">
           {items.map((item) => (
             <PreferenceItem
               key={item.id}

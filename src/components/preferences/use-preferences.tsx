@@ -83,6 +83,7 @@ export function usePreferences() {
 
         const result = await addPersonPreference({
           data: {
+            personId: person.id,
             personName: person.name,
             personType: person.category,
             profilePath: person.profileImageUrl,
@@ -108,6 +109,7 @@ export function usePreferences() {
 
         const result = await addMoviePreference({
           data: {
+            preferenceId: film.id,
             title: film.title,
             category,
             genres: genres || undefined,
@@ -149,14 +151,14 @@ export function usePreferences() {
       let result;
 
       if (type === "person") {
-        // Remove from user people table
-        const personType =
-          preferences.people.find((p) => p.id === id)?.category === "director"
-            ? "director"
-            : "actor";
+        // Find the person and get database ID
+        const person = preferences.people.find((p) => p.id === id);
+        const dbId = (person as any)?.dbId;
+        const personType = person?.category === "director" ? "director" : "actor";
+
         result = await removePersonPreference({
           data: {
-            id,
+            id: dbId || id, // Use dbId if available, fallback to id
             personType,
           },
         });
@@ -168,10 +170,13 @@ export function usePreferences() {
           }));
         }
       } else if (type === "movie") {
-        // Remove from user preferences table
+        // Find the movie and get database ID
+        const movie = preferences.movies.find((m) => m.id === id);
+        const dbId = (movie as any)?.dbId;
+
         result = await removeMoviePreference({
           data: {
-            id,
+            id: dbId || id, // Use dbId if available, fallback to id
             type: "movie",
           },
         });
@@ -184,9 +189,12 @@ export function usePreferences() {
         }
       } else {
         // TV show
+        const tvShow = preferences.tvShows.find((t) => t.id === id);
+        const dbId = (tvShow as any)?.dbId;
+
         result = await removeMoviePreference({
           data: {
-            id,
+            id: dbId || id, // Use dbId if available, fallback to id
             type: "tv-series",
           },
         });

@@ -11,11 +11,13 @@ import { eq, and, desc, ilike } from "drizzle-orm";
 // Input validation schemas
 const addPreferenceSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
+  preferenceId: z.number().positive("TMDB ID is required"),
   title: z.string().min(1, "Title is required"),
   category: z.enum(["movie", "tv-series"], {
     errorMap: () => ({ message: "Category must be either movie or tv-series" }),
   }),
   genres: z.string().optional(),
+  posterPath: z.string().optional(),
 });
 
 const updatePreferenceSchema = z.object({
@@ -52,8 +54,7 @@ export const addUserPreference = createServerFn({
         .where(
           and(
             eq(userPreferences.userId, data.userId),
-            eq(userPreferences.title, data.title),
-            eq(userPreferences.category, data.category)
+            eq(userPreferences.preferenceId, data.preferenceId)
           )
         )
         .limit(1);
@@ -65,9 +66,11 @@ export const addUserPreference = createServerFn({
       // Insert new preference
       const newPreference: NewUserPreference = {
         userId: data.userId,
+        preferenceId: data.preferenceId,
         title: data.title,
         category: data.category,
         genres: data.genres || null,
+        posterPath: data.posterPath || null,
       };
 
       const result = await db

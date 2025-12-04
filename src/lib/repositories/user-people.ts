@@ -6,15 +6,19 @@ import { eq, and, desc, ilike } from "drizzle-orm";
 // Input validation schemas
 const addPersonSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
+  personId: z.number().positive("TMDB ID is required"),
   personName: z.string().min(1, "Person name is required"),
   personType: z.enum(["actor", "director"]),
+  profilePath: z.string().optional(),
 });
 
 const updatePersonSchema = z.object({
   id: z.number().positive(),
   userId: z.string().min(1, "User ID is required"),
+  personId: z.number().positive("TMDB ID is required"),
   personName: z.string().min(1, "Person name is required"),
   personType: z.enum(["actor", "director"]),
+  profilePath: z.string().optional(),
 });
 
 const removePersonSchema = z.object({
@@ -43,8 +47,7 @@ export const addUserPerson = createServerFn({
         .where(
           and(
             eq(userPeople.userId, data.userId),
-            eq(userPeople.personName, data.personName),
-            eq(userPeople.personType, data.personType)
+            eq(userPeople.personId, data.personId)
           )
         )
         .limit(1);
@@ -56,8 +59,10 @@ export const addUserPerson = createServerFn({
       // Insert new person preference
       const newPerson: NewUserPerson = {
         userId: data.userId,
+        personId: data.personId,
         personName: data.personName,
         personType: data.personType,
+        profilePath: data.profilePath || null,
       };
 
       const result = await db.insert(userPeople).values(newPerson).returning();

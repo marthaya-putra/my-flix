@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Star, Calendar, Plus } from "lucide-react";
+import { Star, Calendar, Plus, Check } from "lucide-react";
 import { FilmInfo, Person } from "@/lib/types";
 
 export interface MovieCardProps {
@@ -12,7 +12,14 @@ export interface MovieCardProps {
 
 export function MovieCard({ movie, onAdd, isAdded }: MovieCardProps) {
   return (
-    <Card className="group hover:shadow-md transition-shadow">
+    <Card className={`group hover:shadow-md transition-shadow relative ${isAdded ? 'ring-2 ring-primary/20 bg-primary/5' : ''}`}>
+      {/* Added Badge */}
+      {isAdded && (
+        <div className="absolute top-2 right-2 z-10 bg-primary text-primary-foreground rounded-full p-1.5 shadow-sm">
+          <Check className="h-3 w-3" />
+        </div>
+      )}
+
       <CardContent className="p-4">
         <div className="flex gap-3">
           {/* Movie Poster */}
@@ -65,15 +72,16 @@ export function MovieCard({ movie, onAdd, isAdded }: MovieCardProps) {
           </div>
 
           {/* Add Button */}
-          <Button
-            size="sm"
-            variant={isAdded ? "secondary" : "outline"}
-            onClick={() => onAdd?.(movie)}
-            disabled={isAdded}
-            className="shrink-0 h-8 w-8 p-0"
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
+          {!isAdded && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onAdd?.(movie)}
+              className="shrink-0 h-8 w-8 p-0"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -88,7 +96,14 @@ export interface TVCardProps {
 
 export function TVCard({ tvShow, onAdd, isAdded }: TVCardProps) {
   return (
-    <Card className="group hover:shadow-md transition-shadow">
+    <Card className={`group hover:shadow-md transition-shadow relative ${isAdded ? 'ring-2 ring-primary/20 bg-primary/5' : ''}`}>
+      {/* Added Badge */}
+      {isAdded && (
+        <div className="absolute top-2 right-2 z-10 bg-primary text-primary-foreground rounded-full p-1.5 shadow-sm">
+          <Check className="h-3 w-3" />
+        </div>
+      )}
+
       <CardContent className="p-4">
         <div className="flex gap-3">
           {/* TV Show Poster */}
@@ -141,15 +156,16 @@ export function TVCard({ tvShow, onAdd, isAdded }: TVCardProps) {
           </div>
 
           {/* Add Button */}
-          <Button
-            size="sm"
-            variant={isAdded ? "secondary" : "outline"}
-            onClick={() => onAdd?.(tvShow)}
-            disabled={isAdded}
-            className="shrink-0 h-8 w-8 p-0"
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
+          {!isAdded && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onAdd?.(tvShow)}
+              className="shrink-0 h-8 w-8 p-0"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -164,7 +180,14 @@ export interface PersonCardProps {
 
 export function PersonCard({ person, onAdd, isAdded }: PersonCardProps) {
   return (
-    <Card className="group hover:shadow-md transition-shadow">
+    <Card className={`group hover:shadow-md transition-shadow relative ${isAdded ? 'ring-2 ring-primary/20 bg-primary/5' : ''}`}>
+      {/* Added Badge */}
+      {isAdded && (
+        <div className="absolute top-2 right-2 z-10 bg-primary text-primary-foreground rounded-full p-1.5 shadow-sm">
+          <Check className="h-3 w-3" />
+        </div>
+      )}
+
       <CardContent className="p-4">
         <div className="flex gap-3">
           {/* Person Profile */}
@@ -190,15 +213,16 @@ export function PersonCard({ person, onAdd, isAdded }: PersonCardProps) {
           </div>
 
           {/* Add Button */}
-          <Button
-            size="sm"
-            variant={isAdded ? "secondary" : "outline"}
-            onClick={() => onAdd?.(person)}
-            disabled={isAdded}
-            className="shrink-0 h-8 w-8 p-0"
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
+          {!isAdded && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onAdd?.(person)}
+              className="shrink-0 h-8 w-8 p-0"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

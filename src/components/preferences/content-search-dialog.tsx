@@ -26,7 +26,7 @@ interface ContentSearchDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   searchType: ContentType;
-  onContentSelected: (content: FilmInfo | Person) => void;
+  onContentSelected: (content: ContentItem) => void;
   existingIds?: Set<number>;
 }
 
@@ -189,15 +189,14 @@ export function ContentSearchDialog({
               ) : (
                 <div className="p-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-                    {searchResponse
-                      ?.filter((item) => !existingIds.has(item.id))
-                      .map((item) => (
-                        <ContentCard
-                          key={item.id}
-                          item={item}
-                          onSelect={(content) => handleContentClick(content)}
-                        />
-                      ))}
+                    {searchResponse?.map((item) => (
+                      <ContentCard
+                        key={item.id}
+                        item={item}
+                        onSelect={(content) => handleContentClick(content)}
+                        isAdded={existingIds.has(item.id)}
+                      />
+                    ))}
                   </div>
 
                   {page < totalPages && (
@@ -227,30 +226,31 @@ export function ContentSearchDialog({
 interface ContentCardProps {
   item: ContentItem;
   onSelect: (content: ContentItem) => void;
+  isAdded?: boolean;
 }
 
-function ContentCard({ item, onSelect }: ContentCardProps) {
+function ContentCard({ item, onSelect, isAdded = false }: ContentCardProps) {
   // Use pattern matching to render the appropriate card
   return match(item)
     .with({ contentType: "movie" }, (movie) => (
       <MovieCard
         movie={movie}
         onAdd={(movie) => onSelect({ ...movie, contentType: "movie" })}
-        isAdded={false}
+        isAdded={isAdded}
       />
     ))
     .with({ contentType: "tv" }, (tv) => (
       <TVCard
         tvShow={tv}
         onAdd={() => onSelect({ ...tv, contentType: "tv" })}
-        isAdded={false}
+        isAdded={isAdded}
       />
     ))
     .with({ contentType: "person" }, (person) => (
       <PersonCard
         person={person}
         onAdd={() => onSelect({ ...person, contentType: "person" })}
-        isAdded={false}
+        isAdded={isAdded}
       />
     ))
     .otherwise(() => null);

@@ -6,6 +6,7 @@ import { FilmInfo, Person } from "@/lib/types";
 
 // Input validation schemas
 const AddMoviePreferenceInput = z.object({
+  preferenceId: z.number().positive(),
   title: z.string(),
   category: z.enum(["movie", "tv-series"]),
   genres: z.string().optional(),
@@ -13,6 +14,7 @@ const AddMoviePreferenceInput = z.object({
 });
 
 const AddPersonPreferenceInput = z.object({
+  personId: z.number().positive(),
   personName: z.string(),
   personType: z.enum(["actor", "director", "other"]),
   profilePath: z.string().optional(),
@@ -38,7 +40,7 @@ export const addMoviePreference = createServerFn({
   .inputValidator(AddMoviePreferenceInput)
   .handler(async ({ data }) => {
     try {
-      const { title, category, genres, posterPath } = data;
+      const { preferenceId, title, category, genres, posterPath } = data;
 
       // Check if already exists
       const existing = await db
@@ -47,8 +49,7 @@ export const addMoviePreference = createServerFn({
         .where(
           and(
             eq(userPreferences.userId, DEFAULT_USER_ID),
-            eq(userPreferences.title, title),
-            eq(userPreferences.category, category)
+            eq(userPreferences.preferenceId, preferenceId)
           )
         )
         .limit(1);
@@ -62,6 +63,7 @@ export const addMoviePreference = createServerFn({
         .insert(userPreferences)
         .values({
           userId: DEFAULT_USER_ID,
+          preferenceId,
           title,
           category,
           genres: genres || null,
@@ -126,7 +128,7 @@ export const addPersonPreference = createServerFn({
   .inputValidator(AddPersonPreferenceInput)
   .handler(async ({ data }) => {
     try {
-      const { personName, personType, profilePath } = data;
+      const { personId, personName, personType, profilePath } = data;
 
       // Check if already exists
       const existing = await db
@@ -135,8 +137,7 @@ export const addPersonPreference = createServerFn({
         .where(
           and(
             eq(userPeople.userId, DEFAULT_USER_ID),
-            eq(userPeople.personName, personName),
-            eq(userPeople.personType, personType)
+            eq(userPeople.personId, personId)
           )
         )
         .limit(1);
@@ -150,6 +151,7 @@ export const addPersonPreference = createServerFn({
         .insert(userPeople)
         .values({
           userId: DEFAULT_USER_ID,
+          personId,
           personName,
           personType,
           profilePath: profilePath || null,
@@ -229,7 +231,8 @@ export const fetchUserPreferences = createServerFn({
     const movies = movieTVPreferences
       .filter((pref) => pref.category === "movie")
       .map((pref) => ({
-        id: pref.id,
+        id: pref.preferenceId, // Use TMDB ID for display/search comparison
+        dbId: pref.id, // Keep database ID for removal operations
         title: pref.title,
         category: "movie" as const,
         genreIds: [],
@@ -249,7 +252,8 @@ export const fetchUserPreferences = createServerFn({
     const tvShows = movieTVPreferences
       .filter((pref) => pref.category === "tv-series")
       .map((pref) => ({
-        id: pref.id,
+        id: pref.preferenceId, // Use TMDB ID for display/search comparison
+        dbId: pref.id, // Keep database ID for removal operations
         title: pref.title,
         category: "tv" as const,
         genreIds: [],
@@ -268,7 +272,8 @@ export const fetchUserPreferences = createServerFn({
 
     // Convert people preferences
     const people = peoplePreferences.map((pref) => ({
-      id: pref.id,
+      id: pref.personId, // Use TMDB ID for display/search comparison
+      dbId: pref.id, // Keep database ID for removal operations
       name: pref.personName,
       profileImageUrl: pref.profilePath || "",
       popularity: 0,
@@ -337,6 +342,7 @@ export const addFilmInfoPreference = createServerFn({
 
       return await addMoviePreference({
         data: {
+          preferenceId: filmInfo.id,
           title: filmInfo.title,
           category,
           genres: genres || undefined,
@@ -374,6 +380,7 @@ export const addPersonInfoPreference = createServerFn({
 
       return await addPersonPreference({
         data: {
+          personId: person.id,
           personName: person.name,
           personType,
         },
