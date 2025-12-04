@@ -111,6 +111,7 @@ export function usePreferences() {
           data: {
             preferenceId: film.id,
             title: film.title,
+            year: parseInt(film.releaseDate.split('-')[0]) || 0,
             category,
             genres: genres || undefined,
             posterPath: film.posterPath,

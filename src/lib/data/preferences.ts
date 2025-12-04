@@ -8,6 +8,7 @@ import { FilmInfo, Person } from "@/lib/types";
 const AddMoviePreferenceInput = z.object({
   preferenceId: z.number().positive(),
   title: z.string(),
+  year: z.number().positive(),
   category: z.enum(["movie", "tv-series"]),
   genres: z.string().optional(),
   posterPath: z.string().optional(),
@@ -40,7 +41,7 @@ export const addMoviePreference = createServerFn({
   .inputValidator(AddMoviePreferenceInput)
   .handler(async ({ data }) => {
     try {
-      const { preferenceId, title, category, genres, posterPath } = data;
+      const { preferenceId, title, year, category, genres, posterPath } = data;
 
       // Check if already exists
       const existing = await db
@@ -65,6 +66,7 @@ export const addMoviePreference = createServerFn({
           userId: DEFAULT_USER_ID,
           preferenceId,
           title,
+          year,
           category,
           genres: genres || null,
           posterPath: posterPath || null,
@@ -246,7 +248,7 @@ export const fetchUserPreferences = createServerFn({
         backdropPath: "",
         overview: "",
         voteAverage: 0,
-        releaseDate: pref.createdAt?.toISOString() || "",
+        releaseDate: pref.year?.toString() || "",
       }));
 
     const tvShows = movieTVPreferences
@@ -267,7 +269,7 @@ export const fetchUserPreferences = createServerFn({
         backdropPath: "",
         overview: "",
         voteAverage: 0,
-        releaseDate: pref.createdAt?.toISOString() || "",
+        releaseDate: pref.year?.toString() || "",
       }));
 
     // Convert people preferences
@@ -331,6 +333,7 @@ export const addFilmInfoPreference = createServerFn({
         title: z.string(),
         category: z.enum(["movie", "tv"]),
         genres: z.array(z.string()),
+        releaseDate: z.string().optional(),
       }),
     })
   )
@@ -339,11 +342,13 @@ export const addFilmInfoPreference = createServerFn({
       const { filmInfo } = data;
       const category = filmInfo.category === "tv" ? "tv-series" : "movie";
       const genres = filmInfo.genres.join(", ");
+      const year = filmInfo.releaseDate ? new Date(filmInfo.releaseDate).getFullYear() : new Date().getFullYear();
 
       return await addMoviePreference({
         data: {
           preferenceId: filmInfo.id,
           title: filmInfo.title,
+          year,
           category,
           genres: genres || undefined,
         },

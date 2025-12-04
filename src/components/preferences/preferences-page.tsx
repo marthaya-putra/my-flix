@@ -255,7 +255,6 @@ function ContentSection({
             <PreferenceItem
               key={item.id}
               item={item}
-              type={type}
               onRemove={() => onRemove(item.id)}
             />
           ))}

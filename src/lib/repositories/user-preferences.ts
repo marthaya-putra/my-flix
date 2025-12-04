@@ -13,6 +13,7 @@ const addPreferenceSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
   preferenceId: z.number().positive("TMDB ID is required"),
   title: z.string().min(1, "Title is required"),
+  year: z.number().positive("Year is required"),
   category: z.enum(["movie", "tv-series"], {
     errorMap: () => ({ message: "Category must be either movie or tv-series" }),
   }),
@@ -24,6 +25,7 @@ const updatePreferenceSchema = z.object({
   id: z.number().positive(),
   userId: z.string().min(1, "User ID is required"),
   title: z.string().min(1, "Title is required"),
+  year: z.number().positive("Year is required"),
   category: z.enum(["movie", "tv-series"]),
   genres: z.string().optional(),
 });
@@ -68,6 +70,7 @@ export const addUserPreference = createServerFn({
         userId: data.userId,
         preferenceId: data.preferenceId,
         title: data.title,
+        year: data.year,
         category: data.category,
         genres: data.genres || null,
         posterPath: data.posterPath || null,
@@ -131,6 +134,7 @@ export const updateUserPreference = createServerFn({
         .update(userPreferences)
         .set({
           title: data.title,
+          year: data.year,
           category: data.category,
           genres: data.genres || null,
           updatedAt: new Date(),

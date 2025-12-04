@@ -8,6 +8,7 @@ export const userPreferences = pgTable(
     userId: text('user_id').notNull(),
     preferenceId: integer('preference_id').notNull(), // TMDB ID
     title: text('title').notNull(),
+    year: integer('year').notNull(), // Release year
     category: text('category').notNull(), // 'movie' | 'tv-series'
     genres: text('genres'), // comma-separated genre names
     posterPath: text('poster_path'), // TMDB poster path

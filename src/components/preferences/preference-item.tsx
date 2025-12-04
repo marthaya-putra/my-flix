@@ -1,18 +1,24 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Calendar, Film, Tv, Users, Camera, UserIcon } from "lucide-react";
-import { FilmInfo, Person } from "@/lib/types";
+import {
+  Trash2,
+  Calendar,
+  Film,
+  Tv,
+  Users,
+  Camera,
+  UserIcon,
+} from "lucide-react";
+import { ContentItem } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 interface PreferenceItemProps {
-  item: FilmInfo | Person;
-  type: "movie" | "tv" | "person";
+  item: ContentItem;
   onRemove: () => void;
-  compact?: boolean;
 }
 
-const getCategoryIcon = (category: Person["category"]) => {
+const getCategoryIcon = (category: "actor" | "director" | "other") => {
   switch (category) {
     case "actor":
       return <Film className="h-3 w-3" />;
@@ -26,7 +32,7 @@ const getCategoryIcon = (category: Person["category"]) => {
 };
 
 const getCategoryBadgeVariant = (
-  category: Person["category"]
+  category: "actor" | "director" | "other"
 ): "default" | "secondary" | "outline" => {
   switch (category) {
     case "actor":
@@ -40,111 +46,39 @@ const getCategoryBadgeVariant = (
   }
 };
 
-export function PreferenceItem({
-  item,
-  type,
-  onRemove,
-  compact = false,
-}: PreferenceItemProps) {
-  const getItemInfo = () => {
-    if (type === "person") {
-      const person = item as Person;
-      return {
-        title: person.name,
-        subtitle: null,
-        imageUrl: person.profileImageUrl,
-        rating: null,
-        date: null,
-        genres: [],
-        category: person.category,
-        extraInfo: person.knownFor?.slice(0, 5).map((film) => film.title),
-        badgeText: person.category,
-        badgeVariant: getCategoryBadgeVariant(person.category),
-        categoryIcon: getCategoryIcon(person.category),
-      };
-    } else {
-      const film = item as FilmInfo;
-      return {
-        title: film.title,
-        subtitle: film.category === "movie" ? "Movie" : "TV Show",
-        imageUrl: film.posterPath,
-        rating: film.voteAverage,
-        date: film.releaseDate
-          ? new Date(film.releaseDate).getFullYear()
-          : null,
-        genres: film.genres,
-        category: film.category,
-        extraInfo: null,
-        badgeText: film.category === "movie" ? "Film" : "TV",
-        badgeVariant: "secondary" as const,
-      };
-    }
-  };
-
-  const info = getItemInfo();
-
-  if (compact) {
-    return (
-      <div
-        className={cn(
-          "relative flex items-center gap-3 p-2 rounded-lg border bg-card hover:bg-accent transition-colors group"
-        )}
-      >
-        {/* Close Button */}
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={onRemove}
-          className="absolute top-1 right-1 h-6 w-6 p-0 text-muted-foreground hover:text-red-500 hover:bg-red-50 rounded-md transition-all duration-200 z-10"
-        >
-          <Trash2 className="h-3 w-3" />
-        </Button>
-
-        {/* Image */}
-        <div className="shrink-0">
-          {info.imageUrl ? (
-            <img
-              src={info.imageUrl}
-              alt={info.title}
-              className="w-12 h-16 object-cover rounded"
-              loading="lazy"
-            />
-          ) : (
-            <div className="w-12 h-16 bg-muted rounded flex items-center justify-center">
-              {type === "person" ? (
-                <div className="flex flex-col items-center">
-                  {info.categoryIcon}
-                  <Badge variant={info.badgeVariant} className="ml-1 text-xs">
-                    {info.badgeText}
-                  </Badge>
-                </div>
-              ) : type === "movie" ? (
-                <Film className="h-5 w-5 text-muted-foreground" />
-              ) : (
-                <Tv className="h-5 w-5 text-muted-foreground" />
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0 pr-8">
-          <h4 className="font-medium text-sm truncate mb-1">
-            {info.title}
-          </h4>
-          <p className="text-xs text-muted-foreground mb-1">{info.subtitle}</p>
-          <div className="flex items-center gap-2">
-            {info.date && (
-              <div className="flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                <span className="text-xs">{info.date}</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
+const getItemInfo = (item: ContentItem) => {
+  if (item.contentType === "person") {
+    return {
+      title: item.name,
+      subtitle: null,
+      imageUrl: item.profileImageUrl,
+      rating: null,
+      date: null,
+      genres: [],
+      category: item.category,
+      extraInfo: item.knownFor?.slice(0, 5).map((film) => film.title),
+      badgeText: item.category,
+      badgeVariant: getCategoryBadgeVariant(item.category),
+      categoryIcon: getCategoryIcon(item.category),
+    };
+  } else {
+    return {
+      title: item.title,
+      subtitle: item.contentType === "movie" ? "Movie" : "TV Show",
+      imageUrl: item.posterPath,
+      rating: item.voteAverage,
+      date: item.releaseDate ? new Date(item.releaseDate).getFullYear() : null,
+      genres: item.genres,
+      category: item.contentType,
+      extraInfo: null,
+      badgeText: item.contentType === "movie" ? "Film" : "TV",
+      badgeVariant: "secondary" as const,
+    };
   }
+};
+
+export function PreferenceItem({ item, onRemove }: PreferenceItemProps) {
+  const info = getItemInfo(item);
 
   return (
     <Card className="group hover:shadow-md transition-shadow cursor-pointer relative">
@@ -171,7 +105,7 @@ export function PreferenceItem({
               />
             ) : (
               <div className="w-16 h-24 bg-muted rounded-lg flex items-center justify-center">
-                {type === "person" ? (
+                {item.contentType === "person" ? (
                   <div className="flex flex-col items-center gap-1">
                     {info.categoryIcon}
                     <Badge variant={info.badgeVariant} className="text-xs">
@@ -197,8 +131,8 @@ export function PreferenceItem({
 
             {/* Metadata */}
             <div className="flex items-center gap-3">
-              {type === "person" && (
-                <div className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+              {item.contentType === "person" && (
+                <div className="flex text-white items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium bg-transparent dark:bg-gray-800 dark:text-gray-300">
                   {info.categoryIcon}
                   <span className="capitalize">{info.badgeText}</span>
                 </div>

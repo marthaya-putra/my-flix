@@ -43,7 +43,7 @@ export function MovieCard({ movie, onAdd, isAdded }: MovieCardProps) {
             </h3>
             {movie.releaseDate && (
               <p className="text-xs text-muted-foreground">
-                {movie.releaseDate}
+                {new Date(movie.releaseDate).getFullYear().toString()}
               </p>
             )}
 

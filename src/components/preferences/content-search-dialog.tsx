@@ -158,7 +158,7 @@ export function ContentSearchDialog({
           <Separator />
 
           {/* Results */}
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 pb-5">
             <div>
               {query.length < 2 ? (
                 <div className="flex items-center justify-center h-64 text-center">
