@@ -2,7 +2,6 @@ import { Link, useLocation } from "@tanstack/react-router";
 import {
   Search,
   Bell,
-  User,
   LogOut,
   Settings,
   User as UserIcon,
@@ -86,21 +85,7 @@ export default function Navbar() {
             >
               TV Shows
             </Link>
-            <Link
-              to="/preferences"
-              className={cn(
-                "transition-colors",
-                location.pathname === "/preferences"
-                  ? "text-primary font-semibold"
-                  : "text-foreground hover:text-primary"
-              )}
-            >
-              <div className="flex items-center gap-2">
-                <Heart className="w-4 h-4" />
-                <span>Preferences</span>
-              </div>
-            </Link>
-          </div>
+            </div>
         </div>
 
         <div className="flex items-center gap-4">
@@ -142,6 +127,20 @@ export default function Navbar() {
               <DropdownMenuItem className="cursor-pointer focus:bg-white/10 focus:text-white">
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Settings</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link
+                  to="/preferences"
+                  className={cn(
+                    "flex items-center w-full cursor-pointer focus:bg-white/10 focus:text-white",
+                    location.pathname === "/preferences"
+                      ? "text-primary"
+                      : "text-foreground"
+                  )}
+                >
+                  <Heart className="mr-2 h-4 w-4" />
+                  <span>Preferences</span>
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-white/10" />
               <DropdownMenuItem className="cursor-pointer text-red-500 focus:text-red-500 focus:bg-red-500/10">
