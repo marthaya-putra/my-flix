@@ -7,6 +7,7 @@ import {
   NewUserPreference,
 } from "@/lib/db";
 import { eq, and, desc, ilike } from "drizzle-orm";
+import { removeUserDislikeByPreferenceId } from "@/lib/repositories/user-dislikes";
 
 // Input validation schemas
 const addPreferenceSchema = z.object({
@@ -62,6 +63,19 @@ export const addUserPreference = createServerFn({
         .limit(1);
 
       if (existing.length > 0) {
+        // Preference already exists, remove from dislikes if it exists there
+        try {
+          await removeUserDislikeByPreferenceId({
+            data: {
+              userId: data.userId,
+              preferenceId: data.preferenceId,
+            },
+          });
+        } catch (error) {
+          // Log error but don't fail the preference addition
+          console.error("Failed to remove from dislikes:", error);
+        }
+
         // Preference already exists, return success with the existing preference
         return {
           success: true,
@@ -84,6 +98,19 @@ export const addUserPreference = createServerFn({
         .insert(userPreferences)
         .values(newPreference)
         .returning();
+
+      // Remove from dislikes if it exists there
+      try {
+        await removeUserDislikeByPreferenceId({
+          data: {
+            userId: data.userId,
+            preferenceId: data.preferenceId,
+          },
+        });
+      } catch (error) {
+        // Log error but don't fail the preference addition
+        console.error("Failed to remove from dislikes:", error);
+      }
 
       return {
         success: true,

@@ -5,13 +5,18 @@ import {
   addUserPreference,
   removeUserPreferenceByPreferenceId,
 } from "@/lib/repositories/user-preferences";
+import {
+  addUserDislike,
+  removeUserDislikeByPreferenceId,
+  getUserDislikes,
+} from "@/lib/repositories/user-dislikes";
 import { getUserPeople } from "@/lib/repositories/user-people";
 import { enrichRecommendationsWithTMDB } from "@/lib/data/recommendations";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FilmInfo } from "@/lib/types";
-import { ThumbsUp } from "lucide-react";
+import { ThumbsUp, ThumbsDown } from "lucide-react";
 
 export const Route = createFileRoute("/recommendations")({
   component: Recommendations,
@@ -33,6 +38,7 @@ function Recommendations() {
   const [error, setError] = useState<string | null>(null);
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
   const [likedItems, setLikedItems] = useState<Set<string>>(new Set());
+  const [dislikedItems, setDislikedItems] = useState<Set<string>>(new Set());
   const [addingToPreferences, setAddingToPreferences] = useState<Set<string>>(
     new Set()
   );
@@ -42,15 +48,20 @@ function Recommendations() {
 
   const loadUserPreferences = async () => {
     try {
-      const [preferencesResponse, peopleResponse] = await Promise.all([
-        getUserPreferences({ data: { userId } }),
-        getUserPeople({ data: { userId } }),
-      ]);
+      const [preferencesResponse, peopleResponse, dislikesResponse] =
+        await Promise.all([
+          getUserPreferences({ data: { userId } }),
+          getUserPeople({ data: { userId } }),
+          getUserDislikes({ data: { userId } }),
+        ]);
 
       const preferences = preferencesResponse.success
         ? preferencesResponse.preferences
         : [];
       const people = peopleResponse.success ? peopleResponse.people : [];
+      const dislikes = dislikesResponse.success
+        ? dislikesResponse.dislikes
+        : [];
 
       // Extract genres from preferences
       const allGenres = preferences
@@ -75,6 +86,12 @@ function Recommendations() {
             title: p.title,
             year: p.year,
           })),
+        dislikedContent: dislikes.map((d) => ({
+          title: d.title,
+          year: d.year,
+          category:
+            d.category === "movie" ? ("movie" as const) : ("tv" as const),
+        })),
         actors: people
           .filter((p) => p.personType === "actor")
           .map((p) => p.personName),
@@ -88,6 +105,7 @@ function Recommendations() {
       return {
         movies: [],
         tvs: [],
+        dislikedContent: [],
         actors: [],
         directors: [],
         genres: [],
@@ -106,6 +124,7 @@ function Recommendations() {
         data: {
           previouslyLikedMovies: userPrefs.movies,
           previouslyLikedTvs: userPrefs.tvs,
+          dislikedContent: userPrefs.dislikedContent,
           favoriteActors: userPrefs.actors,
           favoriteDirectors: userPrefs.directors,
           genres: userPrefs.genres,
@@ -152,49 +171,124 @@ function Recommendations() {
     try {
       if (isCurrentlyLiked) {
         // Remove from preferences
-        const result = await removeUserPreferenceByPreferenceId({
+        await removeUserPreferenceByPreferenceId({
           data: {
             userId,
             preferenceId: recommendation.tmdbData.id,
           },
         });
 
-        if (result.success) {
-          setLikedItems((prev) => {
-            const newSet = new Set(prev);
-            newSet.delete(itemKey);
-            return newSet;
-          });
-        } else {
-          alert("Failed to remove from preferences");
-        }
-      } else {
-        // Add to preferences
-        const result = await addUserPreference({
-          data: {
-            userId,
-            preferenceId: recommendation.tmdbData.id,
-            title: recommendation.title,
-            year: recommendation.releasedYear,
-            category:
-              recommendation.category === "movie" ? "movie" : "tv-series",
-            posterPath: recommendation.tmdbData.posterPath,
-            genres:
-              recommendation.tmdbData.genres.length > 0
-                ? recommendation.tmdbData.genres.join(", ")
-                : undefined,
-          },
+        setLikedItems((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(itemKey);
+          return newSet;
         });
+        return;
+      }
 
-        if (result.success) {
-          setLikedItems((prev) => new Set(prev).add(itemKey));
-        } else {
-          alert("Failed to add to preferences");
-        }
+      // Add to preferences
+      await addUserPreference({
+        data: {
+          userId,
+          preferenceId: recommendation.tmdbData.id,
+          title: recommendation.title,
+          year: recommendation.releasedYear,
+          category:
+            recommendation.category === "movie" ? "movie" : "tv-series",
+          posterPath: recommendation.tmdbData.posterPath,
+          genres:
+            recommendation.tmdbData.genres.length > 0
+              ? recommendation.tmdbData.genres.join(", ")
+              : undefined,
+        },
+      });
+
+      setLikedItems((prev) => new Set(prev).add(itemKey));
+
+      // If it was previously disliked, remove it from disliked items in UI state
+      if (dislikedItems.has(itemKey)) {
+        setDislikedItems((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(itemKey);
+          return newSet;
+        });
       }
     } catch (error) {
       console.error("Error modifying preferences:", error);
       alert(`Failed to ${isCurrentlyLiked ? "remove" : "add"} to preferences`);
+    } finally {
+      // Remove from loading state
+      setAddingToPreferences((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(itemKey);
+        return newSet;
+      });
+    }
+  };
+
+  const handleDislikeRecommendation = async (
+    recommendation: Recommendation
+  ) => {
+    if (!recommendation.tmdbData) {
+      alert("Cannot modify recommendation without TMDB data");
+      return;
+    }
+
+    const itemKey = `${recommendation.tmdbData.id}`;
+    const isCurrentlyDisliked = dislikedItems.has(itemKey);
+
+    // Add to loading state
+    setAddingToPreferences((prev) => new Set(prev).add(itemKey));
+
+    try {
+      if (isCurrentlyDisliked) {
+        // Remove from dislikes
+        await removeUserDislikeByPreferenceId({
+          data: {
+            userId,
+            preferenceId: recommendation.tmdbData.id,
+          },
+        });
+
+        setDislikedItems((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(itemKey);
+          return newSet;
+        });
+        return;
+      }
+
+      // Add to dislikes
+      await addUserDislike({
+        data: {
+          userId,
+          preferenceId: recommendation.tmdbData.id,
+          title: recommendation.title,
+          year: recommendation.releasedYear,
+          category:
+            recommendation.category === "movie" ? "movie" : "tv-series",
+        },
+      });
+
+      setDislikedItems((prev) => new Set(prev).add(itemKey));
+
+      // If it was previously liked, remove it from liked items
+      if (likedItems.has(itemKey)) {
+        await removeUserPreferenceByPreferenceId({
+          data: {
+            userId,
+            preferenceId: recommendation.tmdbData.id,
+          },
+        });
+        setLikedItems((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(itemKey);
+          return newSet;
+        });
+      }
+    } catch (error) {
+      console.error("Error modifying dislikes:", error);
+      alert(`Failed to ${isCurrentlyDisliked ? "remove" : "add"} to dislikes`);
     } finally {
       // Remove from loading state
       setAddingToPreferences((prev) => {
@@ -291,20 +385,36 @@ function Recommendations() {
                         <div className="flex justify-between items-start mb-3">
                           <h4 className="font-semibold text-xl">{rec.title}</h4>
                           {rec.tmdbData && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleLikeRecommendation(rec)}
-                              className="p-2 h-8 w-8"
-                            >
-                              <ThumbsUp
-                                className={`h-4 w-4 ${
-                                  likedItems.has(`${rec.tmdbData.id}`)
-                                    ? "fill-white text-white"
-                                    : "text-gray-300 hover:text-red-500 hover:fill-red-100"
-                                }`}
-                              />
-                            </Button>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDislikeRecommendation(rec)}
+                                className="p-2 h-8 w-8"
+                              >
+                                <ThumbsDown
+                                  className={`h-4 w-4 ${
+                                    dislikedItems.has(`${rec.tmdbData.id}`)
+                                      ? "fill-red-500 text-red-500"
+                                      : "text-gray-300 hover:text-red-500 hover:fill-red-100"
+                                  }`}
+                                />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleLikeRecommendation(rec)}
+                                className="p-2 h-8 w-8"
+                              >
+                                <ThumbsUp
+                                  className={`h-4 w-4 ${
+                                    likedItems.has(`${rec.tmdbData.id}`)
+                                      ? "fill-white text-white"
+                                      : "text-gray-300 hover:text-red-500 hover:fill-red-100"
+                                  }`}
+                                />
+                              </Button>
+                            </div>
                           )}
                         </div>
 
@@ -362,13 +472,6 @@ function Recommendations() {
                 No recommendations yet. Click "Get Recommendations" to see
                 personalized suggestions!
               </p>
-            </div>
-          )}
-
-          {/* Stats */}
-          {allRecommendations.length > 0 && (
-            <div className="text-sm text-gray-500 text-center">
-              Total recommendations received: {allRecommendations.length}
             </div>
           )}
         </CardContent>

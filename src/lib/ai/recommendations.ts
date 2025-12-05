@@ -20,6 +20,14 @@ const RecommendationInput = z.object({
       })
     )
     .optional(),
+  dislikedContent: z
+    .array(
+      z.object({
+        title: z.string(),
+        year: z.number(),
+      })
+    )
+    .optional(),
   previousRecommendations: z
     .array(
       z.object({
@@ -55,6 +63,7 @@ export const getRecommendations = createServerFn({
       const cleanData = {
         previouslyLikedMovies: simplifyWatched(data.previouslyLikedMovies),
         previouslyLikedTvs: simplifyWatched(data.previouslyLikedTvs),
+        dislikedContent: simplifyDisliked(data.dislikedContent),
         previousRecommendations: simplifyPrevRecs(data.previousRecommendations),
         favoriteActors: data.favoriteActors ?? [],
         favoriteDirectors: data.favoriteDirectors ?? [],
@@ -83,6 +92,7 @@ export const getRecommendations = createServerFn({
         - DO NOT recommend any content that has been previously recommended to this user
         - NEVER recommend content the user has already marked as liked - they already know these titles!
         - ABSOLUTELY NO recommendations from their "ALREADY LIKED CONTENT" list
+        - CRITICAL: NEVER recommend content from their "DISLIKED CONTENT" list - the user explicitly dislikes these titles!
         - Return exactly 5 recommendations`,
         prompt,
       });
@@ -115,10 +125,24 @@ function simplifyPrevRecs(
   }));
 }
 
+function simplifyDisliked(items?: Array<{ title: string; year: number }>) {
+  return (items ?? []).map((i) => ({
+    title: i.title,
+    year: i.year,
+  }));
+}
+
 function buildPrompt(cleanData: {
   previouslyLikedMovies: Array<{ title: string; year: number }>;
   previouslyLikedTvs: Array<{ title: string; year: number }>;
-  previousRecommendations: Array<{ title: string; year: number; category: "movie" | "tv" }>;
+  dislikedContent: Array<{
+    title: string;
+    year: number;
+  }>;
+  previousRecommendations: Array<{
+    title: string;
+    year: number;
+  }>;
   favoriteActors: string[];
   favoriteDirectors: string[];
   genres: string[];
@@ -138,6 +162,7 @@ ${JSON.stringify(cleanData, null, 2)}
 The data includes:
 - previouslyLikedMovies: [{ title, year }]
 - previouslyLikedTvs: [{ title, year }]
+- dislikedContent: [{ title, year }]
 - previousRecommendations: [{ title, year, category }]
 - favoriteActors: string[]
 - favoriteDirectors: string[]
@@ -152,11 +177,13 @@ Before recommending ANY movie or TV series:
 
 1. Reject anything whose title appears in previouslyLikedMovies.
 2. Reject anything whose title appears in previouslyLikedTvs.
-3. Reject anything whose title appears in previousRecommendations.
-4. If excludeAdult = true → reject adult content.
-5. If a title is already known to user, DO NOT recommend it.
+3. Reject anything whose title appears in dislikedContent.
+4. Reject anything whose title appears in previousRecommendations.
+5. If excludeAdult = true → reject adult content.
+6. If a title is already known to user, DO NOT recommend it.
 
 You must strictly follow this. Never break exclusion rules.
+IMPORTANT: The user has explicitly DISLIKED the content in the dislikedContent list - ABSOLUTELY NEVER recommend anything from this list under any circumstances.
 
 =====================================================
 = RECOMMENDATION GUIDELINES                         =

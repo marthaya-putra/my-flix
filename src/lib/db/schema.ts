@@ -30,6 +30,30 @@ export const userPreferences = pgTable(
   ]
 );
 
+// User dislikes for movies and TV series
+export const userDislikes = pgTable(
+  'user_dislikes',
+  {
+    id: serial('id').primaryKey(),
+    userId: text('user_id').notNull(),
+    preferenceId: integer('preference_id').notNull(), // TMDB ID
+    title: text('title').notNull(),
+    year: integer('year').notNull(), // Release year
+    category: categoryEnum('category').notNull(), // 'movie' | 'tv-series'
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+  },
+  (table) => [
+    index('user_dislikes_user_id_idx').on(table.userId),
+    index('user_dislikes_preference_id_idx').on(table.preferenceId),
+    index('user_dislikes_category_idx').on(table.category),
+    uniqueIndex('user_dislikes_user_id_preference_id_unique').on(
+      table.userId,
+      table.preferenceId
+    ),
+  ]
+);
+
 // User preferences for actors and directors
 export const userPeople = pgTable(
   'user_people',
@@ -56,5 +80,7 @@ export const userPeople = pgTable(
 // Export types for TypeScript
 export type UserPreference = typeof userPreferences.$inferSelect;
 export type NewUserPreference = typeof userPreferences.$inferInsert;
+export type UserDislike = typeof userDislikes.$inferSelect;
+export type NewUserDislike = typeof userDislikes.$inferInsert;
 export type UserPerson = typeof userPeople.$inferSelect;
 export type NewUserPerson = typeof userPeople.$inferInsert;
