@@ -193,8 +193,7 @@ function Recommendations() {
           preferenceId: recommendation.tmdbData.id,
           title: recommendation.title,
           year: recommendation.releasedYear,
-          category:
-            recommendation.category === "movie" ? "movie" : "tv-series",
+          category: recommendation.category === "movie" ? "movie" : "tv-series",
           posterPath: recommendation.tmdbData.posterPath,
           genres:
             recommendation.tmdbData.genres.length > 0
@@ -265,27 +264,24 @@ function Recommendations() {
           preferenceId: recommendation.tmdbData.id,
           title: recommendation.title,
           year: recommendation.releasedYear,
-          category:
-            recommendation.category === "movie" ? "movie" : "tv-series",
+          category: recommendation.category === "movie" ? "movie" : "tv-series",
         },
       });
 
       setDislikedItems((prev) => new Set(prev).add(itemKey));
 
       // If it was previously liked, remove it from liked items
-      if (likedItems.has(itemKey)) {
-        await removeUserPreferenceByPreferenceId({
-          data: {
-            userId,
-            preferenceId: recommendation.tmdbData.id,
-          },
-        });
-        setLikedItems((prev) => {
-          const newSet = new Set(prev);
-          newSet.delete(itemKey);
-          return newSet;
-        });
-      }
+      await removeUserPreferenceByPreferenceId({
+        data: {
+          userId,
+          preferenceId: recommendation.tmdbData.id,
+        },
+      });
+      setLikedItems((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(itemKey);
+        return newSet;
+      });
     } catch (error) {
       console.error("Error modifying dislikes:", error);
       alert(`Failed to ${isCurrentlyDisliked ? "remove" : "add"} to dislikes`);
