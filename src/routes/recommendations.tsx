@@ -16,7 +16,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FilmInfo } from "@/lib/types";
-import { ThumbsUp, ThumbsDown } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Play } from "lucide-react";
+import { PlayLink } from "@/components/play-link";
 
 export const Route = createFileRoute("/recommendations")({
   component: Recommendations,
@@ -332,7 +333,7 @@ function Recommendations() {
                   >
                     <div className="flex flex-col sm:flex-row">
                       {/* Poster Image */}
-                      <div className="relative w-full sm:w-48 aspect-[2/3] sm:aspect-auto bg-muted">
+                      <div className="relative w-full sm:w-48 aspect-2/3 sm:aspect-auto bg-muted">
                         {rec.tmdbData?.posterPath &&
                         !imageErrors.has(`${rec.title}-${rec.releasedYear}`) ? (
                           <img
@@ -380,38 +381,57 @@ function Recommendations() {
                       <CardContent className="flex-1 p-4">
                         <div className="flex justify-between items-start mb-3">
                           <h4 className="font-semibold text-xl">{rec.title}</h4>
-                          {rec.tmdbData && (
-                            <div className="flex gap-1">
+                          <div className="flex gap-2">
+                            <PlayLink title={rec.title} category={rec.category}>
                               <Button
-                                variant="ghost"
+                                variant="default"
                                 size="sm"
-                                onClick={() => handleDislikeRecommendation(rec)}
-                                className="p-2 h-8 w-8"
+                                className="gap-2 group hover:scale-105 transition-all duration-300"
                               >
-                                <ThumbsDown
-                                  className={`h-4 w-4 ${
-                                    dislikedItems.has(`${rec.tmdbData.id}`)
-                                      ? "fill-red-500 text-red-500"
-                                      : "text-gray-300 hover:text-red-500 hover:fill-red-100"
-                                  }`}
-                                />
+                                <div
+                                  className="group-hover:animate-sliding"
+                                  style={
+                                    { "--slide-animation-from": "-6px" } as React.CSSProperties
+                                  }
+                                >
+                                  <Play className="h-4 w-4 fill-current" />
+                                </div>
+                                Watch Now
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleLikeRecommendation(rec)}
-                                className="p-2 h-8 w-8"
-                              >
-                                <ThumbsUp
-                                  className={`h-4 w-4 ${
-                                    likedItems.has(`${rec.tmdbData.id}`)
-                                      ? "fill-white text-white"
-                                      : "text-gray-300 hover:text-red-500 hover:fill-red-100"
-                                  }`}
-                                />
-                              </Button>
-                            </div>
-                          )}
+                            </PlayLink>
+                            {rec.tmdbData && (
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDislikeRecommendation(rec)}
+                                  className="p-2 h-8 w-8"
+                                >
+                                  <ThumbsDown
+                                    className={`h-4 w-4 ${
+                                      dislikedItems.has(`${rec.tmdbData.id}`)
+                                        ? "fill-red-500 text-red-500"
+                                        : "text-gray-300 hover:text-red-500 hover:fill-red-100"
+                                    }`}
+                                  />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleLikeRecommendation(rec)}
+                                  className="p-2 h-8 w-8"
+                                >
+                                  <ThumbsUp
+                                    className={`h-4 w-4 ${
+                                      likedItems.has(`${rec.tmdbData.id}`)
+                                        ? "fill-white text-white"
+                                        : "text-gray-300 hover:text-red-500 hover:fill-red-100"
+                                    }`}
+                                  />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
                         </div>
 
                         {/* Recommendation Reason */}
