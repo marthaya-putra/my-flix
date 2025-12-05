@@ -1,34 +1,31 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { db, userPreferences, userPeople } from "@/lib/db";
-import { eq, and } from "drizzle-orm";
 import { FilmInfo, Person } from "@/lib/types";
+import {
+  addUserPreference,
+  getUserPreferences,
+  removeUserPreferenceByPreferenceId,
+  schemas as preferenceSchemas,
+} from "@/lib/repositories/user-preferences";
+import { db, userPreferences } from "@/lib/db";
+import { eq } from "drizzle-orm";
+import {
+  addUserPerson,
+  getUserPeople,
+  removeUserPerson,
+  schemas as peopleSchemas,
+} from "@/lib/repositories/user-people";
 
-// Input validation schemas
-const AddMoviePreferenceInput = z.object({
-  preferenceId: z.number().positive(),
-  title: z.string(),
-  year: z.number().positive(),
-  category: z.enum(["movie", "tv-series"]),
-  genres: z.string().optional(),
-  posterPath: z.string().optional(),
-});
-
-const AddPersonPreferenceInput = z.object({
-  personId: z.number().positive(),
-  personName: z.string(),
-  personType: z.enum(["actor", "director", "other"]),
-  profilePath: z.string().optional(),
-});
-
+// Input validation schemas from repositories
+const AddMoviePreferenceInput = preferenceSchemas.addPreference.omit({ userId: true });
+const AddPersonPreferenceInput = peopleSchemas.addPerson.omit({ userId: true });
 const RemovePreferenceInput = z.object({
   id: z.number(),
   type: z.enum(["movie", "tv-series"]),
 });
-
 const RemovePersonInput = z.object({
   id: z.number(),
-  personType: z.enum(["actor", "director"]),
+  personType: z.enum(["actor", "director", "other"]),
 });
 
 // Hardcoded user ID for now
@@ -43,37 +40,23 @@ export const addMoviePreference = createServerFn({
     try {
       const { preferenceId, title, year, category, genres, posterPath } = data;
 
-      // Check if already exists
-      const existing = await db
-        .select()
-        .from(userPreferences)
-        .where(
-          and(
-            eq(userPreferences.userId, DEFAULT_USER_ID),
-            eq(userPreferences.preferenceId, preferenceId)
-          )
-        )
-        .limit(1);
-
-      if (existing.length > 0) {
-        return { success: false, error: "Already in preferences" };
-      }
-
-      // Insert new preference
-      const result = await db
-        .insert(userPreferences)
-        .values({
+      const result = await addUserPreference({
+        data: {
           userId: DEFAULT_USER_ID,
           preferenceId,
           title,
           year,
           category,
-          genres: genres || null,
-          posterPath: posterPath || null,
-        })
-        .returning();
+          genres,
+          posterPath,
+        },
+      });
 
-      return { success: true, data: result[0] };
+      if (result.success && result.preference) {
+        return { success: true, data: result.preference };
+      } else {
+        return { success: false, error: "Already in preferences" };
+      }
     } catch (error) {
       console.error("Error adding movie preference:", error);
       return {
@@ -95,22 +78,34 @@ export const removeMoviePreference = createServerFn({
     try {
       const { id, type } = data;
 
-      const result = await db
-        .delete(userPreferences)
+      // First get the preference to find the TMDB ID
+      const preferenceToDelete = await db
+        .select()
+        .from(userPreferences)
         .where(
-          and(
-            eq(userPreferences.id, id),
-            eq(userPreferences.userId, DEFAULT_USER_ID),
-            eq(userPreferences.category, type)
-          )
+          eq(userPreferences.id, id)
         )
-        .returning();
+        .limit(1);
 
-      if (result.length === 0) {
+      if (preferenceToDelete.length === 0) {
         return { success: false, error: "Preference not found" };
       }
 
-      return { success: true, data: result[0] };
+      const preference = preferenceToDelete[0];
+
+      // Use repository function to remove by TMDB ID
+      const result = await removeUserPreferenceByPreferenceId({
+        data: {
+          userId: DEFAULT_USER_ID,
+          preferenceId: preference.preferenceId,
+        },
+      });
+
+      if (result.success && result.deletedPreference) {
+        return { success: true, data: result.deletedPreference };
+      } else {
+        return { success: false, error: "Failed to remove preference" };
+      }
     } catch (error) {
       console.error("Error removing movie preference:", error);
       return {
@@ -132,35 +127,21 @@ export const addPersonPreference = createServerFn({
     try {
       const { personId, personName, personType, profilePath } = data;
 
-      // Check if already exists
-      const existing = await db
-        .select()
-        .from(userPeople)
-        .where(
-          and(
-            eq(userPeople.userId, DEFAULT_USER_ID),
-            eq(userPeople.personId, personId)
-          )
-        )
-        .limit(1);
-
-      if (existing.length > 0) {
-        return { success: false, error: "Already in preferences" };
-      }
-
-      // Insert new person
-      const result = await db
-        .insert(userPeople)
-        .values({
+      const result = await addUserPerson({
+        data: {
           userId: DEFAULT_USER_ID,
           personId,
           personName,
           personType,
-          profilePath: profilePath || null,
-        })
-        .returning();
+          profilePath,
+        },
+      });
 
-      return { success: true, data: result[0] };
+      if (result.success && result.person) {
+        return { success: true, data: result.person };
+      } else {
+        return { success: false, error: "Already in preferences" };
+      }
     } catch (error) {
       console.error("Error adding person preference:", error);
       return {
@@ -182,22 +163,18 @@ export const removePersonPreference = createServerFn({
     try {
       const { id, personType } = data;
 
-      const result = await db
-        .delete(userPeople)
-        .where(
-          and(
-            eq(userPeople.id, id),
-            eq(userPeople.userId, DEFAULT_USER_ID),
-            eq(userPeople.personType, personType)
-          )
-        )
-        .returning();
+      const result = await removeUserPerson({
+        data: {
+          id,
+          userId: DEFAULT_USER_ID,
+        },
+      });
 
-      if (result.length === 0) {
+      if (result.success && result.deletedPerson) {
+        return { success: true, data: result.deletedPerson };
+      } else {
         return { success: false, error: "Person not found" };
       }
-
-      return { success: true, data: result[0] };
     } catch (error) {
       console.error("Error removing person preference:", error);
       return {
@@ -215,19 +192,24 @@ export const fetchUserPreferences = createServerFn({
   method: "GET",
 }).handler(async () => {
   try {
-    // Fetch movie and TV preferences
-    const movieTVPreferences = await db
-      .select()
-      .from(userPreferences)
-      .where(eq(userPreferences.userId, DEFAULT_USER_ID))
-      .orderBy(userPreferences.createdAt);
+    // Fetch movie and TV preferences using repository
+    const movieTVResult = await getUserPreferences({
+      data: {
+        userId: DEFAULT_USER_ID,
+        limit: 1000, // Get all preferences
+      },
+    });
 
-    // Fetch people preferences
-    const peoplePreferences = await db
-      .select()
-      .from(userPeople)
-      .where(eq(userPeople.userId, DEFAULT_USER_ID))
-      .orderBy(userPeople.createdAt);
+    // Fetch people preferences using repository
+    const peopleResult = await getUserPeople({
+      data: {
+        userId: DEFAULT_USER_ID,
+        limit: 1000, // Get all people
+      },
+    });
+
+    const movieTVPreferences = movieTVResult.success ? movieTVResult.preferences : [];
+    const peoplePreferences = peopleResult.success ? peopleResult.people : [];
 
     // Separate movies and TV shows
     const movies = movieTVPreferences
@@ -280,7 +262,7 @@ export const fetchUserPreferences = createServerFn({
       profileImageUrl: pref.profilePath || "",
       popularity: 0,
       knownFor: [],
-      category: pref.personType as "actor" | "director" | "other",
+      category: pref.personType,
     }));
 
     return {
@@ -375,8 +357,9 @@ export const addPersonInfoPreference = createServerFn({
         id: z.number(),
         name: z.string(),
         knownForDepartment: z.string().optional(),
+        profilePath: z.string().optional(),
       }),
-      personType: z.enum(["actor", "director"]),
+      personType: z.enum(["actor", "director", "other"]),
     })
   )
   .handler(async ({ data }) => {
@@ -388,6 +371,7 @@ export const addPersonInfoPreference = createServerFn({
           personId: person.id,
           personName: person.name,
           personType,
+          profilePath: person.profilePath,
         },
       });
     } catch (error) {

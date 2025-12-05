@@ -1,4 +1,8 @@
-import { pgTable, serial, text, timestamp, uniqueIndex, index, integer } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, timestamp, uniqueIndex, index, integer, pgEnum } from 'drizzle-orm/pg-core';
+
+// Enum definitions
+export const categoryEnum = pgEnum('category', ['movie', 'tv-series']);
+export const personTypeEnum = pgEnum('person_type', ['actor', 'director', 'other']);
 
 // User preferences for movies and TV series
 export const userPreferences = pgTable(
@@ -9,7 +13,7 @@ export const userPreferences = pgTable(
     preferenceId: integer('preference_id').notNull(), // TMDB ID
     title: text('title').notNull(),
     year: integer('year').notNull(), // Release year
-    category: text('category').notNull(), // 'movie' | 'tv-series'
+    category: categoryEnum('category').notNull(), // 'movie' | 'tv-series'
     genres: text('genres'), // comma-separated genre names
     posterPath: text('poster_path'), // TMDB poster path
     createdAt: timestamp('created_at').defaultNow(),
@@ -34,7 +38,7 @@ export const userPeople = pgTable(
     userId: text('user_id').notNull(),
     personId: integer('person_id').notNull(), // TMDB ID
     personName: text('person_name').notNull(),
-    personType: text('person_type').notNull(), // 'actor' | 'director' | 'other'
+    personType: personTypeEnum('person_type').notNull(), // 'actor' | 'director' | 'other'
     profilePath: text('profile_path'), // TMDB profile path
     createdAt: timestamp('created_at').defaultNow(),
   },

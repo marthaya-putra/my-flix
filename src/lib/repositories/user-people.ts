@@ -8,7 +8,7 @@ const addPersonSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
   personId: z.number().positive("TMDB ID is required"),
   personName: z.string().min(1, "Person name is required"),
-  personType: z.enum(["actor", "director"]),
+  personType: z.enum(["actor", "director", "other"]),
   profilePath: z.string().optional(),
 });
 
@@ -17,7 +17,7 @@ const updatePersonSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
   personId: z.number().positive("TMDB ID is required"),
   personName: z.string().min(1, "Person name is required"),
-  personType: z.enum(["actor", "director"]),
+  personType: z.enum(["actor", "director", "other"]),
   profilePath: z.string().optional(),
 });
 
@@ -28,8 +28,8 @@ const removePersonSchema = z.object({
 
 const getUserPeopleSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
-  personType: z.enum(["actor", "director"]).optional(),
-  limit: z.number().positive().max(100).default(50),
+  personType: z.enum(["actor", "director", "other"]).optional(),
+  limit: z.number().positive().max(100).optional(),
   offset: z.number().nonnegative().default(0),
 });
 
@@ -53,7 +53,9 @@ export const addUserPerson = createServerFn({
         .limit(1);
 
       if (existing.length > 0) {
-        throw new Error(`This ${data.personType} is already in your preferences`);
+        throw new Error(
+          `This ${data.personType} is already in your preferences`
+        );
       }
 
       // Insert new person preference
@@ -96,18 +98,27 @@ export const getUserPeople = createServerFn({
         whereConditions.push(eq(userPeople.personType, data.personType));
       }
 
-      const people = await db
+      let query = db
         .select()
         .from(userPeople)
         .where(and(...whereConditions))
         .orderBy(desc(userPeople.createdAt))
-        .limit(data.limit)
-        .offset(data.offset);
+        .$dynamic();
+
+      if (data.limit) {
+        query = query.limit(data.limit);
+      }
+
+      if (data.offset > 0) {
+        query = query.offset(data.offset);
+      }
+
+      const people = await query;
 
       return {
         success: true,
         people,
-        hasMore: people.length === data.limit,
+        hasMore: data.limit ? people.length === data.limit : false,
       };
     } catch (error) {
       console.error("Failed to get user people:", error);
@@ -119,10 +130,14 @@ export const getUserPeople = createServerFn({
 export const getUserActors = createServerFn({
   method: "GET",
 })
-  .inputValidator(getUserPeopleSchema.omit({ personType: true }).extend({ personType: z.literal("actor").optional() }))
+  .inputValidator(
+    getUserPeopleSchema
+      .omit({ personType: true })
+      .extend({ personType: z.literal("actor").optional() })
+  )
   .handler(async ({ data }) => {
     try {
-      const actors = await db
+      let query = db
         .select()
         .from(userPeople)
         .where(
@@ -132,13 +147,22 @@ export const getUserActors = createServerFn({
           )
         )
         .orderBy(desc(userPeople.createdAt))
-        .limit(data.limit)
-        .offset(data.offset);
+        .$dynamic();
+
+      if (data.limit) {
+        query = query.limit(data.limit);
+      }
+
+      if (data.offset > 0) {
+        query = query.offset(data.offset);
+      }
+
+      const actors = await query;
 
       return {
         success: true,
         actors,
-        hasMore: actors.length === data.limit,
+        hasMore: data.limit ? actors.length === data.limit : false,
       };
     } catch (error) {
       console.error("Failed to get user actors:", error);
@@ -225,7 +249,7 @@ export const searchUserPeople = createServerFn({
     z.object({
       userId: z.string().min(1, "User ID is required"),
       query: z.string().min(1, "Search query is required"),
-      personType: z.enum(["actor", "director"]).optional(),
+      personType: z.enum(["actor", "director", "other"]).optional(),
       limit: z.number().positive().max(50).default(20),
     })
   )
@@ -233,7 +257,7 @@ export const searchUserPeople = createServerFn({
     try {
       let whereConditions = [
         eq(userPeople.userId, data.userId),
-        ilike(userPeople.personName, `%${data.query}%`)
+        ilike(userPeople.personName, `%${data.query}%`),
       ];
 
       if (data.personType) {
@@ -292,3 +316,17 @@ export const searchUserActors = createServerFn({
       throw new Error("Failed to search actor preferences");
     }
   });
+
+// Export schemas for reuse
+export const schemas = {
+  addPerson: addPersonSchema,
+  updatePerson: updatePersonSchema,
+  removePerson: removePersonSchema,
+  getUserPeople: getUserPeopleSchema,
+  searchUserPeople: z.object({
+    userId: z.string().min(1, "User ID is required"),
+    query: z.string().min(1, "Search query is required"),
+    personType: z.enum(["actor", "director", "other"]).optional(),
+    limit: z.number().positive().max(50).default(20),
+  }),
+};

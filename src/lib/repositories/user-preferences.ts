@@ -278,3 +278,17 @@ export const removeUserPreferenceByPreferenceId = createServerFn({
       };
     }
   });
+
+// Export schemas for reuse
+export const schemas = {
+  addPreference: addPreferenceSchema,
+  updatePreference: updatePreferenceSchema,
+  removePreferenceByTmdbId: removePreferenceByTmdbIdSchema,
+  getUserPreferences: getUserPreferencesSchema,
+  searchUserPreferences: z.object({
+    userId: z.string().min(1, "User ID is required"),
+    query: z.string().min(1, "Search query is required"),
+    category: z.enum(["movie", "tv-series"]).optional(),
+    limit: z.number().positive().max(50).default(20),
+  }),
+};

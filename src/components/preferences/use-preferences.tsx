@@ -1,6 +1,11 @@
 import { useState, useEffect } from "react";
 import { createServerFn } from "@tanstack/react-start";
 import { FilmInfo, Person } from "@/lib/types";
+
+// Extended Person type that includes dbId from database
+type PersonWithDbId = Person & {
+  dbId?: number;
+};
 import {
   addMoviePreference,
   addPersonPreference,
@@ -15,7 +20,7 @@ export interface UserPreferences {
   userId?: string;
   movies: FilmInfo[];
   tvShows: FilmInfo[];
-  people: Person[];
+  people: PersonWithDbId[];
   favoriteGenres: string[];
   minRating: number;
   preferredContent: {
@@ -81,11 +86,12 @@ export function usePreferences() {
         // It's a person/actor
         const person = content as Person;
 
+        const personType = person.category;
         const result = await addPersonPreference({
           data: {
             personId: person.id,
             personName: person.name,
-            personType: person.category,
+            personType,
             profilePath: person.profileImageUrl,
           },
         });
@@ -154,8 +160,8 @@ export function usePreferences() {
       if (type === "person") {
         // Find the person and get database ID
         const person = preferences.people.find((p) => p.id === id);
-        const dbId = (person as any)?.dbId;
-        const personType = person?.category === "director" ? "director" : "actor";
+        const dbId = person?.dbId;
+        const personType = person?.category || "actor";
 
         result = await removePersonPreference({
           data: {
