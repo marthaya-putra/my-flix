@@ -49,6 +49,14 @@ Routes export a `Route` object with `component` and optional `loader` for data f
 - **UI Components**: The UI library components (in `src/components/ui/`) follow their existing naming convention
 - **Files**: All files should use lowercase with hyphens for readability
 
+**TypeScript Best Practices:**
+
+- **Avoid the `any` type**: Never use `any` in this codebase. Always prefer proper TypeScript typing
+- Use specific types or interfaces instead of `any` for better type safety and code maintainability
+- When working with external APIs or unknown data structures, create proper type definitions
+- Use `unknown` instead of `any` when you truly cannot determine the type at development time
+- Leverage TypeScript's type inference to reduce explicit type annotations where appropriate
+
 **UI Component Usage:**
 
 - **Always prefer shadcn UI components** over native HTML elements

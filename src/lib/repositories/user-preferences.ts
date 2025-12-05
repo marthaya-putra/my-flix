@@ -15,7 +15,7 @@ const addPreferenceSchema = z.object({
   title: z.string().min(1, "Title is required"),
   year: z.number().positive("Year is required"),
   category: z.enum(["movie", "tv-series"], {
-    errorMap: () => ({ message: "Category must be either movie or tv-series" }),
+    message: "Category must be either movie or tv-series",
   }),
   genres: z.string().optional(),
   posterPath: z.string().optional(),
@@ -38,7 +38,7 @@ const removePreferenceSchema = z.object({
 const getUserPreferencesSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
   category: z.enum(["movie", "tv-series"]).optional(),
-  limit: z.number().positive().max(100).default(50),
+  limit: z.number().positive().max(100).optional(),
   offset: z.number().nonnegative().default(0),
 });
 
@@ -105,18 +105,20 @@ export const getUserPreferences = createServerFn({
         whereConditions.push(eq(userPreferences.category, data.category));
       }
 
-      const preferences = await db
+      const baseQuery = db
         .select()
         .from(userPreferences)
         .where(and(...whereConditions))
-        .orderBy(desc(userPreferences.updatedAt))
-        .limit(data.limit)
-        .offset(data.offset);
+        .orderBy(desc(userPreferences.updatedAt));
+
+      const preferences = data.limit
+        ? await baseQuery.limit(data.limit).offset(data.offset)
+        : await baseQuery.offset(data.offset);
 
       return {
         success: true,
         preferences,
-        hasMore: preferences.length === data.limit,
+        hasMore: data.limit ? preferences.length === data.limit : false,
       };
     } catch (error) {
       console.error("Failed to get user preferences:", error);

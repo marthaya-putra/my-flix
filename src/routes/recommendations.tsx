@@ -1,6 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { getRecommendations } from "@/lib/ai/test-fn";
-import { getUserPreferences, addUserPreference } from "@/lib/repositories/user-preferences";
+import { getRecommendations } from "@/lib/ai/recommendations";
+import {
+  getUserPreferences,
+  addUserPreference,
+} from "@/lib/repositories/user-preferences";
 import { getUserPeople } from "@/lib/repositories/user-people";
 import { enrichRecommendationsWithTMDB } from "@/lib/data/recommendations";
 import { useState } from "react";
@@ -29,7 +32,9 @@ function Recommendations() {
   const [error, setError] = useState<string | null>(null);
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
   const [lovedItems, setLovedItems] = useState<Set<string>>(new Set());
-  const [addingToPreferences, setAddingToPreferences] = useState<Set<string>>(new Set());
+  const [addingToPreferences, setAddingToPreferences] = useState<Set<string>>(
+    new Set()
+  );
 
   // Hardcoded user ID for testing - in real app, get from auth context
   const userId = "default-user";
@@ -49,7 +54,7 @@ function Recommendations() {
       // Extract genres from preferences
       const allGenres = preferences
         .filter((p) => p.genres)
-        .map((p) => p.genres!.split(',').map((genre) => genre.trim()))
+        .map((p) => p.genres!.split(",").map((genre) => genre.trim()))
         .flat()
         .filter((genre) => genre.length > 0);
 
@@ -118,10 +123,7 @@ function Recommendations() {
           data: result.data.recommendations,
         });
 
-        setAllRecommendations((prev) => [
-          ...prev,
-          ...enrichedRecommendations,
-        ]);
+        setAllRecommendations((prev) => [...prev, ...enrichedRecommendations]);
       } else {
         setError(result.error || "Failed to get recommendations");
       }
@@ -147,7 +149,7 @@ function Recommendations() {
     }
 
     // Add to loading state
-    setAddingToPreferences(prev => new Set(prev).add(itemKey));
+    setAddingToPreferences((prev) => new Set(prev).add(itemKey));
 
     try {
       const result = await addUserPreference({
@@ -158,14 +160,15 @@ function Recommendations() {
           year: recommendation.releasedYear,
           category: recommendation.category === "movie" ? "movie" : "tv-series",
           posterPath: recommendation.tmdbData.posterPath,
-          genres: recommendation.tmdbData.genres.length > 0
-            ? recommendation.tmdbData.genres.join(', ')
-            : undefined,
+          genres:
+            recommendation.tmdbData.genres.length > 0
+              ? recommendation.tmdbData.genres.join(", ")
+              : undefined,
         },
       });
 
       if (result.success) {
-        setLovedItems(prev => new Set(prev).add(itemKey));
+        setLovedItems((prev) => new Set(prev).add(itemKey));
       } else {
         alert("Failed to add to preferences");
       }
@@ -174,7 +177,7 @@ function Recommendations() {
       alert("Failed to add to preferences");
     } finally {
       // Remove from loading state
-      setAddingToPreferences(prev => {
+      setAddingToPreferences((prev) => {
         const newSet = new Set(prev);
         newSet.delete(itemKey);
         return newSet;
@@ -182,7 +185,6 @@ function Recommendations() {
     }
   };
 
-  
   return (
     <div className="container mx-auto p-4 max-w-4xl mt-8">
       <Card>
@@ -221,13 +223,18 @@ function Recommendations() {
                     <div className="flex flex-col sm:flex-row">
                       {/* Poster Image */}
                       <div className="relative w-full sm:w-48 aspect-[2/3] sm:aspect-auto bg-muted">
-                        {rec.tmdbData?.posterPath && !imageErrors.has(`${rec.title}-${rec.releasedYear}`) ? (
+                        {rec.tmdbData?.posterPath &&
+                        !imageErrors.has(`${rec.title}-${rec.releasedYear}`) ? (
                           <img
                             src={rec.tmdbData.posterPath}
                             alt={`${rec.title} poster`}
                             className="w-full h-full object-cover"
                             onError={() => {
-                              setImageErrors(prev => new Set(prev).add(`${rec.title}-${rec.releasedYear}`));
+                              setImageErrors((prev) =>
+                                new Set(prev).add(
+                                  `${rec.title}-${rec.releasedYear}`
+                                )
+                              );
                             }}
                           />
                         ) : (
@@ -268,14 +275,23 @@ function Recommendations() {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleLoveRecommendation(rec)}
-                              disabled={lovedItems.has(`${rec.tmdbData.id}-${rec.category}`) || addingToPreferences.has(`${rec.tmdbData.id}-${rec.category}`)}
+                              disabled={
+                                lovedItems.has(
+                                  `${rec.tmdbData.id}-${rec.category}`
+                                ) ||
+                                addingToPreferences.has(
+                                  `${rec.tmdbData.id}-${rec.category}`
+                                )
+                              }
                               className="p-2 h-8 w-8"
                             >
                               <Heart
                                 className={`h-4 w-4 ${
-                                  lovedItems.has(`${rec.tmdbData.id}-${rec.category}`)
-                                    ? 'fill-red-500 text-red-500'
-                                    : 'text-gray-400 hover:text-red-500'
+                                  lovedItems.has(
+                                    `${rec.tmdbData.id}-${rec.category}`
+                                  )
+                                    ? "fill-red-500 text-red-500"
+                                    : "text-gray-400 hover:text-red-500"
                                 }`}
                               />
                             </Button>
@@ -284,7 +300,9 @@ function Recommendations() {
 
                         {/* Recommendation Reason */}
                         <div className="mb-4">
-                          <p className="text-sm text-blue-600 font-medium mb-2">Why you'll like it:</p>
+                          <p className="text-sm text-blue-600 font-medium mb-2">
+                            Why you'll like it:
+                          </p>
                           <p className="text-muted-foreground text-sm leading-relaxed">
                             {rec.reason}
                           </p>
@@ -293,7 +311,9 @@ function Recommendations() {
                         {/* Additional TMDB Details */}
                         {rec.tmdbData?.overview && (
                           <div>
-                            <p className="text-sm text-gray-600 font-medium mb-2">Overview:</p>
+                            <p className="text-sm text-gray-600 font-medium mb-2">
+                              Overview:
+                            </p>
                             <p className="text-muted-foreground text-xs leading-relaxed line-clamp-4">
                               {rec.tmdbData.overview}
                             </p>
