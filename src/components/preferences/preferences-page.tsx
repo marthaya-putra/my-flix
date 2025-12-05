@@ -222,7 +222,6 @@ interface ContentSectionProps {
 function ContentSection({
   title,
   items,
-  type,
   onRemove,
   onAdd,
   showEmptyState,

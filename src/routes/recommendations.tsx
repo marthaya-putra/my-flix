@@ -3,6 +3,7 @@ import { getRecommendations } from "@/lib/ai/recommendations";
 import {
   getUserPreferences,
   addUserPreference,
+  removeUserPreferenceByPreferenceId,
 } from "@/lib/repositories/user-preferences";
 import { getUserPeople } from "@/lib/repositories/user-people";
 import { enrichRecommendationsWithTMDB } from "@/lib/data/recommendations";
@@ -10,7 +11,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FilmInfo } from "@/lib/types";
-import { Heart } from "lucide-react";
+import { ThumbsUp } from "lucide-react";
 
 export const Route = createFileRoute("/recommendations")({
   component: Recommendations,
@@ -31,7 +32,7 @@ function Recommendations() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
-  const [lovedItems, setLovedItems] = useState<Set<string>>(new Set());
+  const [likedItems, setLikedItems] = useState<Set<string>>(new Set());
   const [addingToPreferences, setAddingToPreferences] = useState<Set<string>>(
     new Set()
   );
@@ -136,45 +137,64 @@ function Recommendations() {
     }
   };
 
-  const handleLoveRecommendation = async (recommendation: Recommendation) => {
+  const handleLikeRecommendation = async (recommendation: Recommendation) => {
     if (!recommendation.tmdbData) {
-      alert("Cannot add recommendation without TMDB data");
+      alert("Cannot modify recommendation without TMDB data");
       return;
     }
 
-    const itemKey = `${recommendation.tmdbData.id}-${recommendation.category}`;
-
-    if (lovedItems.has(itemKey)) {
-      return; // Already loved
-    }
+    const itemKey = `${recommendation.tmdbData.id}`;
+    const isCurrentlyLiked = likedItems.has(itemKey);
 
     // Add to loading state
     setAddingToPreferences((prev) => new Set(prev).add(itemKey));
 
     try {
-      const result = await addUserPreference({
-        data: {
-          userId,
-          preferenceId: recommendation.tmdbData.id,
-          title: recommendation.title,
-          year: recommendation.releasedYear,
-          category: recommendation.category === "movie" ? "movie" : "tv-series",
-          posterPath: recommendation.tmdbData.posterPath,
-          genres:
-            recommendation.tmdbData.genres.length > 0
-              ? recommendation.tmdbData.genres.join(", ")
-              : undefined,
-        },
-      });
+      if (isCurrentlyLiked) {
+        // Remove from preferences
+        const result = await removeUserPreferenceByPreferenceId({
+          data: {
+            userId,
+            preferenceId: recommendation.tmdbData.id,
+          },
+        });
 
-      if (result.success) {
-        setLovedItems((prev) => new Set(prev).add(itemKey));
+        if (result.success) {
+          setLikedItems((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(itemKey);
+            return newSet;
+          });
+        } else {
+          alert("Failed to remove from preferences");
+        }
       } else {
-        alert("Failed to add to preferences");
+        // Add to preferences
+        const result = await addUserPreference({
+          data: {
+            userId,
+            preferenceId: recommendation.tmdbData.id,
+            title: recommendation.title,
+            year: recommendation.releasedYear,
+            category:
+              recommendation.category === "movie" ? "movie" : "tv-series",
+            posterPath: recommendation.tmdbData.posterPath,
+            genres:
+              recommendation.tmdbData.genres.length > 0
+                ? recommendation.tmdbData.genres.join(", ")
+                : undefined,
+          },
+        });
+
+        if (result.success) {
+          setLikedItems((prev) => new Set(prev).add(itemKey));
+        } else {
+          alert("Failed to add to preferences");
+        }
       }
     } catch (error) {
-      console.error("Error adding to preferences:", error);
-      alert("Failed to add to preferences");
+      console.error("Error modifying preferences:", error);
+      alert(`Failed to ${isCurrentlyLiked ? "remove" : "add"} to preferences`);
     } finally {
       // Remove from loading state
       setAddingToPreferences((prev) => {
@@ -274,24 +294,14 @@ function Recommendations() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleLoveRecommendation(rec)}
-                              disabled={
-                                lovedItems.has(
-                                  `${rec.tmdbData.id}-${rec.category}`
-                                ) ||
-                                addingToPreferences.has(
-                                  `${rec.tmdbData.id}-${rec.category}`
-                                )
-                              }
+                              onClick={() => handleLikeRecommendation(rec)}
                               className="p-2 h-8 w-8"
                             >
-                              <Heart
+                              <ThumbsUp
                                 className={`h-4 w-4 ${
-                                  lovedItems.has(
-                                    `${rec.tmdbData.id}-${rec.category}`
-                                  )
-                                    ? "fill-red-500 text-red-500"
-                                    : "text-gray-400 hover:text-red-500"
+                                  likedItems.has(`${rec.tmdbData.id}`)
+                                    ? "fill-white text-white"
+                                    : "text-gray-300 hover:text-red-500 hover:fill-red-100"
                                 }`}
                               />
                             </Button>
