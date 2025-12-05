@@ -315,9 +315,10 @@ export const searchActors = createServerFn({
 export const searchContent = createServerFn({
   method: "GET",
 })
-  .inputValidator((query: string) => query)
+  .inputValidator((params: { query: string }) => params)
   .handler(async ({ data }) => {
-    if (!data || data.trim().length < 2) {
+    const query = data.query;
+    if (!query || query.trim().length < 2) {
       return {
         page: 1,
         movies: [],
@@ -329,7 +330,7 @@ export const searchContent = createServerFn({
 
     try {
       const includeAdult = process.env.INCLUDE_ADULT_CONTENT === "true";
-      const searchPath = `/search/multi?query=${encodeURIComponent(data)}&include_adult=${includeAdult}`;
+      const searchPath = `/search/multi?query=${encodeURIComponent(query)}&include_adult=${includeAdult}`;
       const tmdbResult = await fetchFromTMDB(searchPath);
 
       // Convert the TMDB multi-search result to our SearchResult format
