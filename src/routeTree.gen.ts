@@ -9,8 +9,10 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SignUpRouteImport } from './routes/sign-up'
 import { Route as RecommendationsRouteImport } from './routes/recommendations'
 import { Route as PreferencesRouteImport } from './routes/preferences'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TvsIndexRouteImport } from './routes/tvs.index'
 import { Route as MoviesIndexRouteImport } from './routes/movies.index'
@@ -21,6 +23,11 @@ import { Route as PersonSearchRouteImport } from './routes/person.search'
 import { Route as MoviesSearchRouteImport } from './routes/movies.search'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
+const SignUpRoute = SignUpRouteImport.update({
+  id: '/sign-up',
+  path: '/sign-up',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RecommendationsRoute = RecommendationsRouteImport.update({
   id: '/recommendations',
   path: '/recommendations',
@@ -29,6 +36,11 @@ const RecommendationsRoute = RecommendationsRouteImport.update({
 const PreferencesRoute = PreferencesRouteImport.update({
   id: '/preferences',
   path: '/preferences',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -79,8 +91,10 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/preferences': typeof PreferencesRoute
   '/recommendations': typeof RecommendationsRoute
+  '/sign-up': typeof SignUpRoute
   '/movies/search': typeof MoviesSearchRoute
   '/person/search': typeof PersonSearchRoute
   '/tvs/airing-this-week': typeof TvsAiringThisWeekRoute
@@ -92,8 +106,10 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/preferences': typeof PreferencesRoute
   '/recommendations': typeof RecommendationsRoute
+  '/sign-up': typeof SignUpRoute
   '/movies/search': typeof MoviesSearchRoute
   '/person/search': typeof PersonSearchRoute
   '/tvs/airing-this-week': typeof TvsAiringThisWeekRoute
@@ -106,8 +122,10 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/preferences': typeof PreferencesRoute
   '/recommendations': typeof RecommendationsRoute
+  '/sign-up': typeof SignUpRoute
   '/movies/search': typeof MoviesSearchRoute
   '/person/search': typeof PersonSearchRoute
   '/tvs/airing-this-week': typeof TvsAiringThisWeekRoute
@@ -121,8 +139,10 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/login'
     | '/preferences'
     | '/recommendations'
+    | '/sign-up'
     | '/movies/search'
     | '/person/search'
     | '/tvs/airing-this-week'
@@ -134,8 +154,10 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/login'
     | '/preferences'
     | '/recommendations'
+    | '/sign-up'
     | '/movies/search'
     | '/person/search'
     | '/tvs/airing-this-week'
@@ -147,8 +169,10 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/login'
     | '/preferences'
     | '/recommendations'
+    | '/sign-up'
     | '/movies/search'
     | '/person/search'
     | '/tvs/airing-this-week'
@@ -161,8 +185,10 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LoginRoute: typeof LoginRoute
   PreferencesRoute: typeof PreferencesRoute
   RecommendationsRoute: typeof RecommendationsRoute
+  SignUpRoute: typeof SignUpRoute
   MoviesSearchRoute: typeof MoviesSearchRoute
   PersonSearchRoute: typeof PersonSearchRoute
   TvsAiringThisWeekRoute: typeof TvsAiringThisWeekRoute
@@ -175,6 +201,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sign-up': {
+      id: '/sign-up'
+      path: '/sign-up'
+      fullPath: '/sign-up'
+      preLoaderRoute: typeof SignUpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/recommendations': {
       id: '/recommendations'
       path: '/recommendations'
@@ -187,6 +220,13 @@ declare module '@tanstack/react-router' {
       path: '/preferences'
       fullPath: '/preferences'
       preLoaderRoute: typeof PreferencesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -257,8 +297,10 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LoginRoute: LoginRoute,
   PreferencesRoute: PreferencesRoute,
   RecommendationsRoute: RecommendationsRoute,
+  SignUpRoute: SignUpRoute,
   MoviesSearchRoute: MoviesSearchRoute,
   PersonSearchRoute: PersonSearchRoute,
   TvsAiringThisWeekRoute: TvsAiringThisWeekRoute,

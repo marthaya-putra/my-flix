@@ -39,7 +39,7 @@ const removePreferenceByTmdbIdSchema = z.object({
 const getUserPreferencesSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
   category: z.enum(["movie", "tv-series"]).optional(),
-  limit: z.number().positive().max(100).optional(),
+  limit: z.number().positive().optional(),
   offset: z.number().nonnegative().default(0),
 });
 
@@ -206,7 +206,6 @@ export const updateUserPreference = createServerFn({
     }
   });
 
-
 export const searchUserPreferences = createServerFn({
   method: "GET",
 })
@@ -287,7 +286,8 @@ export const removeUserPreferenceByPreferenceId = createServerFn({
         .returning();
 
       // If deletion result is empty, return the previously retrieved item
-      const deletedPreference = result.length > 0 ? result[0] : preferencesToDelete[0];
+      const deletedPreference =
+        result.length > 0 ? result[0] : preferencesToDelete[0];
 
       return {
         success: true,
