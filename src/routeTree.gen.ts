@@ -19,6 +19,7 @@ import { Route as TvsAiringTodayRouteImport } from './routes/tvs.airing-today'
 import { Route as TvsAiringThisWeekRouteImport } from './routes/tvs.airing-this-week'
 import { Route as PersonSearchRouteImport } from './routes/person.search'
 import { Route as MoviesSearchRouteImport } from './routes/movies.search'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const RecommendationsRoute = RecommendationsRouteImport.update({
   id: '/recommendations',
@@ -70,6 +71,11 @@ const MoviesSearchRoute = MoviesSearchRouteImport.update({
   path: '/movies/search',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/tvs/search': typeof TvsSearchRoute
   '/movies': typeof MoviesIndexRoute
   '/tvs': typeof TvsIndexRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -94,6 +101,7 @@ export interface FileRoutesByTo {
   '/tvs/search': typeof TvsSearchRoute
   '/movies': typeof MoviesIndexRoute
   '/tvs': typeof TvsIndexRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -107,6 +115,7 @@ export interface FileRoutesById {
   '/tvs/search': typeof TvsSearchRoute
   '/movies/': typeof MoviesIndexRoute
   '/tvs/': typeof TvsIndexRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -121,6 +130,7 @@ export interface FileRouteTypes {
     | '/tvs/search'
     | '/movies'
     | '/tvs'
+    | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -133,6 +143,7 @@ export interface FileRouteTypes {
     | '/tvs/search'
     | '/movies'
     | '/tvs'
+    | '/api/auth/$'
   id:
     | '__root__'
     | '/'
@@ -145,6 +156,7 @@ export interface FileRouteTypes {
     | '/tvs/search'
     | '/movies/'
     | '/tvs/'
+    | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -158,6 +170,7 @@ export interface RootRouteChildren {
   TvsSearchRoute: typeof TvsSearchRoute
   MoviesIndexRoute: typeof MoviesIndexRoute
   TvsIndexRoute: typeof TvsIndexRoute
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -232,6 +245,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MoviesSearchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -246,6 +266,7 @@ const rootRouteChildren: RootRouteChildren = {
   TvsSearchRoute: TvsSearchRoute,
   MoviesIndexRoute: MoviesIndexRoute,
   TvsIndexRoute: TvsIndexRoute,
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
