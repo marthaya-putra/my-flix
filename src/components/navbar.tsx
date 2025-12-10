@@ -87,6 +87,17 @@ export default function Navbar() {
             >
               TV Shows
             </Link>
+            <Link
+              to="/recommendations"
+              className={cn(
+                "transition-colors",
+                location.pathname === "/recommendations"
+                  ? "text-primary font-semibold"
+                  : "text-foreground hover:text-primary"
+              )}
+            >
+              Recommendations
+            </Link>
             </div>
         </div>
 

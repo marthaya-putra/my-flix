@@ -1,53 +1,27 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { createServerFn } from "@tanstack/react-start";
+import { Suspense } from "react";
+import { Await } from "@tanstack/react-router";
 import { getRecommendations } from "@/lib/ai/recommendations";
 import {
   getUserPreferences,
-  addUserPreference,
-  removeUserPreferenceByPreferenceId,
 } from "@/lib/repositories/user-preferences";
 import {
-  addUserDislike,
-  removeUserDislikeByPreferenceId,
   getUserDislikes,
 } from "@/lib/repositories/user-dislikes";
 import { getUserPeople } from "@/lib/repositories/user-people";
 import { enrichRecommendationsWithTMDB } from "@/lib/data/recommendations";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FilmInfo } from "@/lib/types";
-import { ThumbsUp, ThumbsDown, Play } from "lucide-react";
-import { PlayLink } from "@/components/play-link";
+import { Recommendations as RecommendationsList } from "@/components/recommendations";
+import { RecommendationCardSkeleton } from "@/components/recommendation-card-skeleton";
+import { z } from "zod";
 
-export const Route = createFileRoute("/recommendations")({
-  component: Recommendations,
-});
+// Server function to load user preferences
+const loadUserPreferencesFn = createServerFn()
+  .handler(async () => {
+    const userId = "default-user";
 
-interface Recommendation {
-  title: string;
-  category: "movie" | "tv";
-  releasedYear: number;
-  reason: string;
-  tmdbData: FilmInfo | null;
-}
-
-function Recommendations() {
-  const [allRecommendations, setAllRecommendations] = useState<
-    Recommendation[]
-  >([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
-  const [likedItems, setLikedItems] = useState<Set<string>>(new Set());
-  const [dislikedItems, setDislikedItems] = useState<Set<string>>(new Set());
-  const [addingToPreferences, setAddingToPreferences] = useState<Set<string>>(
-    new Set()
-  );
-
-  // Hardcoded user ID for testing - in real app, get from auth context
-  const userId = "default-user";
-
-  const loadUserPreferences = async () => {
     try {
       const [preferencesResponse, peopleResponse, dislikesResponse] =
         await Promise.all([
@@ -112,15 +86,38 @@ function Recommendations() {
         genres: [],
       };
     }
-  };
+  });
 
-  const getRecommendationsHandler = async () => {
-    setLoading(true);
-    setError(null);
+// Input schema for recommendations
+const GetRecommendationsInput = z.object({
+  userPrefs: z.object({
+    movies: z.array(z.object({ title: z.string(), year: z.number() })),
+    tvs: z.array(z.object({ title: z.string(), year: z.number() })),
+    dislikedContent: z.array(z.object({
+      title: z.string(),
+      year: z.number(),
+      category: z.enum(["movie", "tv"])
+    })),
+    actors: z.array(z.string()),
+    directors: z.array(z.string()),
+    genres: z.array(z.string()),
+  }),
+  previousRecommendations: z.array(z.object({
+    title: z.string(),
+    year: z.number(),
+    category: z.enum(["movie", "tv"]),
+  })).optional(),
+});
+
+// Server function to get recommendations
+const getRecommendationsFn = createServerFn({
+  method: "POST",
+})
+  .inputValidator(GetRecommendationsInput)
+  .handler(async ({ data }) => {
+    const { userPrefs, previousRecommendations = [] } = data;
 
     try {
-      const userPrefs = await loadUserPreferences();
-
       const result = await getRecommendations({
         data: {
           previouslyLikedMovies: userPrefs.movies,
@@ -130,11 +127,7 @@ function Recommendations() {
           favoriteDirectors: userPrefs.directors,
           genres: userPrefs.genres,
           excludeAdult: true,
-          previousRecommendations: allRecommendations.map((rec) => ({
-            title: rec.title,
-            year: rec.releasedYear,
-            category: rec.category,
-          })),
+          previousRecommendations,
         },
       });
 
@@ -143,157 +136,56 @@ function Recommendations() {
         const enrichedRecommendations = await enrichRecommendationsWithTMDB({
           data: result.data.recommendations,
         });
-
-        setAllRecommendations((prev) => [...prev, ...enrichedRecommendations]);
+        return enrichedRecommendations;
       } else {
-        setError(result.error || "Failed to get recommendations");
+        throw new Error(result.error || "Failed to get recommendations");
       }
     } catch (error) {
-      setError(
-        `Error: ${error instanceof Error ? error.message : "Unknown error"}`
-      );
-    } finally {
-      setLoading(false);
+      console.error("Failed to get recommendations:", error);
+      throw error;
     }
-  };
+  });
 
-  const handleLikeRecommendation = async (recommendation: Recommendation) => {
-    if (!recommendation.tmdbData) {
-      alert("Cannot modify recommendation without TMDB data");
-      return;
-    }
+export const Route = createFileRoute("/recommendations")({
+  component: Recommendations,
+  loader: async () => {
+    // Load user preferences
+    const userPrefs = await loadUserPreferencesFn();
 
-    const itemKey = `${recommendation.tmdbData.id}`;
-    const isCurrentlyLiked = likedItems.has(itemKey);
-
-    // Add to loading state
-    setAddingToPreferences((prev) => new Set(prev).add(itemKey));
-
-    try {
-      if (isCurrentlyLiked) {
-        // Remove from preferences
-        await removeUserPreferenceByPreferenceId({
-          data: {
-            userId,
-            preferenceId: recommendation.tmdbData.id,
-          },
-        });
-
-        setLikedItems((prev) => {
-          const newSet = new Set(prev);
-          newSet.delete(itemKey);
-          return newSet;
-        });
-        return;
+    // Get initial recommendations
+    const recommendations = getRecommendationsFn({
+      data: {
+        userPrefs,
+        previousRecommendations: []
       }
+    });
 
-      // Add to preferences
-      await addUserPreference({
-        data: {
-          userId,
-          preferenceId: recommendation.tmdbData.id,
-          title: recommendation.title,
-          year: recommendation.releasedYear,
-          category: recommendation.category === "movie" ? "movie" : "tv-series",
-          posterPath: recommendation.tmdbData.posterPath,
-          genres:
-            recommendation.tmdbData.genres.length > 0
-              ? recommendation.tmdbData.genres.join(", ")
-              : undefined,
-        },
-      });
+    return {
+      userPrefs,
+      recommendations,
+    };
+  },
+});
 
-      setLikedItems((prev) => new Set(prev).add(itemKey));
+interface Recommendation {
+  title: string;
+  category: "movie" | "tv";
+  releasedYear: number;
+  reason: string;
+  tmdbData: FilmInfo | null;
+}
 
-      // If it was previously disliked, remove it from disliked items in UI state
-      if (dislikedItems.has(itemKey)) {
-        setDislikedItems((prev) => {
-          const newSet = new Set(prev);
-          newSet.delete(itemKey);
-          return newSet;
-        });
+function Recommendations() {
+  const { userPrefs, recommendations } = Route.useLoaderData();
+
+  const handleLoadMore = async (): Promise<Recommendation[]> => {
+    const result = await getRecommendationsFn({
+      data: {
+        userPrefs,
+        previousRecommendations: []
       }
-    } catch (error) {
-      console.error("Error modifying preferences:", error);
-      alert(`Failed to ${isCurrentlyLiked ? "remove" : "add"} to preferences`);
-    } finally {
-      // Remove from loading state
-      setAddingToPreferences((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(itemKey);
-        return newSet;
-      });
-    }
-  };
-
-  const handleDislikeRecommendation = async (
-    recommendation: Recommendation
-  ) => {
-    if (!recommendation.tmdbData) {
-      alert("Cannot modify recommendation without TMDB data");
-      return;
-    }
-
-    const itemKey = `${recommendation.tmdbData.id}`;
-    const isCurrentlyDisliked = dislikedItems.has(itemKey);
-
-    // Add to loading state
-    setAddingToPreferences((prev) => new Set(prev).add(itemKey));
-
-    try {
-      if (isCurrentlyDisliked) {
-        // Remove from dislikes
-        await removeUserDislikeByPreferenceId({
-          data: {
-            userId,
-            preferenceId: recommendation.tmdbData.id,
-          },
-        });
-
-        setDislikedItems((prev) => {
-          const newSet = new Set(prev);
-          newSet.delete(itemKey);
-          return newSet;
-        });
-        return;
-      }
-
-      // Add to dislikes
-      await addUserDislike({
-        data: {
-          userId,
-          preferenceId: recommendation.tmdbData.id,
-          title: recommendation.title,
-          year: recommendation.releasedYear,
-          category: recommendation.category === "movie" ? "movie" : "tv-series",
-        },
-      });
-
-      setDislikedItems((prev) => new Set(prev).add(itemKey));
-
-      // If it was previously liked, remove it from liked items
-      await removeUserPreferenceByPreferenceId({
-        data: {
-          userId,
-          preferenceId: recommendation.tmdbData.id,
-        },
-      });
-      setLikedItems((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(itemKey);
-        return newSet;
-      });
-    } catch (error) {
-      console.error("Error modifying dislikes:", error);
-      alert(`Failed to ${isCurrentlyDisliked ? "remove" : "add"} to dislikes`);
-    } finally {
-      // Remove from loading state
-      setAddingToPreferences((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(itemKey);
-        return newSet;
-      });
-    }
+    });
+    return result;
   };
 
   return (
@@ -303,193 +195,19 @@ function Recommendations() {
           <CardTitle>AI Movie/TV Recommendations</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Actions */}
-          <div className="flex gap-4">
-            <Button
-              onClick={getRecommendationsHandler}
-              disabled={loading}
-              className="min-w-[140px]"
-            >
-              {loading ? "Getting recommendations..." : "Get Recommendations"}
-            </Button>
-          </div>
-
-          {/* Error Display */}
-          {error && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-700">{error}</p>
-            </div>
-          )}
-
-          {/* Recommendations Display */}
-          {allRecommendations.length > 0 && (
-            <div>
-              <h3 className="font-semibold mb-4">Recommended for You:</h3>
-              <div className="grid gap-6 grid-cols-1">
-                {allRecommendations.map((rec, index) => (
-                  <Card
-                    key={`${rec.title}-${rec.releasedYear}-${index}`}
-                    className="overflow-hidden hover:shadow-lg transition-shadow"
-                  >
-                    <div className="flex flex-col sm:flex-row">
-                      {/* Poster Image */}
-                      <div className="relative w-full sm:w-48 aspect-2/3 sm:aspect-auto bg-muted">
-                        {rec.tmdbData?.posterPath &&
-                        !imageErrors.has(`${rec.title}-${rec.releasedYear}`) ? (
-                          <img
-                            src={rec.tmdbData.posterPath}
-                            alt={`${rec.title} poster`}
-                            className="w-full h-full object-cover"
-                            onError={() => {
-                              setImageErrors((prev) =>
-                                new Set(prev).add(
-                                  `${rec.title}-${rec.releasedYear}`
-                                )
-                              );
-                            }}
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                            <div className="text-center p-4">
-                              <div className="text-4xl mb-2">🎬</div>
-                              <p className="text-sm">No poster available</p>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Category and Year Badge */}
-                        <div className="absolute top-2 right-2 flex gap-1">
-                          <span className="px-2 py-1 bg-black/70 text-white text-xs rounded">
-                            {rec.category === "movie" ? "Movie" : "TV"}
-                          </span>
-                          <span className="px-2 py-1 bg-black/70 text-white text-xs rounded">
-                            {rec.releasedYear}
-                          </span>
-                        </div>
-
-                        {/* Rating Badge */}
-                        {rec.tmdbData?.voteAverage && (
-                          <div className="absolute top-2 left-2">
-                            <span className="px-2 py-1 bg-yellow-600/90 text-white text-xs rounded flex items-center gap-1">
-                              ⭐ {rec.tmdbData.voteAverage.toFixed(1)}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Content */}
-                      <CardContent className="flex-1 p-4">
-                        <div className="flex justify-between items-start mb-3">
-                          <h4 className="font-semibold text-xl">{rec.title}</h4>
-                          <div className="flex gap-2">
-                            <PlayLink title={rec.title} category={rec.category}>
-                              <Button
-                                variant="default"
-                                size="sm"
-                                className="gap-2 group hover:scale-105 transition-all duration-300"
-                              >
-                                <div
-                                  className="group-hover:animate-sliding"
-                                  style={
-                                    { "--slide-animation-from": "-6px" } as React.CSSProperties
-                                  }
-                                >
-                                  <Play className="h-4 w-4 fill-current" />
-                                </div>
-                                Watch Now
-                              </Button>
-                            </PlayLink>
-                            {rec.tmdbData && (
-                              <div className="flex gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleDislikeRecommendation(rec)}
-                                  className="p-2 h-8 w-8"
-                                >
-                                  <ThumbsDown
-                                    className={`h-4 w-4 ${
-                                      dislikedItems.has(`${rec.tmdbData.id}`)
-                                        ? "fill-red-500 text-red-500"
-                                        : "text-gray-300 hover:text-red-500 hover:fill-red-100"
-                                    }`}
-                                  />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleLikeRecommendation(rec)}
-                                  className="p-2 h-8 w-8"
-                                >
-                                  <ThumbsUp
-                                    className={`h-4 w-4 ${
-                                      likedItems.has(`${rec.tmdbData.id}`)
-                                        ? "fill-white text-white"
-                                        : "text-gray-300 hover:text-red-500 hover:fill-red-100"
-                                    }`}
-                                  />
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Recommendation Reason */}
-                        <div className="mb-4">
-                          <p className="text-sm text-blue-600 font-medium mb-2">
-                            Why you'll like it:
-                          </p>
-                          <p className="text-muted-foreground text-sm leading-relaxed">
-                            {rec.reason}
-                          </p>
-                        </div>
-
-                        {/* Additional TMDB Details */}
-                        {rec.tmdbData?.overview && (
-                          <div>
-                            <p className="text-sm text-gray-600 font-medium mb-2">
-                              Overview:
-                            </p>
-                            <p className="text-muted-foreground text-xs leading-relaxed line-clamp-4">
-                              {rec.tmdbData.overview}
-                            </p>
-                          </div>
-                        )}
-
-                        {!rec.tmdbData && (
-                          <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded">
-                            ℹ️ TMDB data not available for this recommendation
-                          </div>
-                        )}
-                      </CardContent>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-
-              {/* Load More Button */}
-              <div className="mt-6">
-                <Button
-                  onClick={getRecommendationsHandler}
-                  disabled={loading}
-                  variant="outline"
-                  className="w-full"
-                >
-                  {loading ? "Loading more..." : "Load More Recommendations"}
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Empty State */}
-          {allRecommendations.length === 0 && !loading && !error && (
-            <div className="text-center py-8 text-gray-500">
-              <p>
-                No recommendations yet. Click "Get Recommendations" to see
-                personalized suggestions!
-              </p>
-            </div>
-          )}
+          <Suspense fallback={<RecommendationCardSkeleton />}>
+            <Await
+              promise={recommendations}
+              children={(data: Recommendation[]) => (
+                <RecommendationsList
+                  recommendations={data}
+                  userPrefs={userPrefs}
+                  onLoadMore={handleLoadMore}
+                  error={null}
+                />
+              )}
+            />
+          </Suspense>
         </CardContent>
       </Card>
     </div>
