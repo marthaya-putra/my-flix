@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { FilmInfo, Person } from "@/lib/types";
+import { getRequest } from "@tanstack/react-start/server";
+
 import {
   addUserPreference,
   getUserPreferences,
@@ -15,9 +16,12 @@ import {
   removeUserPerson,
   schemas as peopleSchemas,
 } from "@/lib/repositories/user-people";
+import { auth } from "../auth";
 
 // Input validation schemas from repositories
-const AddMoviePreferenceInput = preferenceSchemas.addPreference.omit({ userId: true });
+const AddMoviePreferenceInput = preferenceSchemas.addPreference.omit({
+  userId: true,
+});
 const AddPersonPreferenceInput = peopleSchemas.addPerson.omit({ userId: true });
 const RemovePreferenceInput = z.object({
   id: z.number(),
@@ -82,9 +86,7 @@ export const removeMoviePreference = createServerFn({
       const preferenceToDelete = await db
         .select()
         .from(userPreferences)
-        .where(
-          eq(userPreferences.id, id)
-        )
+        .where(eq(userPreferences.id, id))
         .limit(1);
 
       if (preferenceToDelete.length === 0) {
@@ -192,11 +194,15 @@ export const fetchUserPreferences = createServerFn({
   method: "GET",
 }).handler(async () => {
   try {
+    const req = getRequest();
+    const session = await auth.api.getSession({
+      headers: getRequest().headers,
+    });
+    console.log({ req });
     // Fetch movie and TV preferences using repository
     const movieTVResult = await getUserPreferences({
       data: {
         userId: DEFAULT_USER_ID,
-        limit: 1000, // Get all preferences
       },
     });
 
@@ -204,11 +210,12 @@ export const fetchUserPreferences = createServerFn({
     const peopleResult = await getUserPeople({
       data: {
         userId: DEFAULT_USER_ID,
-        limit: 1000, // Get all people
       },
     });
 
-    const movieTVPreferences = movieTVResult.success ? movieTVResult.preferences : [];
+    const movieTVPreferences = movieTVResult.success
+      ? movieTVResult.preferences
+      : [];
     const peoplePreferences = peopleResult.success ? peopleResult.people : [];
 
     // Separate movies and TV shows
@@ -324,7 +331,9 @@ export const addFilmInfoPreference = createServerFn({
       const { filmInfo } = data;
       const category = filmInfo.category === "tv" ? "tv-series" : "movie";
       const genres = filmInfo.genres.join(", ");
-      const year = filmInfo.releaseDate ? new Date(filmInfo.releaseDate).getFullYear() : new Date().getFullYear();
+      const year = filmInfo.releaseDate
+        ? new Date(filmInfo.releaseDate).getFullYear()
+        : new Date().getFullYear();
 
       return await addMoviePreference({
         data: {

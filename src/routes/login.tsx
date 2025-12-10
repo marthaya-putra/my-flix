@@ -34,12 +34,15 @@ function LoginComponent() {
       const result = await authClient.signIn.email({
         email,
         password,
+        fetchOptions: {
+          onSuccess: () => {
+            router.navigate({ to: "/", reloadDocument: true });
+          },
+        },
       });
 
       if (result.error) {
         setError(result.error.message || "Failed to sign in");
-      } else {
-        router.navigate({ to: "/", reloadDocument: true });
       }
     } catch (err) {
       setError("An unexpected error occurred");

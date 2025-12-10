@@ -29,8 +29,8 @@ const removePersonSchema = z.object({
 const getUserPeopleSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
   personType: z.enum(["actor", "director", "other"]).optional(),
-  limit: z.number().positive().max(100).optional(),
-  offset: z.number().nonnegative().default(0),
+  limit: z.number().positive().optional(),
+  offset: z.number().nonnegative().optional(),
 });
 
 // Server functions for user people preferences (actors and directors)
@@ -109,7 +109,7 @@ export const getUserPeople = createServerFn({
         query = query.limit(data.limit);
       }
 
-      if (data.offset > 0) {
+      if (data.offset && data.offset > 0) {
         query = query.offset(data.offset);
       }
 
@@ -153,7 +153,7 @@ export const getUserActors = createServerFn({
         query = query.limit(data.limit);
       }
 
-      if (data.offset > 0) {
+      if (data.offset && data.offset > 0) {
         query = query.offset(data.offset);
       }
 
@@ -250,7 +250,7 @@ export const searchUserPeople = createServerFn({
       userId: z.string().min(1, "User ID is required"),
       query: z.string().min(1, "Search query is required"),
       personType: z.enum(["actor", "director", "other"]).optional(),
-      limit: z.number().positive().max(50).default(20),
+      limit: z.number().positive().default(20),
     })
   )
   .handler(async ({ data }) => {
@@ -289,7 +289,7 @@ export const searchUserActors = createServerFn({
     z.object({
       userId: z.string().min(1, "User ID is required"),
       query: z.string().min(1, "Search query is required"),
-      limit: z.number().positive().max(50).default(20),
+      limit: z.number().positive().default(20),
     })
   )
   .handler(async ({ data }) => {
@@ -327,6 +327,6 @@ export const schemas = {
     userId: z.string().min(1, "User ID is required"),
     query: z.string().min(1, "Search query is required"),
     personType: z.enum(["actor", "director", "other"]).optional(),
-    limit: z.number().positive().max(50).default(20),
+    limit: z.number().positive().default(20),
   }),
 };

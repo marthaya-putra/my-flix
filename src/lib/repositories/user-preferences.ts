@@ -40,7 +40,7 @@ const getUserPreferencesSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
   category: z.enum(["movie", "tv-series"]).optional(),
   limit: z.number().positive().optional(),
-  offset: z.number().nonnegative().default(0),
+  offset: z.number().nonnegative().optional(),
 });
 
 // Server functions for user preferences
@@ -153,8 +153,8 @@ export const getUserPreferences = createServerFn({
         .orderBy(desc(userPreferences.updatedAt));
 
       const preferences = data.limit
-        ? await baseQuery.limit(data.limit).offset(data.offset)
-        : await baseQuery.offset(data.offset);
+        ? await baseQuery.limit(data.limit).offset(data.offset || 0)
+        : await baseQuery.offset(data.offset || 0);
 
       return {
         success: true,
@@ -214,7 +214,7 @@ export const searchUserPreferences = createServerFn({
       userId: z.string().min(1, "User ID is required"),
       query: z.string().min(1, "Search query is required"),
       category: z.enum(["movie", "tv-series"]).optional(),
-      limit: z.number().positive().max(50).default(20),
+      limit: z.number().positive().default(20),
     })
   )
   .handler(async ({ data }) => {
@@ -316,6 +316,6 @@ export const schemas = {
     userId: z.string().min(1, "User ID is required"),
     query: z.string().min(1, "Search query is required"),
     category: z.enum(["movie", "tv-series"]).optional(),
-    limit: z.number().positive().max(50).default(20),
+    limit: z.number().positive().default(20),
   }),
 };

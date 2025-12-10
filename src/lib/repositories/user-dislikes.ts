@@ -27,15 +27,15 @@ const removeDislikeByTmdbIdSchema = z.object({
 const getUserDislikesSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
   category: z.enum(["movie", "tv-series"]).optional(),
-  limit: z.number().positive().max(100).optional(),
-  offset: z.number().nonnegative().default(0),
+  limit: z.number().positive().optional(),
+  offset: z.number().nonnegative().optional(),
 });
 
 const searchUserDislikesSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
   query: z.string().min(1, "Search query is required"),
   category: z.enum(["movie", "tv-series"]).optional(),
-  limit: z.number().positive().max(50).default(20),
+  limit: z.number().positive().default(20),
 });
 
 // Server functions for user dislikes
@@ -118,8 +118,8 @@ export const getUserDislikes = createServerFn({
         .orderBy(desc(userDislikes.updatedAt));
 
       const dislikes = data.limit
-        ? await baseQuery.limit(data.limit).offset(data.offset)
-        : await baseQuery.offset(data.offset);
+        ? await baseQuery.limit(data.limit).offset(data.offset || 0)
+        : await baseQuery.offset(data.offset || 0);
 
       return {
         success: true,

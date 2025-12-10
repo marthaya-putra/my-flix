@@ -1,6 +1,13 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
 import { authClient } from "@/lib/auth-client";
 import type { User } from "better-auth/types";
+import { useRouter } from "@tanstack/react-router";
 
 interface AuthContextType {
   user: User | null;
@@ -15,6 +22,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -34,7 +42,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
-      await authClient.signOut();
+      await authClient.signOut({
+        fetchOptions: {
+          onSuccess: () => {
+            router.navigate({ to: "/" });
+          },
+        },
+      });
       setUser(null);
     } catch (error) {
       console.error("Error signing out:", error);
