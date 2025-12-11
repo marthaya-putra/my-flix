@@ -93,7 +93,7 @@ export const getRecommendations = createServerFn({
         - NEVER recommend content the user has already marked as liked - they already know these titles!
         - ABSOLUTELY NO recommendations from their "ALREADY LIKED CONTENT" list
         - CRITICAL: NEVER recommend content from their "DISLIKED CONTENT" list - the user explicitly dislikes these titles!
-        - Return exactly 5 recommendations`,
+        - Return exactly 6 recommendations`,
         prompt,
       });
 
@@ -189,7 +189,7 @@ IMPORTANT: The user has explicitly DISLIKED the content in the dislikedContent l
 = RECOMMENDATION GUIDELINES                         =
 =====================================================
 
-Recommend EXACTLY 5 NEW titles total.
+Recommend EXACTLY 6 NEW titles total.
 
 Rules:
 - They must be a mix of movies or TV series (any balance).

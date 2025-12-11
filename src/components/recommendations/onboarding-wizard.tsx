@@ -128,6 +128,8 @@ export function OnboardingWizard() {
             movieCount={selectedMovies.length}
             tvCount={selectedTvShows.length}
             peopleCount={selectedPeople.length}
+            onGetRecommendations={handleNext}
+            isLoading={isSaving}
           />
         );
 
@@ -155,36 +157,20 @@ export function OnboardingWizard() {
       </div>
 
       {/* Current Step */}
-      {currentStep === 0 || currentStep === steps.length - 1 ? (
+      {currentStep === 0 ? (
         <div className="space-y-6">
           {renderStep()}
           <div className="flex justify-end">
-            {currentStep === 0 && (
-              <button
-                onClick={handleNext}
-                className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
-              >
-                Get Started
-              </button>
-            )}
-            {currentStep === steps.length - 1 && (
-              <button
-                onClick={handleNext}
-                disabled={isSaving}
-                className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 gap-2"
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Saving Preferences...
-                  </>
-                ) : (
-                  "Get My Recommendations"
-                )}
-              </button>
-            )}
+            <button
+              onClick={handleNext}
+              className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
+            >
+              Get Started
+            </button>
           </div>
         </div>
+      ) : currentStep === steps.length - 1 ? (
+        renderStep()
       ) : (
         <WizardStep
           title={steps[currentStep].title}

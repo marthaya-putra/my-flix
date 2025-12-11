@@ -78,11 +78,14 @@ export function RecommendationCard({
         </div>
 
         {/* Content */}
-        <CardContent className="flex-1 p-4">
+        <CardContent className="flex-1 p-4 max-w-sm">
           <div className="flex justify-between items-start mb-3">
             <h4 className="font-semibold text-xl">{recommendation.title}</h4>
             <div className="flex gap-2">
-              <PlayLink title={recommendation.title} category={recommendation.category}>
+              <PlayLink
+                title={recommendation.title}
+                category={recommendation.category}
+              >
                 <Button
                   variant="default"
                   size="sm"
@@ -91,7 +94,9 @@ export function RecommendationCard({
                   <div
                     className="group-hover:animate-sliding"
                     style={
-                      { "--slide-animation-from": "-6px" } as React.CSSProperties
+                      {
+                        "--slide-animation-from": "-6px",
+                      } as React.CSSProperties
                     }
                   >
                     <Play className="h-4 w-4 fill-current" />
@@ -106,7 +111,9 @@ export function RecommendationCard({
                     size="sm"
                     onClick={() => onDislike(recommendation)}
                     className="p-2 h-8 w-8"
-                    disabled={addingToPreferences.has(`${recommendation.tmdbData.id}`)}
+                    disabled={addingToPreferences.has(
+                      `${recommendation.tmdbData.id}`
+                    )}
                   >
                     <ThumbsDown
                       className={`h-4 w-4 ${
@@ -121,7 +128,9 @@ export function RecommendationCard({
                     size="sm"
                     onClick={() => onLike(recommendation)}
                     className="p-2 h-8 w-8"
-                    disabled={addingToPreferences.has(`${recommendation.tmdbData.id}`)}
+                    disabled={addingToPreferences.has(
+                      `${recommendation.tmdbData.id}`
+                    )}
                   >
                     <ThumbsUp
                       className={`h-4 w-4 ${
@@ -145,18 +154,6 @@ export function RecommendationCard({
               {recommendation.reason}
             </p>
           </div>
-
-          {/* Additional TMDB Details */}
-          {recommendation.tmdbData?.overview && (
-            <div>
-              <p className="text-sm text-gray-600 font-medium mb-2">
-                Overview:
-              </p>
-              <p className="text-muted-foreground text-xs leading-relaxed line-clamp-4">
-                {recommendation.tmdbData.overview}
-              </p>
-            </div>
-          )}
 
           {!recommendation.tmdbData && (
             <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded">

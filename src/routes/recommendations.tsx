@@ -63,7 +63,7 @@ function Recommendations() {
   // Show loading state while checking auth
   if (isLoading) {
     return (
-      <div className="container mx-auto p-4 max-w-4xl mt-8">
+      <div className="container mx-auto p-4 mt-8">
         <Card>
           <CardHeader>
             <CardTitle>AI Movie/TV Recommendations</CardTitle>
@@ -88,7 +88,7 @@ function Recommendations() {
 
   // Case 3: User has sufficient preferences - show recommendations
   return (
-    <div className="container mx-auto p-4 max-w-4xl mt-8">
+    <div className="container mx-auto p-4 mt-8">
       <Card>
         <CardHeader>
           <CardTitle>AI Movie/TV Recommendations</CardTitle>

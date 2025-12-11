@@ -81,23 +81,16 @@ export function ContentSelectionStep({
       </div>
 
       {selectedItems.length > 0 ? (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="grid gap-3">
-              {selectedItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between p-3 border rounded-lg"
-                >
-                  <PreferenceItem
-                    item={item}
-                    onRemove={() => handleRemoveItem(item.id)}
-                  />
-                </div>
-              ))}
+        <div className="flex flex-wrap gap-3">
+          {selectedItems.map((item) => (
+            <div key={item.id}>
+              <PreferenceItem
+                item={item}
+                onRemove={() => handleRemoveItem(item.id)}
+              />
             </div>
-          </CardContent>
-        </Card>
+          ))}
+        </div>
       ) : (
         <Card className="border-dashed">
           <CardContent className="pt-6">
