@@ -24,8 +24,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-# Local Netlify folder
-.netlify
 
 # TanStack router cache
 .tanstack
