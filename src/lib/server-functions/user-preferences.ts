@@ -8,11 +8,9 @@ import { getUserPeople } from "@/lib/repositories/user-people";
 // Server function to load user preferences
 export const loadUserPreferencesFn = createServerFn().handler(async () => {
   // Get the current session to retrieve authenticated user ID
-  // const session = await auth.api.getSession({
-  //   headers: getRequest().headers,
-  // });
-
-  const session = null as any;
+  const session = await auth.api.getSession({
+    headers: getRequest().headers,
+  });
 
   // If no session, return empty preferences
   if (!session?.user?.id) {
