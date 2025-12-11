@@ -1,8 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Suspense } from "react";
 import { Await } from "@tanstack/react-router";
-import { loadUserPreferencesFn } from "@/lib/server-functions/user-preferences";
-import { getRecommendationsFn } from "@/lib/server-functions/recommendations";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Recommendations as RecommendationsList } from "@/components/recommendations";
 import { RecommendationCardSkeleton } from "@/components/recommendation-card-skeleton";
@@ -13,6 +11,8 @@ import { OnboardingWizard } from "@/components/recommendations/onboarding-wizard
 import { hasSufficientPreferences } from "@/lib/utils/preferences-check";
 import { useAuth } from "@/contexts/auth-context";
 import { RecommendationsError } from "@/components/recommendations-error";
+import { getAllUserContent } from "@/lib/data/preferences";
+import { getRecommendationsFn } from "@/lib/data/recommendations";
 
 export const Route = createFileRoute("/recommendations")({
   component: Recommendations,
@@ -23,7 +23,7 @@ export const Route = createFileRoute("/recommendations")({
   loader: async () => {
     // Load user preferences - auth is handled client-side with AuthContext
     // The middleware still protects this route for SSR
-    const userPrefs = await loadUserPreferencesFn();
+    const userPrefs = await getAllUserContent();
 
     // Only generate recommendations if user has sufficient preferences
     if (hasSufficientPreferences(userPrefs)) {

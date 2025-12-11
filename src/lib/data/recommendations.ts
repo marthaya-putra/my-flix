@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { searchMovies, searchTVs } from "./search";
+import { getRecommendations } from "../ai/recommendations";
+import z from "zod";
 
 // Bulk search function to get TMDB data for multiple recommendations
 export const enrichRecommendationsWithTMDB = createServerFn({
@@ -24,7 +26,7 @@ export const enrichRecommendationsWithTMDB = createServerFn({
           data: {
             query: recommendation.title,
             primaryReleaseYear: recommendation.releasedYear,
-            page: 1
+            page: 1,
           },
         })
           .then((result) => {
@@ -53,7 +55,7 @@ export const enrichRecommendationsWithTMDB = createServerFn({
           data: {
             query: recommendation.title,
             firstAirDateYear: recommendation.releasedYear,
-            page: 1
+            page: 1,
           },
         })
           .then((result) => {
@@ -90,4 +92,65 @@ export const enrichRecommendationsWithTMDB = createServerFn({
     return enrichedRecommendations.filter(
       (rec): rec is NonNullable<typeof rec> => rec !== undefined
     );
+  });
+
+// Shared server function to get recommendations (reusable for initial and load more)
+export const getRecommendationsFn = createServerFn({
+  method: "POST",
+})
+  .inputValidator(
+    z.object({
+      userPrefs: z.object({
+        movies: z.array(z.object({ title: z.string(), year: z.number() })),
+        tvs: z.array(z.object({ title: z.string(), year: z.number() })),
+        dislikedContent: z.array(
+          z.object({
+            title: z.string(),
+            year: z.number(),
+            category: z.enum(["movie", "tv"]),
+          })
+        ),
+        actors: z.array(z.string()),
+        directors: z.array(z.string()),
+        genres: z.array(z.string()),
+      }),
+      previousRecommendations: z.array(
+        z.object({
+          title: z.string(),
+          year: z.number(),
+          category: z.enum(["movie", "tv"]),
+        })
+      ),
+    })
+  )
+  .handler(async ({ data }) => {
+    const { userPrefs, previousRecommendations } = data;
+
+    try {
+      const result = await getRecommendations({
+        data: {
+          previouslyLikedMovies: userPrefs.movies,
+          previouslyLikedTvs: userPrefs.tvs,
+          dislikedContent: userPrefs.dislikedContent,
+          favoriteActors: userPrefs.actors,
+          favoriteDirectors: userPrefs.directors,
+          genres: userPrefs.genres,
+          excludeAdult: true,
+          previousRecommendations,
+        },
+      });
+
+      if (result.success) {
+        // Enrich recommendations with TMDB data
+        const enrichedRecommendations = await enrichRecommendationsWithTMDB({
+          data: result.data.recommendations,
+        });
+        return enrichedRecommendations;
+      } else {
+        throw new Error(result.error || "Failed to get recommendations");
+      }
+    } catch (error) {
+      console.error("Failed to get recommendations:", error);
+      throw error;
+    }
   });

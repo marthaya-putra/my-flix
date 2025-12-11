@@ -10,8 +10,8 @@ import {
   addUserDislike,
   removeUserDislikeByPreferenceId,
 } from "@/lib/repositories/user-dislikes";
-import { getRecommendationsFn } from "@/lib/server-functions/recommendations";
 import { useAuth } from "@/contexts/auth-context";
+import { getRecommendationsFn } from "@/lib/data/recommendations";
 
 interface Recommendation {
   title: string;
