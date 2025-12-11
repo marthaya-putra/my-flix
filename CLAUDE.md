@@ -84,13 +84,3 @@ For complex tasks, always activate ULTRATHINK mode:
 4. **Review**: Evaluate the solution for completeness and efficiency.
 
 Use ULTRATHINK to ensure the best possible outcomes for challenging problems.
-
-## Subagent Consultation
-
-**CRITICAL**: Always consult project subagents whenever possible. For complex tasks or architectural guidance, use the Task tool with appropriate subagent_type:
-- tanstack-architect for TanStack Start projects
-- frontend-ui-specialist for React/UI component work
-- Explore for codebase exploration and research
-- claude-code-guide for Claude Code and Agent SDK questions
-
-Default to using specialized agents rather than implementing solutions directly when agents are available.

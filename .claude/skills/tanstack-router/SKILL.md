@@ -25,6 +25,10 @@ When working with TanStack Start:
    - Access data with `Route.useLoaderData()`
    - Handle loading and error states
    - Use suspense boundaries for async operations
+   - **Streaming with `<Await>`**: Don't await slow operations in loader for better UX
+     - Fast operations (e.g., DB queries) can be awaited
+     - Slow operations (e.g., AI, external APIs) should be returned as promises
+     - Use `<Suspense>` with `<Await>` in components to stream results
 
 4. **SSR Setup**
    - Ensure root layout in `__root.tsx`
@@ -77,4 +81,40 @@ export const Route = createFileRoute('/movies/$movieId')({
     return { movie }
   }
 })
+```
+
+**Streaming with `<Await>` for slow operations:**
+```typescript
+import { createFileRoute } from '@tanstack/react-router'
+import { Suspense } from 'react'
+import { Await } from '@tanstack/react-router'
+
+export const Route = createFileRoute('/recommendations')({
+  component: Recommendations,
+  loader: async () => {
+    // Fast operation - await it
+    const userPrefs = await getUserPreferences()
+
+    // Slow operation - don't await for streaming
+    const recommendations = getAIRecommendations({ userPrefs })
+
+    return { userPrefs, recommendations }
+  }
+})
+
+function Recommendations() {
+  const { userPrefs, recommendations } = Route.useLoaderData()
+
+  return (
+    <div>
+      <h1>Recommendations</h1>
+      <Suspense fallback={<Skeleton />}>
+        <Await
+          promise={recommendations}
+          children={(data) => <RecommendationList data={data} />}
+        />
+      </Suspense>
+    </div>
+  )
+}
 ```

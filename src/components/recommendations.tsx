@@ -10,6 +10,7 @@ import {
   addUserDislike,
   removeUserDislikeByPreferenceId,
 } from "@/lib/repositories/user-dislikes";
+import { getRecommendationsFn } from "@/lib/server-functions/recommendations";
 
 interface Recommendation {
   title: string;
@@ -19,22 +20,28 @@ interface Recommendation {
   tmdbData: FilmInfo | null;
 }
 
-interface RecommendationsProps {
-  recommendations: Recommendation[];
-  userPrefs: any;
-  onLoadMore: () => Promise<Recommendation[]>;
-  error: string | null;
+interface UserPreferences {
+  movies: Array<{ title: string; year: number }>;
+  tvs: Array<{ title: string; year: number }>;
+  dislikedContent: Array<{ title: string; year: number; category: "movie" | "tv" }>;
+  actors: string[];
+  directors: string[];
+  genres: string[];
 }
 
+interface RecommendationsProps {
+  userPrefs: UserPreferences;
+  initialRecommendations: Recommendation[];
+}
+
+
 export function Recommendations({
-  recommendations,
   userPrefs,
-  onLoadMore,
-  error,
+  initialRecommendations
 }: RecommendationsProps) {
-  const [allRecommendations, setAllRecommendations] =
-    useState<Recommendation[]>(recommendations);
-  const [loading, setLoading] = useState(false);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>(initialRecommendations);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
   const [likedItems, setLikedItems] = useState<Set<string>>(new Set());
   const [dislikedItems, setDislikedItems] = useState<Set<string>>(new Set());
@@ -46,12 +53,31 @@ export function Recommendations({
   const userId = "default-user";
 
   const handleLoadMore = async () => {
-    setLoading(true);
+    setLoadingMore(true);
+    setError(null);
+
     try {
-      const newRecommendations = await onLoadMore();
-      setAllRecommendations((prev) => [...prev, ...newRecommendations]);
+      // Create previous recommendations list from all current recommendations
+      const previousRecommendations = recommendations.map(rec => ({
+        title: rec.title,
+        year: rec.releasedYear,
+        category: rec.category,
+      }));
+
+      const newRecommendations = await getRecommendationsFn({
+        data: {
+          userPrefs,
+          previousRecommendations,
+        },
+      });
+
+      setRecommendations(prev => [...prev, ...newRecommendations]);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to load more recommendations";
+      setError(errorMessage);
+      console.error("Error loading more recommendations:", err);
     } finally {
-      setLoading(false);
+      setLoadingMore(false);
     }
   };
 
@@ -64,7 +90,7 @@ export function Recommendations({
     const itemKey = `${recommendation.tmdbData.id}`;
     const isCurrentlyLiked = likedItems.has(itemKey);
 
-    setAddingToPreferences((prev) => new Set(prev).add(itemKey));
+    setAddingToPreferences(prev => new Set(prev).add(itemKey));
 
     try {
       if (isCurrentlyLiked) {
@@ -74,7 +100,7 @@ export function Recommendations({
             preferenceId: recommendation.tmdbData.id,
           },
         });
-        setLikedItems((prev) => {
+        setLikedItems(prev => {
           const newSet = new Set(prev);
           newSet.delete(itemKey);
           return newSet;
@@ -86,8 +112,7 @@ export function Recommendations({
             preferenceId: recommendation.tmdbData.id,
             title: recommendation.title,
             year: recommendation.releasedYear,
-            category:
-              recommendation.category === "movie" ? "movie" : "tv-series",
+            category: recommendation.category === "movie" ? "movie" : "tv-series",
             posterPath: recommendation.tmdbData.posterPath,
             genres:
               recommendation.tmdbData.genres.length > 0
@@ -95,10 +120,11 @@ export function Recommendations({
                 : undefined,
           },
         });
-        setLikedItems((prev) => new Set(prev).add(itemKey));
+        setLikedItems(prev => new Set(prev).add(itemKey));
 
+        // Remove from disliked if it was there
         if (dislikedItems.has(itemKey)) {
-          setDislikedItems((prev) => {
+          setDislikedItems(prev => {
             const newSet = new Set(prev);
             newSet.delete(itemKey);
             return newSet;
@@ -109,7 +135,7 @@ export function Recommendations({
       console.error("Error modifying preferences:", error);
       alert(`Failed to ${isCurrentlyLiked ? "remove" : "add"} to preferences`);
     } finally {
-      setAddingToPreferences((prev) => {
+      setAddingToPreferences(prev => {
         const newSet = new Set(prev);
         newSet.delete(itemKey);
         return newSet;
@@ -128,7 +154,7 @@ export function Recommendations({
     const itemKey = `${recommendation.tmdbData.id}`;
     const isCurrentlyDisliked = dislikedItems.has(itemKey);
 
-    setAddingToPreferences((prev) => new Set(prev).add(itemKey));
+    setAddingToPreferences(prev => new Set(prev).add(itemKey));
 
     try {
       if (isCurrentlyDisliked) {
@@ -138,7 +164,7 @@ export function Recommendations({
             preferenceId: recommendation.tmdbData.id,
           },
         });
-        setDislikedItems((prev) => {
+        setDislikedItems(prev => {
           const newSet = new Set(prev);
           newSet.delete(itemKey);
           return newSet;
@@ -150,29 +176,25 @@ export function Recommendations({
             preferenceId: recommendation.tmdbData.id,
             title: recommendation.title,
             year: recommendation.releasedYear,
-            category:
-              recommendation.category === "movie" ? "movie" : "tv-series",
+            category: recommendation.category === "movie" ? "movie" : "tv-series",
           },
         });
-        setDislikedItems((prev) => new Set(prev).add(itemKey));
+        setDislikedItems(prev => new Set(prev).add(itemKey));
 
-        await removeUserPreferenceByPreferenceId({
-          data: {
-            userId,
-            preferenceId: recommendation.tmdbData.id,
-          },
-        });
-        setLikedItems((prev) => {
-          const newSet = new Set(prev);
-          newSet.delete(itemKey);
-          return newSet;
-        });
+        // Remove from liked if it was there
+        if (likedItems.has(itemKey)) {
+          setLikedItems(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(itemKey);
+            return newSet;
+          });
+        }
       }
     } catch (error) {
       console.error("Error modifying dislikes:", error);
       alert(`Failed to ${isCurrentlyDisliked ? "remove" : "add"} to dislikes`);
     } finally {
-      setAddingToPreferences((prev) => {
+      setAddingToPreferences(prev => {
         const newSet = new Set(prev);
         newSet.delete(itemKey);
         return newSet;
@@ -181,11 +203,23 @@ export function Recommendations({
   };
 
   const handleImageError = (key: string) => {
-    setImageErrors((prev) => new Set(prev).add(key));
+    setImageErrors(prev => new Set(prev).add(key));
   };
 
-  if (allRecommendations.length === 0) {
-    return null;
+  if (error && recommendations.length === 0) {
+    return (
+      <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+        <p className="text-red-700">{error}</p>
+      </div>
+    );
+  }
+
+  if (recommendations.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-500">No recommendations available. Try adding some movies or TV shows to your preferences first!</p>
+      </div>
+    );
   }
 
   return (
@@ -198,7 +232,7 @@ export function Recommendations({
       )}
 
       <div className="grid gap-6 grid-cols-1">
-        {allRecommendations.map((rec, index) => (
+        {recommendations.map((rec, index) => (
           <RecommendationCard
             key={`${rec.title}-${rec.releasedYear}-${index}`}
             recommendation={rec}
@@ -216,11 +250,11 @@ export function Recommendations({
       <div className="mt-6">
         <Button
           onClick={handleLoadMore}
-          disabled={loading}
+          disabled={loadingMore}
           variant="outline"
           className="w-full"
         >
-          {loading ? "Loading more..." : "Load More Recommendations"}
+          {loadingMore ? "Loading more..." : "Load More Recommendations"}
         </Button>
       </div>
     </div>
