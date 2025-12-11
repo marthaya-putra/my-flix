@@ -35,33 +35,31 @@ export const getRecommendationsFn = createServerFn({
   .handler(async ({ data }) => {
     const { userPrefs, previousRecommendations } = data;
 
-    // try {
-    //   const result = await getRecommendations({
-    //     data: {
-    //       previouslyLikedMovies: userPrefs.movies,
-    //       previouslyLikedTvs: userPrefs.tvs,
-    //       dislikedContent: userPrefs.dislikedContent,
-    //       favoriteActors: userPrefs.actors,
-    //       favoriteDirectors: userPrefs.directors,
-    //       genres: userPrefs.genres,
-    //       excludeAdult: true,
-    //       previousRecommendations,
-    //     },
-    //   });
+    try {
+      const result = await getRecommendations({
+        data: {
+          previouslyLikedMovies: userPrefs.movies,
+          previouslyLikedTvs: userPrefs.tvs,
+          dislikedContent: userPrefs.dislikedContent,
+          favoriteActors: userPrefs.actors,
+          favoriteDirectors: userPrefs.directors,
+          genres: userPrefs.genres,
+          excludeAdult: true,
+          previousRecommendations,
+        },
+      });
 
-    //   if (result.success) {
-    //     // Enrich recommendations with TMDB data
-    //     const enrichedRecommendations = await enrichRecommendationsWithTMDB({
-    //       data: result.data.recommendations,
-    //     });
-    //     return enrichedRecommendations;
-    //   } else {
-    //     throw new Error(result.error || "Failed to get recommendations");
-    //   }
-    // } catch (error) {
-    //   console.error("Failed to get recommendations:", error);
-    //   throw error;
-    // }
-
-    return [];
+      if (result.success) {
+        // Enrich recommendations with TMDB data
+        const enrichedRecommendations = await enrichRecommendationsWithTMDB({
+          data: result.data.recommendations,
+        });
+        return enrichedRecommendations;
+      } else {
+        throw new Error(result.error || "Failed to get recommendations");
+      }
+    } catch (error) {
+      console.error("Failed to get recommendations:", error);
+      throw error;
+    }
   });
