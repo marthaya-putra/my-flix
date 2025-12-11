@@ -7,12 +7,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Recommendations as RecommendationsList } from "@/components/recommendations";
 import { RecommendationCardSkeleton } from "@/components/recommendation-card-skeleton";
 import { FilmInfo } from "@/lib/types";
-
-
+import { authMiddleware } from "@/middleware/auth";
 
 export const Route = createFileRoute("/recommendations")({
   component: Recommendations,
-  loader: async () => {
+  server: {
+    middleware: [authMiddleware],
+  },
+  loader: async ({ serverContext }) => {
+    if (!serverContext?.user) {
+      return {};
+    }
     // Load user preferences
     const userPrefs = await loadUserPreferencesFn();
 
@@ -20,8 +25,8 @@ export const Route = createFileRoute("/recommendations")({
     const recommendations = getRecommendationsFn({
       data: {
         userPrefs,
-        previousRecommendations: [] // Empty for initial load
-      }
+        previousRecommendations: [], // Empty for initial load
+      },
     });
 
     return {
@@ -30,7 +35,6 @@ export const Route = createFileRoute("/recommendations")({
     };
   },
 });
-
 
 interface Recommendation {
   title: string;
@@ -42,6 +46,9 @@ interface Recommendation {
 
 function Recommendations() {
   const { userPrefs, recommendations } = Route.useLoaderData();
+  if (!userPrefs) {
+    return null;
+  }
 
   return (
     <div className="container mx-auto p-4 max-w-4xl mt-8">
