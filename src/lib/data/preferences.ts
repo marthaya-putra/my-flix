@@ -228,7 +228,6 @@ export const fetchUserPreferences = createServerFn({
   method: "GET",
 }).handler(async () => {
   try {
-    const req = getRequest();
     const session = await auth.api.getSession({
       headers: getRequest().headers,
     });

@@ -4,9 +4,6 @@ import { onlyLoggedIn } from "@/middleware/auth";
 
 export const Route = createFileRoute("/preferences")({
   component: PreferencesComponent,
-  server: {
-    middleware: [onlyLoggedIn],
-  },
 });
 
 function PreferencesComponent() {
