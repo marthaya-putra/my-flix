@@ -18,28 +18,32 @@ interface ContentSelectionStepProps {
 
 export function ContentSelectionStep({
   type,
-  title,
-  description,
   selectedItems,
   onSelectionChange,
   minRequired,
 }: ContentSelectionStepProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
-  const handleContentSelected = useCallback((content: any) => {
-    const exists = selectedItems.some((item) => item.id === content.id);
-    if (!exists) {
-      onSelectionChange([...selectedItems, content]);
-      toast.success(`${content.title || content.name} has been added.`);
-    } else {
-      toast.info("Already in your selections.");
-    }
-  }, [selectedItems, onSelectionChange]);
+  const handleContentSelected = useCallback(
+    (content: any) => {
+      const exists = selectedItems.some((item) => item.id === content.id);
+      if (!exists) {
+        onSelectionChange([...selectedItems, content]);
+        toast.success(`${content.title || content.name} has been added.`);
+      } else {
+        toast.info("Already in your selections.");
+      }
+    },
+    [selectedItems, onSelectionChange]
+  );
 
-  const handleRemoveItem = useCallback((id: number) => {
-    onSelectionChange(selectedItems.filter((item) => item.id !== id));
-    toast.info("Item has been removed.");
-  }, [selectedItems, onSelectionChange]);
+  const handleRemoveItem = useCallback(
+    (id: number) => {
+      onSelectionChange(selectedItems.filter((item) => item.id !== id));
+      toast.info("Item has been removed.");
+    },
+    [selectedItems, onSelectionChange]
+  );
 
   const hasMinimum = selectedItems.length >= minRequired;
   const progress = Math.min((selectedItems.length / minRequired) * 100, 100);
@@ -52,7 +56,9 @@ export function ContentSelectionStep({
             Selected {selectedItems.length} of {minRequired} required
           </p>
           <Badge variant={hasMinimum ? "default" : "secondary"}>
-            {hasMinimum ? "✓ Requirement met" : `Need ${minRequired - selectedItems.length} more`}
+            {hasMinimum
+              ? "✓ Requirement met"
+              : `Need ${minRequired - selectedItems.length} more`}
           </Badge>
         </div>
         <div className="w-full bg-muted rounded-full h-2">
@@ -79,7 +85,10 @@ export function ContentSelectionStep({
           <CardContent className="pt-6">
             <div className="grid gap-3">
               {selectedItems.map((item) => (
-                <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between p-3 border rounded-lg"
+                >
                   <PreferenceItem
                     item={item}
                     onRemove={() => handleRemoveItem(item.id)}
@@ -93,16 +102,24 @@ export function ContentSelectionStep({
         <Card className="border-dashed">
           <CardContent className="pt-6">
             <div className="text-center py-8 text-muted-foreground">
-              {type === "movie" ? <Film className="h-12 w-12 mx-auto mb-3" /> : <Tv className="h-12 w-12 mx-auto mb-3" />}
+              {type === "movie" ? (
+                <Film className="h-12 w-12 mx-auto mb-3" />
+              ) : (
+                <Tv className="h-12 w-12 mx-auto mb-3" />
+              )}
               <p>No {type === "movie" ? "movies" : "TV shows"} selected yet</p>
-              <p className="text-sm">Click the button above to add your favorites</p>
+              <p className="text-sm">
+                Click the button above to add your favorites
+              </p>
             </div>
           </CardContent>
         </Card>
       )}
 
       <ContentSearchDialog
+        key={type}
         open={isSearchOpen}
+        restrictedMode={true}
         onOpenChange={setIsSearchOpen}
         searchType={type}
         onContentSelected={handleContentSelected}

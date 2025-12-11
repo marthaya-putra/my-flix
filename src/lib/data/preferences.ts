@@ -32,9 +32,6 @@ const RemovePersonInput = z.object({
   personType: z.enum(["actor", "director", "other"]),
 });
 
-// Hardcoded user ID for now
-const DEFAULT_USER_ID = "default-user";
-
 // Add movie/TV show to user preferences
 export const addMoviePreference = createServerFn({
   method: "POST",
@@ -44,9 +41,18 @@ export const addMoviePreference = createServerFn({
     try {
       const { preferenceId, title, year, category, genres, posterPath } = data;
 
+      // Get the current session to retrieve authenticated user ID
+      const session = await auth.api.getSession({
+        headers: getRequest().headers,
+      });
+
+      if (!session?.user?.id) {
+        return { success: false, error: "User not authenticated" };
+      }
+
       const result = await addUserPreference({
         data: {
-          userId: DEFAULT_USER_ID,
+          userId: session.user.id,
           preferenceId,
           title,
           year,
@@ -82,6 +88,15 @@ export const removeMoviePreference = createServerFn({
     try {
       const { id, type } = data;
 
+      // Get the current session to retrieve authenticated user ID
+      const session = await auth.api.getSession({
+        headers: getRequest().headers,
+      });
+
+      if (!session?.user?.id) {
+        return { success: false, error: "User not authenticated" };
+      }
+
       // First get the preference to find the TMDB ID
       const preferenceToDelete = await db
         .select()
@@ -98,7 +113,7 @@ export const removeMoviePreference = createServerFn({
       // Use repository function to remove by TMDB ID
       const result = await removeUserPreferenceByPreferenceId({
         data: {
-          userId: DEFAULT_USER_ID,
+          userId: session.user.id,
           preferenceId: preference.preferenceId,
         },
       });
@@ -129,9 +144,18 @@ export const addPersonPreference = createServerFn({
     try {
       const { personId, personName, personType, profilePath } = data;
 
+      // Get the current session to retrieve authenticated user ID
+      const session = await auth.api.getSession({
+        headers: getRequest().headers,
+      });
+
+      if (!session?.user?.id) {
+        return { success: false, error: "User not authenticated" };
+      }
+
       const result = await addUserPerson({
         data: {
-          userId: DEFAULT_USER_ID,
+          userId: session.user.id,
           personId,
           personName,
           personType,
@@ -165,10 +189,19 @@ export const removePersonPreference = createServerFn({
     try {
       const { id, personType } = data;
 
+      // Get the current session to retrieve authenticated user ID
+      const session = await auth.api.getSession({
+        headers: getRequest().headers,
+      });
+
+      if (!session?.user?.id) {
+        return { success: false, error: "User not authenticated" };
+      }
+
       const result = await removeUserPerson({
         data: {
           id,
-          userId: DEFAULT_USER_ID,
+          userId: session.user.id,
         },
       });
 
@@ -198,18 +231,27 @@ export const fetchUserPreferences = createServerFn({
     const session = await auth.api.getSession({
       headers: getRequest().headers,
     });
-    console.log({ req });
+
+    // Check if user is authenticated
+    if (!session?.user?.id) {
+      return {
+        success: false,
+        error: "User not authenticated",
+        data: { movies: [], tvShows: [], people: [] },
+      };
+    }
+
     // Fetch movie and TV preferences using repository
     const movieTVResult = await getUserPreferences({
       data: {
-        userId: DEFAULT_USER_ID,
+        userId: session.user.id,
       },
     });
 
     // Fetch people preferences using repository
     const peopleResult = await getUserPeople({
       data: {
-        userId: DEFAULT_USER_ID,
+        userId: session.user.id,
       },
     });
 

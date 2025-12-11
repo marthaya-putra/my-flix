@@ -11,6 +11,7 @@ import {
   removeUserDislikeByPreferenceId,
 } from "@/lib/repositories/user-dislikes";
 import { getRecommendationsFn } from "@/lib/server-functions/recommendations";
+import { useAuth } from "@/contexts/auth-context";
 
 interface Recommendation {
   title: string;
@@ -49,8 +50,18 @@ export function Recommendations({
     new Set()
   );
 
-  // Hardcoded user ID for testing - in real app, get from auth context
-  const userId = "default-user";
+  // Get logged-in user ID from auth context
+  const { user } = useAuth();
+  const userId = user?.id;
+
+  // If user is not authenticated, show message
+  if (!userId) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-500">Please log in to manage your recommendations.</p>
+      </div>
+    );
+  }
 
   const handleLoadMore = async () => {
     setLoadingMore(true);

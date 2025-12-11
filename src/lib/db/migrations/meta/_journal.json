@@ -15,6 +15,13 @@
       "when": 1765336370512,
       "tag": "20251210031250_regular_terrax",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1765443130833,
+      "tag": "20251211085210_powerful_loners",
+      "breakpoints": true
     }
   ]
 }

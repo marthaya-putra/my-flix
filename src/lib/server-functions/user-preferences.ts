@@ -1,4 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
+import { auth } from "@/lib/auth";
 import {
   getUserPreferences,
 } from "@/lib/repositories/user-preferences";
@@ -10,7 +12,24 @@ import { getUserPeople } from "@/lib/repositories/user-people";
 // Server function to load user preferences
 export const loadUserPreferencesFn = createServerFn()
   .handler(async () => {
-    const userId = "default-user";
+    // Get the current session to retrieve authenticated user ID
+    const session = await auth.api.getSession({
+      headers: getRequest().headers,
+    });
+
+    // If no session, return empty preferences
+    if (!session?.user?.id) {
+      return {
+        movies: [],
+        tvs: [],
+        dislikedContent: [],
+        actors: [],
+        directors: [],
+        genres: [],
+      };
+    }
+
+    const userId = session.user.id;
 
     try {
       const [preferencesResponse, peopleResponse, dislikesResponse] =

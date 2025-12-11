@@ -24,7 +24,7 @@ export const userPreferences = pgTable(
   "user_preferences",
   {
     id: serial("id").primaryKey(),
-    userId: text("user_id").notNull(),
+    userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
     preferenceId: integer("preference_id").notNull(), // TMDB ID
     title: text("title").notNull(),
     year: integer("year").notNull(), // Release year
@@ -50,7 +50,7 @@ export const userDislikes = pgTable(
   "user_dislikes",
   {
     id: serial("id").primaryKey(),
-    userId: text("user_id").notNull(),
+    userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
     preferenceId: integer("preference_id").notNull(), // TMDB ID
     title: text("title").notNull(),
     year: integer("year").notNull(), // Release year
@@ -74,7 +74,7 @@ export const userPeople = pgTable(
   "user_people",
   {
     id: serial("id").primaryKey(),
-    userId: text("user_id").notNull(),
+    userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
     personId: integer("person_id").notNull(), // TMDB ID
     personName: text("person_name").notNull(),
     personType: personTypeEnum("person_type").notNull(), // 'actor' | 'director' | 'other'
@@ -177,6 +177,9 @@ export const verification = pgTable(
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
+  preferences: many(userPreferences),
+  dislikes: many(userDislikes),
+  people: many(userPeople),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -189,6 +192,27 @@ export const sessionRelations = relations(session, ({ one }) => ({
 export const accountRelations = relations(account, ({ one }) => ({
   user: one(user, {
     fields: [account.userId],
+    references: [user.id],
+  }),
+}));
+
+export const userPreferencesRelations = relations(userPreferences, ({ one }) => ({
+  user: one(user, {
+    fields: [userPreferences.userId],
+    references: [user.id],
+  }),
+}));
+
+export const userDislikesRelations = relations(userDislikes, ({ one }) => ({
+  user: one(user, {
+    fields: [userDislikes.userId],
+    references: [user.id],
+  }),
+}));
+
+export const userPeopleRelations = relations(userPeople, ({ one }) => ({
+  user: one(user, {
+    fields: [userPeople.userId],
     references: [user.id],
   }),
 }));

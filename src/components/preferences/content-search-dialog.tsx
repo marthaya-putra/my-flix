@@ -28,6 +28,7 @@ interface ContentSearchDialogProps {
   searchType: ContentType;
   onContentSelected: (content: ContentItem) => void;
   existingIds?: Set<number>;
+  restrictedMode?: boolean;
 }
 
 const tabIcons = {
@@ -42,6 +43,7 @@ export function ContentSearchDialog({
   searchType,
   onContentSelected,
   existingIds = new Set(),
+  restrictedMode = false,
 }: ContentSearchDialogProps) {
   const [query, setQuery] = useState("");
   const [searchResponse, setSearchResponse] = useState<ContentItem[] | null>(
@@ -106,7 +108,9 @@ export function ContentSearchDialog({
             Search {getContentSubtitle(activeTab)}s
           </DialogTitle>
           <DialogDescription>
-            Find and add your favorite content to your preferences
+            {restrictedMode
+              ? `Find and add your favorite ${getContentSubtitle(activeTab).toLowerCase()}s to your preferences`
+              : "Find and add your favorite content to your preferences"}
           </DialogDescription>
         </DialogHeader>
 
@@ -127,32 +131,34 @@ export function ContentSearchDialog({
             </div>
 
             {/* Tab Navigation for Multi-Search */}
-            <Tabs
-              value={activeTab}
-              onValueChange={(value) => {
-                setActiveTab(value as any);
-                setPage(1);
-                setSearchResponse(null);
-                if (query.length >= 2) {
-                  debouncedSearch();
-                }
-              }}
-            >
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="movie" className="flex items-center gap-2">
-                  <Film className="h-4 w-4" />
-                  Movies
-                </TabsTrigger>
-                <TabsTrigger value="tv" className="flex items-center gap-2">
-                  <Tv className="h-4 w-4" />
-                  TV Shows
-                </TabsTrigger>
-                <TabsTrigger value="person" className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  People
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+            {!restrictedMode && (
+              <Tabs
+                value={activeTab}
+                onValueChange={(value) => {
+                  setActiveTab(value as any);
+                  setPage(1);
+                  setSearchResponse(null);
+                  if (query.length >= 2) {
+                    debouncedSearch();
+                  }
+                }}
+              >
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="movie" className="flex items-center gap-2">
+                    <Film className="h-4 w-4" />
+                    Movies
+                  </TabsTrigger>
+                  <TabsTrigger value="tv" className="flex items-center gap-2">
+                    <Tv className="h-4 w-4" />
+                    TV Shows
+                  </TabsTrigger>
+                  <TabsTrigger value="person" className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    People
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            )}
           </div>
 
           <Separator />
