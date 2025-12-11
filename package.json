@@ -5,7 +5,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "vite dev",
+    "dev": "npm run dev:check && vite dev",
+    "dev:check": "! lsof -i :3000 && ! lsof -i :3001",
+    "dev:force": "vite dev",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",

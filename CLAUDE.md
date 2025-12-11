@@ -4,8 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Commands
 
-- `npm run dev` - Start development server on port 3000
+- `npm run dev` - Start development server (checks if already running)
+- `npm run dev:force` - Force start development server without checking
 - `npm run build` - Build for production
+
+**IMPORTANT**: Always check if dev server is already running before starting a new one. The `npm run dev` command automatically checks for running servers on ports 3000 and 3001 and will not start if one is found. Use `npm run dev:force` only if you need to override this check.
 
 ## Architecture Overview
 
