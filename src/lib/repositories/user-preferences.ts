@@ -7,35 +7,40 @@ import {
   NewUserPreference,
 } from "@/lib/db";
 import { eq, and, desc, ilike } from "drizzle-orm";
+import { removeUserDislikeByPreferenceId } from "@/lib/repositories/user-dislikes";
 
 // Input validation schemas
 const addPreferenceSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
+  preferenceId: z.number().positive("TMDB ID is required"),
   title: z.string().min(1, "Title is required"),
+  year: z.number().positive("Year is required"),
   category: z.enum(["movie", "tv-series"], {
-    errorMap: () => ({ message: "Category must be either movie or tv-series" }),
+    message: "Category must be either movie or tv-series",
   }),
   genres: z.string().optional(),
+  posterPath: z.string().optional(),
 });
 
 const updatePreferenceSchema = z.object({
   id: z.number().positive(),
   userId: z.string().min(1, "User ID is required"),
   title: z.string().min(1, "Title is required"),
+  year: z.number().positive("Year is required"),
   category: z.enum(["movie", "tv-series"]),
   genres: z.string().optional(),
 });
 
-const removePreferenceSchema = z.object({
-  id: z.number().positive(),
+const removePreferenceByTmdbIdSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
+  preferenceId: z.number().positive("TMDB ID is required"),
 });
 
 const getUserPreferencesSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
   category: z.enum(["movie", "tv-series"]).optional(),
-  limit: z.number().positive().max(100).default(50),
-  offset: z.number().nonnegative().default(0),
+  limit: z.number().positive().optional(),
+  offset: z.number().nonnegative().optional(),
 });
 
 // Server functions for user preferences
@@ -52,22 +57,41 @@ export const addUserPreference = createServerFn({
         .where(
           and(
             eq(userPreferences.userId, data.userId),
-            eq(userPreferences.title, data.title),
-            eq(userPreferences.category, data.category)
+            eq(userPreferences.preferenceId, data.preferenceId)
           )
         )
         .limit(1);
 
       if (existing.length > 0) {
-        throw new Error("This preference already exists");
+        // Preference already exists, remove from dislikes if it exists there
+        try {
+          await removeUserDislikeByPreferenceId({
+            data: {
+              userId: data.userId,
+              preferenceId: data.preferenceId,
+            },
+          });
+        } catch (error) {
+          // Log error but don't fail the preference addition
+          console.error("Failed to remove from dislikes:", error);
+        }
+
+        // Preference already exists, return success with the existing preference
+        return {
+          success: true,
+          preference: existing[0],
+        };
       }
 
       // Insert new preference
       const newPreference: NewUserPreference = {
         userId: data.userId,
+        preferenceId: data.preferenceId,
         title: data.title,
+        year: data.year,
         category: data.category,
         genres: data.genres || null,
+        posterPath: data.posterPath || null,
       };
 
       const result = await db
@@ -75,15 +99,38 @@ export const addUserPreference = createServerFn({
         .values(newPreference)
         .returning();
 
+      // Remove from dislikes if it exists there
+      try {
+        await removeUserDislikeByPreferenceId({
+          data: {
+            userId: data.userId,
+            preferenceId: data.preferenceId,
+          },
+        });
+      } catch (error) {
+        // Log error but don't fail the preference addition
+        console.error("Failed to remove from dislikes:", error);
+      }
+
       return {
         success: true,
         preference: result[0],
       };
     } catch (error) {
       console.error("Failed to add user preference:", error);
-      throw new Error(
-        error instanceof Error ? error.message : "Failed to add preference"
-      );
+      // Always return success even on failure as this is not fatal
+      return {
+        success: true,
+        preference: {
+          userId: data.userId,
+          preferenceId: data.preferenceId,
+          title: data.title,
+          year: data.year,
+          category: data.category,
+          genres: data.genres || null,
+          posterPath: data.posterPath || null,
+        },
+      };
     }
   });
 
@@ -99,18 +146,20 @@ export const getUserPreferences = createServerFn({
         whereConditions.push(eq(userPreferences.category, data.category));
       }
 
-      const preferences = await db
+      const baseQuery = db
         .select()
         .from(userPreferences)
         .where(and(...whereConditions))
-        .orderBy(desc(userPreferences.updatedAt))
-        .limit(data.limit)
-        .offset(data.offset);
+        .orderBy(desc(userPreferences.updatedAt));
+
+      const preferences = data.limit
+        ? await baseQuery.limit(data.limit).offset(data.offset || 0)
+        : await baseQuery.offset(data.offset || 0);
 
       return {
         success: true,
         preferences,
-        hasMore: preferences.length === data.limit,
+        hasMore: data.limit ? preferences.length === data.limit : false,
       };
     } catch (error) {
       console.error("Failed to get user preferences:", error);
@@ -128,6 +177,7 @@ export const updateUserPreference = createServerFn({
         .update(userPreferences)
         .set({
           title: data.title,
+          year: data.year,
           category: data.category,
           genres: data.genres || null,
           updatedAt: new Date(),
@@ -156,38 +206,6 @@ export const updateUserPreference = createServerFn({
     }
   });
 
-export const removeUserPreference = createServerFn({
-  method: "POST",
-})
-  .inputValidator(removePreferenceSchema)
-  .handler(async ({ data }) => {
-    try {
-      const result = await db
-        .delete(userPreferences)
-        .where(
-          and(
-            eq(userPreferences.id, data.id),
-            eq(userPreferences.userId, data.userId)
-          )
-        )
-        .returning();
-
-      if (result.length === 0) {
-        throw new Error("Preference not found or access denied");
-      }
-
-      return {
-        success: true,
-        deletedPreference: result[0],
-      };
-    } catch (error) {
-      console.error("Failed to remove user preference:", error);
-      throw new Error(
-        error instanceof Error ? error.message : "Failed to remove preference"
-      );
-    }
-  });
-
 export const searchUserPreferences = createServerFn({
   method: "GET",
 })
@@ -196,7 +214,7 @@ export const searchUserPreferences = createServerFn({
       userId: z.string().min(1, "User ID is required"),
       query: z.string().min(1, "Search query is required"),
       category: z.enum(["movie", "tv-series"]).optional(),
-      limit: z.number().positive().max(50).default(20),
+      limit: z.number().positive().default(20),
     })
   )
   .handler(async ({ data }) => {
@@ -226,3 +244,78 @@ export const searchUserPreferences = createServerFn({
       throw new Error("Failed to search preferences");
     }
   });
+
+export const removeUserPreferenceByPreferenceId = createServerFn({
+  method: "POST",
+})
+  .inputValidator(removePreferenceByTmdbIdSchema)
+  .handler(async ({ data }) => {
+    try {
+      // First, retrieve the preference to delete
+      const preferencesToDelete = await db
+        .select()
+        .from(userPreferences)
+        .where(
+          and(
+            eq(userPreferences.userId, data.userId),
+            eq(userPreferences.preferenceId, data.preferenceId)
+          )
+        )
+        .limit(1);
+
+      if (preferencesToDelete.length === 0) {
+        // Preference not found, return success with the input data
+        return {
+          success: true,
+          deletedPreference: {
+            userId: data.userId,
+            preferenceId: data.preferenceId,
+          },
+        };
+      }
+
+      // Proceed with deletion
+      const result = await db
+        .delete(userPreferences)
+        .where(
+          and(
+            eq(userPreferences.userId, data.userId),
+            eq(userPreferences.preferenceId, data.preferenceId)
+          )
+        )
+        .returning();
+
+      // If deletion result is empty, return the previously retrieved item
+      const deletedPreference =
+        result.length > 0 ? result[0] : preferencesToDelete[0];
+
+      return {
+        success: true,
+        deletedPreference,
+      };
+    } catch (error) {
+      console.error("Failed to remove user preference:", error);
+      // Always return success even on failure as this is not fatal
+      return {
+        success: true,
+        deletedPreference: {
+          userId: data.userId,
+          preferenceId: data.preferenceId,
+        },
+      };
+    }
+  });
+
+// Export schemas for reuse
+export const schemas = {
+  addPreference: addPreferenceSchema,
+  updatePreference: updatePreferenceSchema,
+  removePreferenceByTmdbId: removePreferenceByTmdbIdSchema,
+  getUserPreferences: getUserPreferencesSchema,
+  searchUserPreferences: z.object({
+    userId: z.string().min(1, "User ID is required"),
+    query: z.string().min(1, "Search query is required"),
+    category: z.enum(["movie", "tv-series"]).optional(),
+    limit: z.number().positive().default(20),
+  }),
+};

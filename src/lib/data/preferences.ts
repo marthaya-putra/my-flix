@@ -1,35 +1,36 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { db, userPreferences, userPeople } from "@/lib/db";
-import { eq, and } from "drizzle-orm";
-import { FilmInfo, Person } from "@/lib/types";
+import { getRequest } from "@tanstack/react-start/server";
 
-// Input validation schemas
-const AddMoviePreferenceInput = z.object({
-  title: z.string(),
-  category: z.enum(["movie", "tv-series"]),
-  genres: z.string().optional(),
-  posterPath: z.string().optional(),
+import {
+  addUserPreference,
+  getUserPreferences,
+  removeUserPreferenceByPreferenceId,
+  schemas as preferenceSchemas,
+} from "@/lib/repositories/user-preferences";
+import { db, userPreferences } from "@/lib/db";
+import { eq } from "drizzle-orm";
+import {
+  addUserPerson,
+  getUserPeople,
+  removeUserPerson,
+  schemas as peopleSchemas,
+} from "@/lib/repositories/user-people";
+import { auth } from "../auth";
+
+// Input validation schemas from repositories
+const AddMoviePreferenceInput = preferenceSchemas.addPreference.omit({
+  userId: true,
 });
-
-const AddPersonPreferenceInput = z.object({
-  personName: z.string(),
-  personType: z.enum(["actor", "director", "other"]),
-  profilePath: z.string().optional(),
-});
-
+const AddPersonPreferenceInput = peopleSchemas.addPerson.omit({ userId: true });
 const RemovePreferenceInput = z.object({
   id: z.number(),
   type: z.enum(["movie", "tv-series"]),
 });
-
 const RemovePersonInput = z.object({
   id: z.number(),
-  personType: z.enum(["actor", "director"]),
+  personType: z.enum(["actor", "director", "other"]),
 });
-
-// Hardcoded user ID for now
-const DEFAULT_USER_ID = "default-user";
 
 // Add movie/TV show to user preferences
 export const addMoviePreference = createServerFn({
@@ -38,38 +39,34 @@ export const addMoviePreference = createServerFn({
   .inputValidator(AddMoviePreferenceInput)
   .handler(async ({ data }) => {
     try {
-      const { title, category, genres, posterPath } = data;
+      const { preferenceId, title, year, category, genres, posterPath } = data;
 
-      // Check if already exists
-      const existing = await db
-        .select()
-        .from(userPreferences)
-        .where(
-          and(
-            eq(userPreferences.userId, DEFAULT_USER_ID),
-            eq(userPreferences.title, title),
-            eq(userPreferences.category, category)
-          )
-        )
-        .limit(1);
+      // Get the current session to retrieve authenticated user ID
+      const session = await auth.api.getSession({
+        headers: getRequest().headers,
+      });
 
-      if (existing.length > 0) {
-        return { success: false, error: "Already in preferences" };
+      if (!session?.user?.id) {
+        return { success: false, error: "User not authenticated" };
       }
 
-      // Insert new preference
-      const result = await db
-        .insert(userPreferences)
-        .values({
-          userId: DEFAULT_USER_ID,
+      const result = await addUserPreference({
+        data: {
+          userId: session.user.id,
+          preferenceId,
           title,
+          year,
           category,
-          genres: genres || null,
-          posterPath: posterPath || null,
-        })
-        .returning();
+          genres,
+          posterPath,
+        },
+      });
 
-      return { success: true, data: result[0] };
+      if (result.success && result.preference) {
+        return { success: true, data: result.preference };
+      } else {
+        return { success: false, error: "Already in preferences" };
+      }
     } catch (error) {
       console.error("Error adding movie preference:", error);
       return {
@@ -91,22 +88,41 @@ export const removeMoviePreference = createServerFn({
     try {
       const { id, type } = data;
 
-      const result = await db
-        .delete(userPreferences)
-        .where(
-          and(
-            eq(userPreferences.id, id),
-            eq(userPreferences.userId, DEFAULT_USER_ID),
-            eq(userPreferences.category, type)
-          )
-        )
-        .returning();
+      // Get the current session to retrieve authenticated user ID
+      const session = await auth.api.getSession({
+        headers: getRequest().headers,
+      });
 
-      if (result.length === 0) {
+      if (!session?.user?.id) {
+        return { success: false, error: "User not authenticated" };
+      }
+
+      // First get the preference to find the TMDB ID
+      const preferenceToDelete = await db
+        .select()
+        .from(userPreferences)
+        .where(eq(userPreferences.id, id))
+        .limit(1);
+
+      if (preferenceToDelete.length === 0) {
         return { success: false, error: "Preference not found" };
       }
 
-      return { success: true, data: result[0] };
+      const preference = preferenceToDelete[0];
+
+      // Use repository function to remove by TMDB ID
+      const result = await removeUserPreferenceByPreferenceId({
+        data: {
+          userId: session.user.id,
+          preferenceId: preference.preferenceId,
+        },
+      });
+
+      if (result.success && result.deletedPreference) {
+        return { success: true, data: result.deletedPreference };
+      } else {
+        return { success: false, error: "Failed to remove preference" };
+      }
     } catch (error) {
       console.error("Error removing movie preference:", error);
       return {
@@ -126,37 +142,32 @@ export const addPersonPreference = createServerFn({
   .inputValidator(AddPersonPreferenceInput)
   .handler(async ({ data }) => {
     try {
-      const { personName, personType, profilePath } = data;
+      const { personId, personName, personType, profilePath } = data;
 
-      // Check if already exists
-      const existing = await db
-        .select()
-        .from(userPeople)
-        .where(
-          and(
-            eq(userPeople.userId, DEFAULT_USER_ID),
-            eq(userPeople.personName, personName),
-            eq(userPeople.personType, personType)
-          )
-        )
-        .limit(1);
+      // Get the current session to retrieve authenticated user ID
+      const session = await auth.api.getSession({
+        headers: getRequest().headers,
+      });
 
-      if (existing.length > 0) {
-        return { success: false, error: "Already in preferences" };
+      if (!session?.user?.id) {
+        return { success: false, error: "User not authenticated" };
       }
 
-      // Insert new person
-      const result = await db
-        .insert(userPeople)
-        .values({
-          userId: DEFAULT_USER_ID,
+      const result = await addUserPerson({
+        data: {
+          userId: session.user.id,
+          personId,
           personName,
           personType,
-          profilePath: profilePath || null,
-        })
-        .returning();
+          profilePath,
+        },
+      });
 
-      return { success: true, data: result[0] };
+      if (result.success && result.person) {
+        return { success: true, data: result.person };
+      } else {
+        return { success: false, error: "Already in preferences" };
+      }
     } catch (error) {
       console.error("Error adding person preference:", error);
       return {
@@ -178,22 +189,27 @@ export const removePersonPreference = createServerFn({
     try {
       const { id, personType } = data;
 
-      const result = await db
-        .delete(userPeople)
-        .where(
-          and(
-            eq(userPeople.id, id),
-            eq(userPeople.userId, DEFAULT_USER_ID),
-            eq(userPeople.personType, personType)
-          )
-        )
-        .returning();
+      // Get the current session to retrieve authenticated user ID
+      const session = await auth.api.getSession({
+        headers: getRequest().headers,
+      });
 
-      if (result.length === 0) {
-        return { success: false, error: "Person not found" };
+      if (!session?.user?.id) {
+        return { success: false, error: "User not authenticated" };
       }
 
-      return { success: true, data: result[0] };
+      const result = await removeUserPerson({
+        data: {
+          id,
+          userId: session.user.id,
+        },
+      });
+
+      if (result.success && result.deletedPerson) {
+        return { success: true, data: result.deletedPerson };
+      } else {
+        return { success: false, error: "Person not found" };
+      }
     } catch (error) {
       console.error("Error removing person preference:", error);
       return {
@@ -211,25 +227,45 @@ export const fetchUserPreferences = createServerFn({
   method: "GET",
 }).handler(async () => {
   try {
-    // Fetch movie and TV preferences
-    const movieTVPreferences = await db
-      .select()
-      .from(userPreferences)
-      .where(eq(userPreferences.userId, DEFAULT_USER_ID))
-      .orderBy(userPreferences.createdAt);
+    const req = getRequest();
+    const session = await auth.api.getSession({
+      headers: getRequest().headers,
+    });
 
-    // Fetch people preferences
-    const peoplePreferences = await db
-      .select()
-      .from(userPeople)
-      .where(eq(userPeople.userId, DEFAULT_USER_ID))
-      .orderBy(userPeople.createdAt);
+    // Check if user is authenticated
+    if (!session?.user?.id) {
+      return {
+        success: false,
+        error: "User not authenticated",
+        data: { movies: [], tvShows: [], people: [] },
+      };
+    }
+
+    // Fetch movie and TV preferences using repository
+    const movieTVResult = await getUserPreferences({
+      data: {
+        userId: session.user.id,
+      },
+    });
+
+    // Fetch people preferences using repository
+    const peopleResult = await getUserPeople({
+      data: {
+        userId: session.user.id,
+      },
+    });
+
+    const movieTVPreferences = movieTVResult.success
+      ? movieTVResult.preferences
+      : [];
+    const peoplePreferences = peopleResult.success ? peopleResult.people : [];
 
     // Separate movies and TV shows
     const movies = movieTVPreferences
       .filter((pref) => pref.category === "movie")
       .map((pref) => ({
-        id: pref.id,
+        id: pref.preferenceId, // Use TMDB ID for display/search comparison
+        dbId: pref.id, // Keep database ID for removal operations
         title: pref.title,
         category: "movie" as const,
         genreIds: [],
@@ -243,13 +279,14 @@ export const fetchUserPreferences = createServerFn({
         backdropPath: "",
         overview: "",
         voteAverage: 0,
-        releaseDate: pref.createdAt?.toISOString() || "",
+        releaseDate: pref.year?.toString() || "",
       }));
 
     const tvShows = movieTVPreferences
       .filter((pref) => pref.category === "tv-series")
       .map((pref) => ({
-        id: pref.id,
+        id: pref.preferenceId, // Use TMDB ID for display/search comparison
+        dbId: pref.id, // Keep database ID for removal operations
         title: pref.title,
         category: "tv" as const,
         genreIds: [],
@@ -263,17 +300,18 @@ export const fetchUserPreferences = createServerFn({
         backdropPath: "",
         overview: "",
         voteAverage: 0,
-        releaseDate: pref.createdAt?.toISOString() || "",
+        releaseDate: pref.year?.toString() || "",
       }));
 
     // Convert people preferences
     const people = peoplePreferences.map((pref) => ({
-      id: pref.id,
+      id: pref.personId, // Use TMDB ID for display/search comparison
+      dbId: pref.id, // Keep database ID for removal operations
       name: pref.personName,
       profileImageUrl: pref.profilePath || "",
       popularity: 0,
       knownFor: [],
-      category: pref.personType as "actor" | "director" | "other",
+      category: pref.personType,
     }));
 
     return {
@@ -326,6 +364,7 @@ export const addFilmInfoPreference = createServerFn({
         title: z.string(),
         category: z.enum(["movie", "tv"]),
         genres: z.array(z.string()),
+        releaseDate: z.string().optional(),
       }),
     })
   )
@@ -334,10 +373,15 @@ export const addFilmInfoPreference = createServerFn({
       const { filmInfo } = data;
       const category = filmInfo.category === "tv" ? "tv-series" : "movie";
       const genres = filmInfo.genres.join(", ");
+      const year = filmInfo.releaseDate
+        ? new Date(filmInfo.releaseDate).getFullYear()
+        : new Date().getFullYear();
 
       return await addMoviePreference({
         data: {
+          preferenceId: filmInfo.id,
           title: filmInfo.title,
+          year,
           category,
           genres: genres || undefined,
         },
@@ -364,8 +408,9 @@ export const addPersonInfoPreference = createServerFn({
         id: z.number(),
         name: z.string(),
         knownForDepartment: z.string().optional(),
+        profilePath: z.string().optional(),
       }),
-      personType: z.enum(["actor", "director"]),
+      personType: z.enum(["actor", "director", "other"]),
     })
   )
   .handler(async ({ data }) => {
@@ -374,8 +419,10 @@ export const addPersonInfoPreference = createServerFn({
 
       return await addPersonPreference({
         data: {
+          personId: person.id,
           personName: person.name,
           personType,
+          profilePath: person.profilePath,
         },
       });
     } catch (error) {

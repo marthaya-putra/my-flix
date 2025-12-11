@@ -11,6 +11,7 @@ import Navbar from "../components/navbar";
 import NotFound from "../components/not-found";
 import appCss from "../styles/app.css?url";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider } from "@/contexts/auth-context";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -51,8 +52,10 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
       </head>
       <body>
         <TooltipProvider>
-          <Navbar />
-          <div className="mt-10">{children}</div>
+          <AuthProvider>
+            <Navbar />
+            <div className="mt-10">{children}</div>
+          </AuthProvider>
         </TooltipProvider>
         <footer className="py-6 px-4 md:px-12 bg-black/40 border-t border-white/5">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-white">

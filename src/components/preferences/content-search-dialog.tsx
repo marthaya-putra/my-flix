@@ -26,8 +26,9 @@ interface ContentSearchDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   searchType: ContentType;
-  onContentSelected: (content: FilmInfo | Person) => void;
+  onContentSelected: (content: ContentItem) => void;
   existingIds?: Set<number>;
+  restrictedMode?: boolean;
 }
 
 const tabIcons = {
@@ -42,6 +43,7 @@ export function ContentSearchDialog({
   searchType,
   onContentSelected,
   existingIds = new Set(),
+  restrictedMode = false,
 }: ContentSearchDialogProps) {
   const [query, setQuery] = useState("");
   const [searchResponse, setSearchResponse] = useState<ContentItem[] | null>(
@@ -106,7 +108,9 @@ export function ContentSearchDialog({
             Search {getContentSubtitle(activeTab)}s
           </DialogTitle>
           <DialogDescription>
-            Find and add your favorite content to your preferences
+            {restrictedMode
+              ? `Find and add your favorite ${getContentSubtitle(activeTab).toLowerCase()}s to your preferences`
+              : "Find and add your favorite content to your preferences"}
           </DialogDescription>
         </DialogHeader>
 
@@ -127,38 +131,40 @@ export function ContentSearchDialog({
             </div>
 
             {/* Tab Navigation for Multi-Search */}
-            <Tabs
-              value={activeTab}
-              onValueChange={(value) => {
-                setActiveTab(value as any);
-                setPage(1);
-                setSearchResponse(null);
-                if (query.length >= 2) {
-                  debouncedSearch();
-                }
-              }}
-            >
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="movie" className="flex items-center gap-2">
-                  <Film className="h-4 w-4" />
-                  Movies
-                </TabsTrigger>
-                <TabsTrigger value="tv" className="flex items-center gap-2">
-                  <Tv className="h-4 w-4" />
-                  TV Shows
-                </TabsTrigger>
-                <TabsTrigger value="person" className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  People
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+            {!restrictedMode && (
+              <Tabs
+                value={activeTab}
+                onValueChange={(value) => {
+                  setActiveTab(value as any);
+                  setPage(1);
+                  setSearchResponse(null);
+                  if (query.length >= 2) {
+                    debouncedSearch();
+                  }
+                }}
+              >
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="movie" className="flex items-center gap-2">
+                    <Film className="h-4 w-4" />
+                    Movies
+                  </TabsTrigger>
+                  <TabsTrigger value="tv" className="flex items-center gap-2">
+                    <Tv className="h-4 w-4" />
+                    TV Shows
+                  </TabsTrigger>
+                  <TabsTrigger value="person" className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    People
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            )}
           </div>
 
           <Separator />
 
           {/* Results */}
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 pb-5">
             <div>
               {query.length < 2 ? (
                 <div className="flex items-center justify-center h-64 text-center">
@@ -189,15 +195,14 @@ export function ContentSearchDialog({
               ) : (
                 <div className="p-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-                    {searchResponse
-                      ?.filter((item) => !existingIds.has(item.id))
-                      .map((item) => (
-                        <ContentCard
-                          key={item.id}
-                          item={item}
-                          onSelect={(content) => handleContentClick(content)}
-                        />
-                      ))}
+                    {searchResponse?.map((item) => (
+                      <ContentCard
+                        key={item.id}
+                        item={item}
+                        onSelect={(content) => handleContentClick(content)}
+                        isAdded={existingIds.has(item.id)}
+                      />
+                    ))}
                   </div>
 
                   {page < totalPages && (
@@ -227,30 +232,31 @@ export function ContentSearchDialog({
 interface ContentCardProps {
   item: ContentItem;
   onSelect: (content: ContentItem) => void;
+  isAdded?: boolean;
 }
 
-function ContentCard({ item, onSelect }: ContentCardProps) {
+function ContentCard({ item, onSelect, isAdded = false }: ContentCardProps) {
   // Use pattern matching to render the appropriate card
   return match(item)
     .with({ contentType: "movie" }, (movie) => (
       <MovieCard
         movie={movie}
         onAdd={(movie) => onSelect({ ...movie, contentType: "movie" })}
-        isAdded={false}
+        isAdded={isAdded}
       />
     ))
     .with({ contentType: "tv" }, (tv) => (
       <TVCard
         tvShow={tv}
         onAdd={() => onSelect({ ...tv, contentType: "tv" })}
-        isAdded={false}
+        isAdded={isAdded}
       />
     ))
     .with({ contentType: "person" }, (person) => (
       <PersonCard
         person={person}
         onAdd={() => onSelect({ ...person, contentType: "person" })}
-        isAdded={false}
+        isAdded={isAdded}
       />
     ))
     .otherwise(() => null);

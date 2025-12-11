@@ -1,8 +1,7 @@
 import { Search, Film, Tv, User, X } from "lucide-react";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useCallback } from "react";
+import { useDebouncedCallback } from "use-debounce";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { useDebounce } from "use-debounce";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +9,7 @@ import {
   DialogTitle,
   DialogClose,
 } from "@/components/ui/dialog";
-import { SearchResult, FilmInfo, Actor } from "@/lib/types";
+import { SearchResult } from "@/lib/types";
 import { Link } from "@tanstack/react-router";
 import Card from "./card";
 import { PlayLink } from "./play-link";
@@ -23,20 +22,8 @@ interface SearchModalProps {
 
 export default function SearchModal({ open, onOpenChange }: SearchModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearchQuery] = useDebounce(searchQuery, 300);
   const [searchResults, setSearchResults] = useState<SearchResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  
-  // Reset states when modal closes
-  useEffect(() => {
-    if (!open) {
-      setSearchQuery("");
-      setSearchResults(null);
-      setIsLoading(false);
-    }
-  }, [open]);
 
   const performSearch = useCallback(async (query: string) => {
     if (query.trim().length < 2) {
@@ -46,7 +33,7 @@ export default function SearchModal({ open, onOpenChange }: SearchModalProps) {
 
     setIsLoading(true);
     try {
-      const results = await searchContent(query);
+      const results = await searchContent({ data: { query } });
       setSearchResults(results);
     } catch (error) {
       console.error("Search failed:", error);
@@ -56,9 +43,7 @@ export default function SearchModal({ open, onOpenChange }: SearchModalProps) {
     }
   }, []);
 
-  useEffect(() => {
-    performSearch(debouncedSearchQuery);
-  }, [debouncedSearchQuery, performSearch]);
+  const debouncedSearch = useDebouncedCallback(performSearch, 300);
 
   const movies = searchResults?.movies.slice(0, 5) || [];
   const tvShows = searchResults?.tvShows.slice(0, 5) || [];
@@ -88,11 +73,14 @@ export default function SearchModal({ open, onOpenChange }: SearchModalProps) {
             <div className="relative flex-1">
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
               <Input
-                ref={inputRef}
-                autoFocus
                 placeholder="Search by title or person..."
+                autoFocus
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  const query = e.target.value;
+                  setSearchQuery(query);
+                  debouncedSearch(query);
+                }}
                 className="pl-12 pr-4 py-3 bg-gray-900/50 border-gray-700 text-white placeholder-gray-400 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500 rounded-full h-12 text-base w-full"
               />
             </div>
@@ -139,7 +127,7 @@ export default function SearchModal({ open, onOpenChange }: SearchModalProps) {
                     {hasMoreMovies && (
                       <div className="flex items-center justify-center">
                         <Link
-                          to="/movies-search"
+                          to="/movies/search"
                           search={{ query: searchQuery }}
                           className="text-sm text-blue-400 hover:text-blue-300 transition-colors font-medium"
                           onClick={handleMoreClick}
@@ -177,7 +165,7 @@ export default function SearchModal({ open, onOpenChange }: SearchModalProps) {
                     {hasMoreTvShows && (
                       <div className="flex items-center justify-center">
                         <Link
-                          to="/tvs-search"
+                          to="/tvs/search"
                           search={{ query: searchQuery }}
                           className="text-sm text-green-400 hover:text-green-300 transition-colors font-medium"
                           onClick={handleMoreClick}

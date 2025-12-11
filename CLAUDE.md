@@ -4,8 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Commands
 
-- `npm run dev` - Start development server on port 3000
+- `npm run dev` - Start development server (checks if already running)
+- `npm run dev:force` - Force start development server without checking
 - `npm run build` - Build for production
+
+**IMPORTANT**: Always check if dev server is already running before starting a new one. The `npm run dev` command automatically checks for running servers on ports 3000 and 3001 and will not start if one is found. Use `npm run dev:force` only if you need to override this check.
 
 ## Architecture Overview
 
@@ -49,6 +52,14 @@ Routes export a `Route` object with `component` and optional `loader` for data f
 - **UI Components**: The UI library components (in `src/components/ui/`) follow their existing naming convention
 - **Files**: All files should use lowercase with hyphens for readability
 
+**TypeScript Best Practices:**
+
+- **Avoid the `any` type**: Never use `any` in this codebase. Always prefer proper TypeScript typing
+- Use specific types or interfaces instead of `any` for better type safety and code maintainability
+- When working with external APIs or unknown data structures, create proper type definitions
+- Use `unknown` instead of `any` when you truly cannot determine the type at development time
+- Leverage TypeScript's type inference to reduce explicit type annotations where appropriate
+
 **UI Component Usage:**
 
 - **Always prefer shadcn UI components** over native HTML elements
@@ -76,13 +87,3 @@ For complex tasks, always activate ULTRATHINK mode:
 4. **Review**: Evaluate the solution for completeness and efficiency.
 
 Use ULTRATHINK to ensure the best possible outcomes for challenging problems.
-
-## Subagent Consultation
-
-**CRITICAL**: Always consult project subagents whenever possible. For complex tasks or architectural guidance, use the Task tool with appropriate subagent_type:
-- tanstack-architect for TanStack Start projects
-- frontend-ui-specialist for React/UI component work
-- Explore for codebase exploration and research
-- claude-code-guide for Claude Code and Agent SDK questions
-
-Default to using specialized agents rather than implementing solutions directly when agents are available.
