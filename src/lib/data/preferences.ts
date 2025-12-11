@@ -232,103 +232,108 @@ export const fetchUserPreferences = createServerFn({
       headers: getRequest().headers,
     });
 
-    // Check if user is authenticated
-    if (!session?.user?.id) {
-      return {
-        success: false,
-        error: "User not authenticated",
-        data: { movies: [], tvShows: [], people: [] },
-      };
-    }
-
-    // Fetch movie and TV preferences using repository
-    const movieTVResult = await getUserPreferences({
-      data: {
-        userId: session.user.id,
-      },
-    });
-
-    // Fetch people preferences using repository
-    const peopleResult = await getUserPeople({
-      data: {
-        userId: session.user.id,
-      },
-    });
-
-    const movieTVPreferences = movieTVResult.success
-      ? movieTVResult.preferences
-      : [];
-    const peoplePreferences = peopleResult.success ? peopleResult.people : [];
-
-    // Separate movies and TV shows
-    const movies = movieTVPreferences
-      .filter((pref) => pref.category === "movie")
-      .map((pref) => ({
-        id: pref.preferenceId, // Use TMDB ID for display/search comparison
-        dbId: pref.id, // Keep database ID for removal operations
-        title: pref.title,
-        category: "movie" as const,
-        genreIds: [],
-        genres: pref.genres
-          ? pref.genres
-              .split(",")
-              .map((g) => g.trim())
-              .filter(Boolean)
-          : [],
-        posterPath: pref.posterPath || "",
-        backdropPath: "",
-        overview: "",
-        voteAverage: 0,
-        releaseDate: pref.year?.toString() || "",
-      }));
-
-    const tvShows = movieTVPreferences
-      .filter((pref) => pref.category === "tv-series")
-      .map((pref) => ({
-        id: pref.preferenceId, // Use TMDB ID for display/search comparison
-        dbId: pref.id, // Keep database ID for removal operations
-        title: pref.title,
-        category: "tv" as const,
-        genreIds: [],
-        genres: pref.genres
-          ? pref.genres
-              .split(",")
-              .map((g) => g.trim())
-              .filter(Boolean)
-          : [],
-        posterPath: pref.posterPath || "",
-        backdropPath: "",
-        overview: "",
-        voteAverage: 0,
-        releaseDate: pref.year?.toString() || "",
-      }));
-
-    // Convert people preferences
-    const people = peoplePreferences.map((pref) => ({
-      id: pref.personId, // Use TMDB ID for display/search comparison
-      dbId: pref.id, // Keep database ID for removal operations
-      name: pref.personName,
-      profileImageUrl: pref.profilePath || "",
-      popularity: 0,
-      knownFor: [],
-      category: pref.personType,
-    }));
-
     return {
       success: true,
-      data: {
-        movies,
-        tvShows,
-        people,
-        favoriteGenres: [], // This would be stored separately in the future
-        minRating: 6,
-        preferredContent: {
-          movie: true,
-          tv: true,
-        },
-        notes: "",
-      },
+      data: { movies: [], tvShows: [], people: [] },
     };
+
+    // Check if user is authenticated
+    // if (!session?.user?.id) {
+    //   return {
+    //     success: false,
+    //     error: "User not authenticated",
+    //     data: { movies: [], tvShows: [], people: [] },
+    //   };
+    // }
+
+    // // Fetch movie and TV preferences using repository
+    // const movieTVResult = await getUserPreferences({
+    //   data: {
+    //     userId: session.user.id,
+    //   },
+    // });
+
+    // // Fetch people preferences using repository
+    // const peopleResult = await getUserPeople({
+    //   data: {
+    //     userId: session.user.id,
+    //   },
+    // });
+
+    // const movieTVPreferences = movieTVResult.success
+    //   ? movieTVResult.preferences
+    //   : [];
+    // const peoplePreferences = peopleResult.success ? peopleResult.people : [];
+
+    // // Separate movies and TV shows
+    // const movies = movieTVPreferences
+    //   .filter((pref) => pref.category === "movie")
+    //   .map((pref) => ({
+    //     id: pref.preferenceId, // Use TMDB ID for display/search comparison
+    //     dbId: pref.id, // Keep database ID for removal operations
+    //     title: pref.title,
+    //     category: "movie" as const,
+    //     genreIds: [],
+    //     genres: pref.genres
+    //       ? pref.genres
+    //           .split(",")
+    //           .map((g) => g.trim())
+    //           .filter(Boolean)
+    //       : [],
+    //     posterPath: pref.posterPath || "",
+    //     backdropPath: "",
+    //     overview: "",
+    //     voteAverage: 0,
+    //     releaseDate: pref.year?.toString() || "",
+    //   }));
+
+    // const tvShows = movieTVPreferences
+    //   .filter((pref) => pref.category === "tv-series")
+    //   .map((pref) => ({
+    //     id: pref.preferenceId, // Use TMDB ID for display/search comparison
+    //     dbId: pref.id, // Keep database ID for removal operations
+    //     title: pref.title,
+    //     category: "tv" as const,
+    //     genreIds: [],
+    //     genres: pref.genres
+    //       ? pref.genres
+    //           .split(",")
+    //           .map((g) => g.trim())
+    //           .filter(Boolean)
+    //       : [],
+    //     posterPath: pref.posterPath || "",
+    //     backdropPath: "",
+    //     overview: "",
+    //     voteAverage: 0,
+    //     releaseDate: pref.year?.toString() || "",
+    //   }));
+
+    // // Convert people preferences
+    // const people = peoplePreferences.map((pref) => ({
+    //   id: pref.personId, // Use TMDB ID for display/search comparison
+    //   dbId: pref.id, // Keep database ID for removal operations
+    //   name: pref.personName,
+    //   profileImageUrl: pref.profilePath || "",
+    //   popularity: 0,
+    //   knownFor: [],
+    //   category: pref.personType,
+    // }));
+
+    // return {
+    //   success: true,
+    //   data: {
+    //     movies,
+    //     tvShows,
+    //     people,
+    //     favoriteGenres: [], // This would be stored separately in the future
+    //     minRating: 6,
+    //     preferredContent: {
+    //       movie: true,
+    //       tv: true,
+    //     },
+    //     notes: "",
+    //   },
+    // };
   } catch (error) {
     console.error("Error fetching user preferences:", error);
     return {
