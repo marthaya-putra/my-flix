@@ -232,19 +232,24 @@ export const fetchUserPreferences = createServerFn({
       headers: getRequest().headers,
     });
 
+    if (!session?.user?.id) {
+      return {
+        success: false,
+        error: "User not authenticated",
+        data: { movies: [], tvShows: [], people: [] },
+      };
+    }
+
+    const movieTVResult = await getUserPreferences({
+      data: {
+        userId: session.user.id,
+      },
+    });
+
     return {
       success: true,
-      data: { movies: [], tvShows: [], people: [] },
+      data: { movies: movieTVResult.preferences, tvShows: [], people: [] },
     };
-
-    // Check if user is authenticated
-    // if (!session?.user?.id) {
-    //   return {
-    //     success: false,
-    //     error: "User not authenticated",
-    //     data: { movies: [], tvShows: [], people: [] },
-    //   };
-    // }
 
     // // Fetch movie and TV preferences using repository
     // const movieTVResult = await getUserPreferences({
