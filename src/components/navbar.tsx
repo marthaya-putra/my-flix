@@ -20,13 +20,14 @@ import {
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import SearchModal from "./search-modal";
-import { useAuth } from "@/contexts/auth-context";
+import { authClient } from "@/lib/auth-client";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const location = useLocation();
-  const { user, isAuthenticated, isLoading, signOut } = useAuth();
+  const { data } = authClient.useSession();
+  const user = data?.user;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -98,7 +99,7 @@ export default function Navbar() {
             >
               Recommendations
             </Link>
-            </div>
+          </div>
         </div>
 
         <div className="flex items-center gap-4">
@@ -118,9 +119,7 @@ export default function Navbar() {
             <Bell className="w-5 h-5" />
           </Button>
 
-          {isLoading ? (
-            <div className="w-8 h-8 rounded-full bg-gray-700 animate-pulse" />
-          ) : isAuthenticated ? (
+          {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Avatar className="w-8 h-8 cursor-pointer hover:scale-105 transition-transform border-2 border-transparent hover:border-primary">
@@ -134,7 +133,9 @@ export default function Navbar() {
                 align="end"
                 className="w-56 bg-background/95 backdrop-blur border-white/10 text-foreground"
               >
-                <DropdownMenuLabel>{user?.name || "My Account"}</DropdownMenuLabel>
+                <DropdownMenuLabel>
+                  {user?.name || "My Account"}
+                </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-white/10" />
                 <DropdownMenuItem className="cursor-pointer focus:bg-white/10 focus:text-white">
                   <UserIcon className="mr-2 h-4 w-4" />
@@ -161,7 +162,7 @@ export default function Navbar() {
                 <DropdownMenuSeparator className="bg-white/10" />
                 <DropdownMenuItem
                   className="cursor-pointer text-red-500 focus:text-red-500 focus:bg-red-500/10"
-                  onClick={signOut}
+                  onClick={() => authClient.signOut()}
                 >
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>

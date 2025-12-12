@@ -10,8 +10,8 @@ import {
   addUserDislike,
   removeUserDislikeByPreferenceId,
 } from "@/lib/repositories/user-dislikes";
-import { useAuth } from "@/contexts/auth-context";
 import { getRecommendationsFn } from "@/lib/data/recommendations";
+import { authClient } from "@/lib/auth-client";
 
 interface Recommendation {
   title: string;
@@ -56,8 +56,8 @@ export function Recommendations({
   );
 
   // Get logged-in user ID from auth context
-  const { user } = useAuth();
-  const userId = user?.id;
+  const { data } = authClient.useSession();
+  const userId = data?.user?.id;
 
   // If user is not authenticated, show message
   if (!userId) {

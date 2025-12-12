@@ -9,10 +9,10 @@ import { authMiddleware } from "@/middleware/auth";
 import { UnauthenticatedPrompt } from "@/components/recommendations/unauthenticated-prompt";
 import { OnboardingWizard } from "@/components/recommendations/onboarding-wizard";
 import { hasSufficientPreferences } from "@/lib/utils/preferences-check";
-import { useAuth } from "@/contexts/auth-context";
 import { RecommendationsError } from "@/components/recommendations-error";
 import { getAllUserContent } from "@/lib/data/preferences";
 import { getRecommendationsFn } from "@/lib/data/recommendations";
+import { authClient } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/recommendations")({
   component: Recommendations,
@@ -58,26 +58,10 @@ interface Recommendation {
 
 function Recommendations() {
   const { userPrefs, recommendations } = Route.useLoaderData();
-  const { isAuthenticated, isLoading } = useAuth();
-
-  // Show loading state while checking auth
-  if (isLoading) {
-    return (
-      <div className="container mx-auto p-4 mt-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>AI Movie/TV Recommendations</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <RecommendationCardSkeleton />
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const data = authClient.useSession();
 
   // Case 1: User is not authenticated
-  if (!isAuthenticated) {
+  if (!data) {
     return <UnauthenticatedPrompt />;
   }
 

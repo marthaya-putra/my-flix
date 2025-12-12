@@ -11,7 +11,6 @@ import Navbar from "../components/navbar";
 import NotFound from "../components/not-found";
 import appCss from "../styles/app.css?url";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider } from "@/contexts/auth-context";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -29,7 +28,7 @@ export const Route = createRootRoute({
     ],
     links: [
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
-      { rel: "stylesheet", href: appCss }
+      { rel: "stylesheet", href: appCss },
     ],
   }),
   component: RootComponent,
@@ -52,10 +51,8 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
       </head>
       <body>
         <TooltipProvider>
-          <AuthProvider>
-            <Navbar />
-            <div className="mt-10">{children}</div>
-          </AuthProvider>
+          <Navbar />
+          <div className="mt-10">{children}</div>
         </TooltipProvider>
         <footer className="py-6 px-4 md:px-12 bg-black/40 border-t border-white/5">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-white">

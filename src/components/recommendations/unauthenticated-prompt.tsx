@@ -1,11 +1,15 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "@tanstack/react-router";
 import { Film, Tv, Sparkles, ArrowRight } from "lucide-react";
 
 export function UnauthenticatedPrompt() {
-  const { isAuthenticated } = useAuth();
   const router = useRouter();
 
   const handleLogin = () => {
@@ -25,9 +29,12 @@ export function UnauthenticatedPrompt() {
               <Sparkles className="h-8 w-8 text-primary" />
             </div>
           </div>
-          <CardTitle className="text-2xl">Get Personalized Movie & TV Recommendations</CardTitle>
+          <CardTitle className="text-2xl">
+            Get Personalized Movie & TV Recommendations
+          </CardTitle>
           <CardDescription className="text-lg mt-2">
-            Discover your next favorite shows with AI-powered recommendations tailored just for you
+            Discover your next favorite shows with AI-powered recommendations
+            tailored just for you
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-8">
