@@ -11,11 +11,11 @@ export default defineConfig({
     port: 3000,
   },
   plugins: [
-    cloudflare({
-      viteEnvironment: {
-        name: "ssr", // Recommended setting for TanStack Start SSR
-      },
-    }),
+    // cloudflare({
+    //   viteEnvironment: {
+    //     name: "ssr", // Recommended setting for TanStack Start SSR
+    //   },
+    // }),
     tsConfigPaths(),
     tanstackStart(),
     // react's vite plugin must come after start's vite plugin
