@@ -53,6 +53,7 @@ interface Recommendation {
   category: "movie" | "tv";
   releasedYear: number;
   reason: string;
+  imdbRating: number;
   tmdbData: FilmInfo | null;
 }
 

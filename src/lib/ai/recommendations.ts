@@ -49,6 +49,7 @@ const RecommendationSchema = z.object({
       title: z.string().describe("Movie or TV series title"),
       category: z.enum(["movie", "tv"]).describe("Either 'movie' or 'tv'"),
       releasedYear: z.number().describe("Year the content was released"),
+      imdbRating: z.number().describe("IMDB rating for the title"),
       reason: z.string().describe("Brief reason why this is recommended"),
     })
   ),
@@ -75,6 +76,7 @@ export const getRecommendations = createServerFn({
       const { object } = await generateObject({
         model: aiClient,
         schema: RecommendationSchema,
+        maxRetries: 0,
         system: `You are a movie and TV series recommendation expert. Your PRIMARY DUTY is to analyze the user's viewing history and preferences to make PERSONALIZED recommendations.
 
         CRITICAL RULES:
@@ -88,6 +90,8 @@ export const getRecommendations = createServerFn({
 
         QUALITY CONTROL:
         - Recommend well-rated, critically acclaimed content that matches their taste
+        - The IMDB rating field is REQUIRED for every recommendation - this is the rating users will see
+        - Ensure IMDB ratings are accurate and current (use your knowledge of actual IMDB ratings)
         ${data.excludeAdult ? "- Exclude adult content (NC-17, XXX, etc.)" : ""}
         - DO NOT recommend any content that has been previously recommended to this user
         - NEVER recommend content the user has already marked as liked - they already know these titles!
@@ -103,7 +107,14 @@ export const getRecommendations = createServerFn({
       return {
         success: false,
         error:
-          error instanceof Error ? error.message : "Unknown error occurred",
+          error instanceof Error
+            ? {
+                name: error.name,
+                message: error.message,
+                stack: error.stack,
+                cause: error.cause as any,
+              }
+            : "Unknown error occurred",
       };
     }
   });
@@ -193,8 +204,9 @@ Recommend EXACTLY 6 NEW titles total.
 
 Rules:
 - They must be a mix of movies or TV series (any balance).
-- Each recommendation must include: title, year, category.
+- Each recommendation must include: title, year, category, AND IMDB rating.
 - Each explanation must be SPECIFIC and PERSONALIZED.
+- IMDB rating should be the actual rating from IMDB (0-10 scale).
 
 Specificity requirements:
 - Mention which genres match.

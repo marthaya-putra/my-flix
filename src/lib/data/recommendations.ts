@@ -14,6 +14,7 @@ export const enrichRecommendationsWithTMDB = createServerFn({
         category: "movie" | "tv";
         releasedYear: number;
         reason: string;
+        imdbRating: number;
       }>
     ) => recommendations
   )
@@ -147,7 +148,11 @@ export const getRecommendationsFn = createServerFn({
         });
         return enrichedRecommendations;
       } else {
-        throw new Error(result.error || "Failed to get recommendations");
+        const errorMsg =
+          typeof result.error === "string"
+            ? result.error
+            : result.error?.message || "Failed to get recommendations";
+        throw new Error(errorMsg);
       }
     } catch (error) {
       console.error("Failed to get recommendations:", error);

@@ -9,6 +9,7 @@ interface Recommendation {
   category: "movie" | "tv";
   releasedYear: number;
   reason: string;
+  imdbRating: number;
   tmdbData: FilmInfo | null;
 }
 
@@ -68,13 +69,11 @@ export function RecommendationCard({
           </div>
 
           {/* Rating Badge */}
-          {recommendation.tmdbData?.voteAverage && (
-            <div className="absolute top-2 left-2">
-              <span className="px-2 py-1 bg-yellow-600/90 text-white text-xs rounded flex items-center gap-1">
-                ⭐ {recommendation.tmdbData.voteAverage.toFixed(1)}
-              </span>
-            </div>
-          )}
+          <div className="absolute top-2 left-2">
+            <span className="px-2 py-1 bg-yellow-600/90 text-white text-xs rounded flex items-center gap-1">
+              ⭐ {recommendation.imdbRating.toFixed(1)}
+            </span>
+          </div>
         </div>
 
         {/* Content */}
