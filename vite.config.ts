@@ -4,20 +4,16 @@ import tsConfigPaths from "vite-tsconfig-paths";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import tailwindcss from "@tailwindcss/vite";
 import viteReact from "@vitejs/plugin-react";
-import { cloudflare } from "@cloudflare/vite-plugin";
+import netlify from "@netlify/vite-plugin-tanstack-start";
 
 export default defineConfig({
   server: {
     port: 3000,
   },
   plugins: [
-    cloudflare({
-      viteEnvironment: {
-        name: "ssr", // Recommended setting for TanStack Start SSR
-      },
-    }),
     tsConfigPaths(),
     tanstackStart(),
+    netlify(),
     // react's vite plugin must come after start's vite plugin
     viteReact(),
     tailwindcss(),

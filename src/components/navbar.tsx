@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,7 +27,7 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const location = useLocation();
-  const { data } = authClient.useSession();
+  const { data, isPending } = authClient.useSession();
   const user = data?.user;
 
   useEffect(() => {
@@ -119,7 +120,9 @@ export default function Navbar() {
             <Bell className="w-5 h-5" />
           </Button>
 
-          {user ? (
+          {isPending ? (
+            <Skeleton className="w-8 h-8 rounded-full" />
+          ) : user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Avatar className="w-8 h-8 cursor-pointer hover:scale-105 transition-transform border-2 border-transparent hover:border-primary">

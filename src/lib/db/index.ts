@@ -1,7 +1,6 @@
 import { drizzle, PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema";
-import { env } from "cloudflare:workers";
 
 // Export database type
 export type DB = PostgresJsDatabase<typeof schema>;
@@ -9,7 +8,7 @@ export type DB = PostgresJsDatabase<typeof schema>;
 // Create Drizzle instance function - should be called within request handlers
 export function getDb(): DB {
   // Connection string for PostgreSQL
-  const connectionString = env.HYPERDRIVE.connectionString;
+  const connectionString = process.env.DATABASE_URL;
 
   if (!connectionString) {
     throw new Error("DATABASE_URL environment variable is required");

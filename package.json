@@ -10,9 +10,7 @@
     "dev:force": "vite dev",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
-    "deploy": "npm run build && wrangler deploy",
     "preview": "npm run build && vite preview --port 3000",
-    "cf-typegen": "wrangler types",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
@@ -77,7 +75,7 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.17.1",
+    "@netlify/vite-plugin-tanstack-start": "^1.2.3",
     "@types/node": "^24.10.1",
     "@types/pg": "^8.15.6",
     "@types/react": "^19.2.7",
@@ -87,7 +85,6 @@
     "drizzle-kit": "^0.31.7",
     "typescript": "^5.9.3",
     "vite": "^7.2.4",
-    "vite-tsconfig-paths": "^5.1.4",
-    "wrangler": "^4.54.0"
+    "vite-tsconfig-paths": "^5.1.4"
   }
 }
