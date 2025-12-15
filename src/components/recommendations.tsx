@@ -3,13 +3,11 @@ import { Button } from "@/components/ui/button";
 import { FilmInfo } from "@/lib/types";
 import { RecommendationCard } from "./recommendation-card";
 import {
-  addUserPreference,
+  addMoviePreference,
   removeUserPreferenceByPreferenceId,
-} from "@/lib/repositories/user-preferences";
-import {
-  addUserDislike,
-  removeUserDislikeByPreferenceId,
-} from "@/lib/repositories/user-dislikes";
+  addUserDislikeFn,
+  removeUserDislikeByPreferenceIdFn,
+} from "@/lib/data/preferences";
 import { getRecommendationsFn } from "@/lib/data/recommendations";
 import { authClient } from "@/lib/auth-client";
 
@@ -118,7 +116,6 @@ export function Recommendations({
       if (isCurrentlyLiked) {
         await removeUserPreferenceByPreferenceId({
           data: {
-            userId,
             preferenceId: recommendation.tmdbData.id,
           },
         });
@@ -128,9 +125,8 @@ export function Recommendations({
           return newSet;
         });
       } else {
-        await addUserPreference({
+        await addMoviePreference({
           data: {
-            userId,
             preferenceId: recommendation.tmdbData.id,
             title: recommendation.title,
             year: recommendation.releasedYear,
@@ -181,9 +177,8 @@ export function Recommendations({
 
     try {
       if (isCurrentlyDisliked) {
-        await removeUserDislikeByPreferenceId({
+        await removeUserDislikeByPreferenceIdFn({
           data: {
-            userId,
             preferenceId: recommendation.tmdbData.id,
           },
         });
@@ -193,9 +188,8 @@ export function Recommendations({
           return newSet;
         });
       } else {
-        await addUserDislike({
+        await addUserDislikeFn({
           data: {
-            userId,
             preferenceId: recommendation.tmdbData.id,
             title: recommendation.title,
             year: recommendation.releasedYear,

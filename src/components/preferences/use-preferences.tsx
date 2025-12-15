@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { createServerFn } from "@tanstack/react-start";
 import { FilmInfo, Person } from "@/lib/types";
 
 // Extended Person type that includes dbId from database
@@ -32,16 +31,8 @@ export interface UserPreferences {
   updatedAt?: string;
 }
 
-// Server function to load preferences from database
-export const loadPreferences = createServerFn({
-  method: "GET",
-}).handler(async () => {
-  const result = await fetchUserPreferences();
-  if (!result.success) {
-    throw new Error(result.error || "Failed to load preferences");
-  }
-  return result.data;
-});
+// Re-export fetchUserPreferences as loadPreferences for consistency
+export const loadPreferences = fetchUserPreferences;
 
 // Hook for managing preferences
 export function usePreferences() {
@@ -66,8 +57,12 @@ export function usePreferences() {
     const loadPrefs = async () => {
       try {
         setIsLoading(true);
-        const savedPrefs = await loadPreferences();
-        setPreferences(savedPrefs);
+        const result = await loadPreferences();
+        if (result.success) {
+          setPreferences(result.data);
+        } else {
+          setError(result.error || "Failed to load preferences");
+        }
       } catch (err) {
         setError("Failed to load preferences");
         console.error("Error loading preferences:", err);

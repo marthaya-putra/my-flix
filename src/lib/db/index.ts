@@ -1,43 +1,51 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
-import * as schema from './schema';
+import { drizzle, PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+import * as schema from "./schema";
+import { env } from "cloudflare:workers";
 
-// Connection string for PostgreSQL
-const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5433/myflix';
+// Export database type
+export type DB = PostgresJsDatabase<typeof schema>;
 
-if (!connectionString) {
-  throw new Error('DATABASE_URL environment variable is required');
+// Create Drizzle instance function - should be called within request handlers
+export function getDb(): DB {
+  // Connection string for PostgreSQL
+  const connectionString = env.HYPERDRIVE.connectionString;
+
+  if (!connectionString) {
+    throw new Error("DATABASE_URL environment variable is required");
+  }
+
+  // Create PostgreSQL client
+  const client = postgres(connectionString, {
+    prepare: false,
+    idle_timeout: 20,
+    connect_timeout: 10,
+    max: 10,
+  });
+
+  // Create and return Drizzle instance
+  return drizzle(client, { schema });
 }
 
-// Create PostgreSQL client
-const client = postgres(connectionString, {
-  prepare: false,
-  idle_timeout: 20,
-  connect_timeout: 10,
-  max: 10,
-});
-
-// Create Drizzle instance
-export const db = drizzle(client, { schema });
-
 // Export schema for convenience
-export * from './schema';
+export * from "./schema";
 
 // Connection management functions
-export async function closeConnection() {
-  await client.end();
+export async function closeConnection(db: DB) {
+  // Note: With the current approach, each getDb() call creates a new client
+  // In a production app, you might want to implement connection pooling
 }
 
 // Health check function
-export async function checkConnection() {
+export async function checkConnection(db: DB) {
   try {
-    await client`SELECT 1`;
-    return { status: 'connected', timestamp: new Date() };
+    await db.execute(`SELECT 1`);
+    return { status: "connected", timestamp: new Date() };
   } catch (error) {
     return {
-      status: 'error',
-      error: error instanceof Error ? error.message : 'Unknown error',
-      timestamp: new Date()
+      status: "error",
+      error: error instanceof Error ? error.message : "Unknown error",
+      timestamp: new Date(),
     };
   }
 }

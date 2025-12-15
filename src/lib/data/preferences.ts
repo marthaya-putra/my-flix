@@ -5,10 +5,10 @@ import { getRequest } from "@tanstack/react-start/server";
 import {
   addUserPreference,
   getUserPreferences,
-  removeUserPreferenceByPreferenceId,
+  removeUserPreferenceByPreferenceId as removeUserPreferenceByPreferenceIdRepo,
   schemas as preferenceSchemas,
 } from "@/lib/repositories/user-preferences";
-import { db, userPreferences } from "@/lib/db";
+import { getDb, userPreferences } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import {
   addUserPerson,
@@ -17,7 +17,11 @@ import {
   schemas as peopleSchemas,
 } from "@/lib/repositories/user-people";
 import { auth } from "../auth";
-import { getUserDislikes } from "../repositories/user-dislikes";
+import {
+  getUserDislikes,
+  addUserDislike,
+  removeUserDislikeByPreferenceId,
+} from "../repositories/user-dislikes";
 
 // Input validation schemas from repositories
 const AddMoviePreferenceInput = preferenceSchemas.addPreference.omit({
@@ -27,6 +31,9 @@ const AddPersonPreferenceInput = peopleSchemas.addPerson.omit({ userId: true });
 const RemovePreferenceInput = z.object({
   id: z.number(),
   type: z.enum(["movie", "tv-series"]),
+});
+const RemovePreferenceByPreferenceIdInput = z.object({
+  preferenceId: z.number(),
 });
 const RemovePersonInput = z.object({
   id: z.number(),
@@ -51,16 +58,15 @@ export const addMoviePreference = createServerFn({
         return { success: false, error: "User not authenticated" };
       }
 
-      const result = await addUserPreference({
-        data: {
-          userId: session.user.id,
-          preferenceId,
-          title,
-          year,
-          category,
-          genres,
-          posterPath,
-        },
+      const db = getDb();
+      const result = await addUserPreference(db, {
+        userId: session.user.id,
+        preferenceId,
+        title,
+        year,
+        category,
+        genres,
+        posterPath,
       });
 
       if (result.success && result.preference) {
@@ -87,6 +93,7 @@ export const removeMoviePreference = createServerFn({
   .inputValidator(RemovePreferenceInput)
   .handler(async ({ data }) => {
     try {
+      const db = getDb();
       const { id, type } = data;
 
       // Get the current session to retrieve authenticated user ID
@@ -112,11 +119,9 @@ export const removeMoviePreference = createServerFn({
       const preference = preferenceToDelete[0];
 
       // Use repository function to remove by TMDB ID
-      const result = await removeUserPreferenceByPreferenceId({
-        data: {
-          userId: session.user.id,
-          preferenceId: preference.preferenceId,
-        },
+      const result = await removeUserPreferenceByPreferenceIdRepo(db, {
+        userId: session.user.id,
+        preferenceId: preference.preferenceId,
       });
 
       if (result.success && result.deletedPreference) {
@@ -154,14 +159,13 @@ export const addPersonPreference = createServerFn({
         return { success: false, error: "User not authenticated" };
       }
 
-      const result = await addUserPerson({
-        data: {
-          userId: session.user.id,
-          personId,
-          personName,
-          personType,
-          profilePath,
-        },
+      const db = getDb();
+      const result = await addUserPerson(db, {
+        userId: session.user.id,
+        personId,
+        personName,
+        personType,
+        profilePath,
       });
 
       if (result.success && result.person) {
@@ -199,11 +203,10 @@ export const removePersonPreference = createServerFn({
         return { success: false, error: "User not authenticated" };
       }
 
-      const result = await removeUserPerson({
-        data: {
-          id,
-          userId: session.user.id,
-        },
+      const db = getDb();
+      const result = await removeUserPerson(db, {
+        id,
+        userId: session.user.id,
       });
 
       if (result.success && result.deletedPerson) {
@@ -240,18 +243,15 @@ export const fetchUserPreferences = createServerFn({
       };
     }
 
-    //  Fetch movie and TV preferences using repository
-    const movieTVResult = await getUserPreferences({
-      data: {
-        userId: session.user.id,
-      },
+    // Fetch movie and TV preferences using repository
+    const db = getDb();
+    const movieTVResult = await getUserPreferences(db, {
+      userId: session.user.id,
     });
 
     // Fetch people preferences using repository
-    const peopleResult = await getUserPeople({
-      data: {
-        userId: session.user.id,
-      },
+    const peopleResult = await getUserPeople(db, {
+      userId: session.user.id,
     });
 
     const movieTVPreferences = movieTVResult.success
@@ -436,6 +436,142 @@ export const addPersonInfoPreference = createServerFn({
     }
   });
 
+// Add content to user dislikes
+export const addUserDislikeFn = createServerFn({
+  method: "POST",
+})
+  .inputValidator(
+    z.object({
+      preferenceId: z.number(),
+      title: z.string(),
+      year: z.number(),
+      category: z.enum(["movie", "tv-series"]),
+    })
+  )
+  .handler(async ({ data }) => {
+    try {
+      const { preferenceId, title, year, category } = data;
+
+      // Get the current session to retrieve authenticated user ID
+      const session = await auth.api.getSession({
+        headers: getRequest().headers,
+      });
+
+      if (!session?.user?.id) {
+        return { success: false, error: "User not authenticated" };
+      }
+
+      const db = getDb();
+      const result = await addUserDislike(db, {
+        userId: session.user.id,
+        preferenceId,
+        title,
+        year,
+        category,
+      });
+
+      if (result.success && result.dislike) {
+        return { success: true, data: result.dislike };
+      } else {
+        return { success: false, error: "Already in dislikes" };
+      }
+    } catch (error) {
+      console.error("Error adding user dislike:", error);
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : "Failed to add user dislike",
+      };
+    }
+  });
+
+// Remove content from user dislikes
+export const removeUserDislikeByPreferenceIdFn = createServerFn({
+  method: "POST",
+})
+  .inputValidator(
+    z.object({
+      preferenceId: z.number(),
+    })
+  )
+  .handler(async ({ data }) => {
+    try {
+      const { preferenceId } = data;
+
+      // Get the current session to retrieve authenticated user ID
+      const session = await auth.api.getSession({
+        headers: getRequest().headers,
+      });
+
+      if (!session?.user?.id) {
+        return { success: false, error: "User not authenticated" };
+      }
+
+      const db = getDb();
+      const result = await removeUserDislikeByPreferenceId(db, {
+        userId: session.user.id,
+        preferenceId,
+      });
+
+      if (result.success && result.deletedDislike) {
+        return { success: true, data: result.deletedDislike };
+      } else {
+        return { success: false, error: "Failed to remove from dislikes" };
+      }
+    } catch (error) {
+      console.error("Error removing user dislike:", error);
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to remove user dislike",
+      };
+    }
+  });
+
+// Remove movie/TV show from user preferences by preferenceId
+export const removeUserPreferenceByPreferenceId = createServerFn({
+  method: "POST",
+})
+  .inputValidator(RemovePreferenceByPreferenceIdInput)
+  .handler(async ({ data }) => {
+    try {
+      const db = getDb();
+      const { preferenceId } = data;
+
+      // Get the current session to retrieve authenticated user ID
+      const session = await auth.api.getSession({
+        headers: getRequest().headers,
+      });
+
+      if (!session?.user?.id) {
+        return { success: false, error: "User not authenticated" };
+      }
+
+      // Use repository function to remove by preference ID
+      const result = await removeUserPreferenceByPreferenceIdRepo(db, {
+        userId: session.user.id,
+        preferenceId,
+      });
+
+      if (result.success && result.deletedPreference) {
+        return { success: true, data: result.deletedPreference };
+      } else {
+        return { success: false, error: "Failed to remove preference" };
+      }
+    } catch (error) {
+      console.error("Error removing movie preference:", error);
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to remove movie preference",
+      };
+    }
+  });
+
 export const getAllUserContent = createServerFn().handler(async () => {
   // Get the current session to retrieve authenticated user ID
   const session = await auth.api.getSession({
@@ -457,11 +593,12 @@ export const getAllUserContent = createServerFn().handler(async () => {
   const userId = session.user.id;
 
   try {
+    const db = getDb();
     const [preferencesResponse, peopleResponse, dislikesResponse] =
       await Promise.all([
-        getUserPreferences({ data: { userId } }),
-        getUserPeople({ data: { userId } }),
-        getUserDislikes({ data: { userId } }),
+        getUserPreferences(db, { userId }),
+        getUserPeople(db, { userId }),
+        getUserDislikes(db, { userId }),
       ]);
 
     const preferences = preferencesResponse.success

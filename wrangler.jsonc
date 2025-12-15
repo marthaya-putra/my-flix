@@ -10,4 +10,11 @@
   "vars": {
     "BETTER_AUTH_URL": "https://my-flix.marthayaputra-han.workers.dev",
   },
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "f515c07543c54ddabb85952517bdccd1",
+      "localConnectionString": "postgresql://postgres:password@localhost:5433/myflix",
+    },
+  ],
 }

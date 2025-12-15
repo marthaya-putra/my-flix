@@ -1,6 +1,5 @@
-import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { db, userPeople, UserPerson, NewUserPerson } from "@/lib/db";
+import { userPeople, NewUserPerson, DB } from "@/lib/db";
 import { eq, and, desc, ilike } from "drizzle-orm";
 
 // Input validation schemas
@@ -33,289 +32,254 @@ const getUserPeopleSchema = z.object({
   offset: z.number().nonnegative().optional(),
 });
 
-// Server functions for user people preferences (actors and directors)
-export const addUserPerson = createServerFn({
-  method: "POST",
-})
-  .inputValidator(addPersonSchema)
-  .handler(async ({ data }) => {
-    try {
-      // Check if person already exists for this user
-      const existing = await db
-        .select()
-        .from(userPeople)
-        .where(
-          and(
-            eq(userPeople.userId, data.userId),
-            eq(userPeople.personId, data.personId)
-          )
+// Plain functions for user people preferences (actors and directors)
+export async function addUserPerson(db: DB, data: z.infer<typeof addPersonSchema>) {
+  try {
+    // Check if person already exists for this user
+    const existing = await db
+      .select()
+      .from(userPeople)
+      .where(
+        and(
+          eq(userPeople.userId, data.userId),
+          eq(userPeople.personId, data.personId)
         )
-        .limit(1);
+      )
+      .limit(1);
 
-      if (existing.length > 0) {
-        throw new Error(
-          `This ${data.personType} is already in your preferences`
-        );
-      }
-
-      // Insert new person preference
-      const newPerson: NewUserPerson = {
-        userId: data.userId,
-        personId: data.personId,
-        personName: data.personName,
-        personType: data.personType,
-        profilePath: data.profilePath || null,
-      };
-
-      const result = await db.insert(userPeople).values(newPerson).returning();
-
-      return {
-        success: true,
-        person: result[0],
-      };
-    } catch (error) {
-      console.error("Failed to add user person:", error);
+    if (existing.length > 0) {
       throw new Error(
-        error instanceof Error
-          ? error.message
-          : "Failed to add person preference"
+        `This ${data.personType} is already in your preferences`
       );
     }
-  });
+
+    // Insert new person preference
+    const newPerson: NewUserPerson = {
+      userId: data.userId,
+      personId: data.personId,
+      personName: data.personName,
+      personType: data.personType,
+      profilePath: data.profilePath || null,
+    };
+
+    const result = await db.insert(userPeople).values(newPerson).returning();
+
+    return {
+      success: true,
+      person: result[0],
+    };
+  } catch (error) {
+    console.error("Failed to add user person:", error);
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : "Failed to add person preference"
+    );
+  }
+}
 
 // Legacy function for backward compatibility
 export const addUserActor = addUserPerson;
 
-export const getUserPeople = createServerFn({
-  method: "GET",
-})
-  .inputValidator(getUserPeopleSchema)
-  .handler(async ({ data }) => {
-    try {
-      let whereConditions = [eq(userPeople.userId, data.userId)];
+export async function getUserPeople(db: DB, data: z.infer<typeof getUserPeopleSchema>) {
+  try {
+    let whereConditions = [eq(userPeople.userId, data.userId)];
 
-      if (data.personType) {
-        whereConditions.push(eq(userPeople.personType, data.personType));
-      }
-
-      let query = db
-        .select()
-        .from(userPeople)
-        .where(and(...whereConditions))
-        .orderBy(desc(userPeople.createdAt))
-        .$dynamic();
-
-      if (data.limit) {
-        query = query.limit(data.limit);
-      }
-
-      if (data.offset && data.offset > 0) {
-        query = query.offset(data.offset);
-      }
-
-      const people = await query;
-
-      return {
-        success: true,
-        people,
-        hasMore: data.limit ? people.length === data.limit : false,
-      };
-    } catch (error) {
-      console.error("Failed to get user people:", error);
-      throw new Error("Failed to fetch person preferences");
+    if (data.personType) {
+      whereConditions.push(eq(userPeople.personType, data.personType));
     }
-  });
+
+    let query = db
+      .select()
+      .from(userPeople)
+      .where(and(...whereConditions))
+      .orderBy(desc(userPeople.createdAt))
+      .$dynamic();
+
+    if (data.limit) {
+      query = query.limit(data.limit);
+    }
+
+    if (data.offset && data.offset > 0) {
+      query = query.offset(data.offset);
+    }
+
+    const people = await query;
+
+    return {
+      success: true,
+      people,
+      hasMore: data.limit ? people.length === data.limit : false,
+    };
+  } catch (error) {
+    console.error("Failed to get user people:", error);
+    throw new Error("Failed to fetch person preferences");
+  }
+}
 
 // Legacy function for backward compatibility (actors only)
-export const getUserActors = createServerFn({
-  method: "GET",
-})
-  .inputValidator(
-    getUserPeopleSchema
-      .omit({ personType: true })
-      .extend({ personType: z.literal("actor").optional() })
-  )
-  .handler(async ({ data }) => {
-    try {
-      let query = db
-        .select()
-        .from(userPeople)
-        .where(
-          and(
-            eq(userPeople.userId, data.userId),
-            eq(userPeople.personType, "actor")
-          )
-        )
-        .orderBy(desc(userPeople.createdAt))
-        .$dynamic();
+export async function getUserActors(db: DB, data: Omit<z.infer<typeof getUserPeopleSchema>, "personType"> & { personType?: "actor" }) {
+  try {
+    let whereConditions = [eq(userPeople.userId, data.userId)];
 
-      if (data.limit) {
-        query = query.limit(data.limit);
-      }
-
-      if (data.offset && data.offset > 0) {
-        query = query.offset(data.offset);
-      }
-
-      const actors = await query;
-
-      return {
-        success: true,
-        actors,
-        hasMore: data.limit ? actors.length === data.limit : false,
-      };
-    } catch (error) {
-      console.error("Failed to get user actors:", error);
-      throw new Error("Failed to fetch actor preferences");
+    if (data.personType) {
+      whereConditions.push(eq(userPeople.personType, "actor"));
     }
-  });
 
-export const updateUserPerson = createServerFn({
-  method: "POST",
-})
-  .inputValidator(updatePersonSchema)
-  .handler(async ({ data }) => {
-    try {
-      const result = await db
-        .update(userPeople)
-        .set({
-          personName: data.personName,
-          personType: data.personType,
-        })
-        .where(
-          and(eq(userPeople.id, data.id), eq(userPeople.userId, data.userId))
-        )
-        .returning();
+    let query = db
+      .select()
+      .from(userPeople)
+      .where(and(...whereConditions))
+      .orderBy(desc(userPeople.createdAt))
+      .$dynamic();
 
-      if (result.length === 0) {
-        throw new Error("Person not found or access denied");
-      }
-
-      return {
-        success: true,
-        person: result[0],
-      };
-    } catch (error) {
-      console.error("Failed to update user person:", error);
-      throw new Error(
-        error instanceof Error
-          ? error.message
-          : "Failed to update person preference"
-      );
+    if (data.limit) {
+      query = query.limit(data.limit);
     }
-  });
+
+    if (data.offset && data.offset > 0) {
+      query = query.offset(data.offset);
+    }
+
+    const actors = await query;
+
+    return {
+      success: true,
+      actors,
+      hasMore: data.limit ? actors.length === data.limit : false,
+    };
+  } catch (error) {
+    console.error("Failed to get user actors:", error);
+    throw new Error("Failed to fetch actor preferences");
+  }
+}
+
+export async function updateUserPerson(db: DB, data: z.infer<typeof updatePersonSchema>) {
+  try {
+    const result = await db
+      .update(userPeople)
+      .set({
+        personName: data.personName,
+        personType: data.personType,
+      })
+      .where(
+        and(eq(userPeople.id, data.id), eq(userPeople.userId, data.userId))
+      )
+      .returning();
+
+    if (result.length === 0) {
+      throw new Error("Person not found or access denied");
+    }
+
+    return {
+      success: true,
+      person: result[0],
+    };
+  } catch (error) {
+    console.error("Failed to update user person:", error);
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : "Failed to update person preference"
+    );
+  }
+}
 
 // Legacy function for backward compatibility
 export const updateUserActor = updateUserPerson;
 
-export const removeUserPerson = createServerFn({
-  method: "POST",
-})
-  .inputValidator(removePersonSchema)
-  .handler(async ({ data }) => {
-    try {
-      const result = await db
-        .delete(userPeople)
-        .where(
-          and(eq(userPeople.id, data.id), eq(userPeople.userId, data.userId))
-        )
-        .returning();
+export async function removeUserPerson(db: DB, data: z.infer<typeof removePersonSchema>) {
+  try {
+    const result = await db
+      .delete(userPeople)
+      .where(
+        and(eq(userPeople.id, data.id), eq(userPeople.userId, data.userId))
+      )
+      .returning();
 
-      if (result.length === 0) {
-        throw new Error("Person not found or access denied");
-      }
-
-      return {
-        success: true,
-        deletedPerson: result[0],
-      };
-    } catch (error) {
-      console.error("Failed to remove user person:", error);
-      throw new Error(
-        error instanceof Error
-          ? error.message
-          : "Failed to remove person preference"
-      );
+    if (result.length === 0) {
+      throw new Error("Person not found or access denied");
     }
-  });
+
+    return {
+      success: true,
+      deletedPerson: result[0],
+    };
+  } catch (error) {
+    console.error("Failed to remove user person:", error);
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : "Failed to remove person preference"
+    );
+  }
+}
 
 // Legacy function for backward compatibility
 export const removeUserActor = removeUserPerson;
 
-export const searchUserPeople = createServerFn({
-  method: "GET",
-})
-  .inputValidator(
-    z.object({
-      userId: z.string().min(1, "User ID is required"),
-      query: z.string().min(1, "Search query is required"),
-      personType: z.enum(["actor", "director", "other"]).optional(),
-      limit: z.number().positive().default(20),
-    })
-  )
-  .handler(async ({ data }) => {
-    try {
-      let whereConditions = [
-        eq(userPeople.userId, data.userId),
-        ilike(userPeople.personName, `%${data.query}%`),
-      ];
+export async function searchUserPeople(db: DB, data: {
+  userId: string;
+  query: string;
+  personType?: "actor" | "director" | "other";
+  limit?: number;
+}) {
+  try {
+    let whereConditions = [
+      eq(userPeople.userId, data.userId),
+      ilike(userPeople.personName, `%${data.query}%`),
+    ];
 
-      if (data.personType) {
-        whereConditions.push(eq(userPeople.personType, data.personType));
-      }
-
-      const people = await db
-        .select()
-        .from(userPeople)
-        .where(and(...whereConditions))
-        .orderBy(desc(userPeople.createdAt))
-        .limit(data.limit);
-
-      return {
-        success: true,
-        people,
-      };
-    } catch (error) {
-      console.error("Failed to search user people:", error);
-      throw new Error("Failed to search person preferences");
+    if (data.personType) {
+      whereConditions.push(eq(userPeople.personType, data.personType));
     }
-  });
+
+    const people = await db
+      .select()
+      .from(userPeople)
+      .where(and(...whereConditions))
+      .orderBy(desc(userPeople.createdAt))
+      .limit(data.limit || 20);
+
+    return {
+      success: true,
+      people,
+    };
+  } catch (error) {
+    console.error("Failed to search user people:", error);
+    throw new Error("Failed to search person preferences");
+  }
+}
 
 // Legacy function for backward compatibility (actors only)
-export const searchUserActors = createServerFn({
-  method: "GET",
-})
-  .inputValidator(
-    z.object({
-      userId: z.string().min(1, "User ID is required"),
-      query: z.string().min(1, "Search query is required"),
-      limit: z.number().positive().default(20),
-    })
-  )
-  .handler(async ({ data }) => {
-    try {
-      const actors = await db
-        .select()
-        .from(userPeople)
-        .where(
-          and(
-            eq(userPeople.userId, data.userId),
-            eq(userPeople.personType, "actor"),
-            ilike(userPeople.personName, `%${data.query}%`)
-          )
+export async function searchUserActors(db: DB, data: {
+  userId: string;
+  query: string;
+  limit?: number;
+}) {
+  try {
+    const actors = await db
+      .select()
+      .from(userPeople)
+      .where(
+        and(
+          eq(userPeople.userId, data.userId),
+          eq(userPeople.personType, "actor"),
+          ilike(userPeople.personName, `%${data.query}%`)
         )
-        .orderBy(desc(userPeople.createdAt))
-        .limit(data.limit);
+      )
+      .orderBy(desc(userPeople.createdAt))
+      .limit(data.limit || 20);
 
-      return {
-        success: true,
-        actors,
-      };
-    } catch (error) {
-      console.error("Failed to search user actors:", error);
-      throw new Error("Failed to search actor preferences");
-    }
-  });
+    return {
+      success: true,
+      actors,
+    };
+  } catch (error) {
+    console.error("Failed to search user actors:", error);
+    throw new Error("Failed to search actor preferences");
+  }
+}
 
 // Export schemas for reuse
 export const schemas = {

@@ -1,10 +1,9 @@
-import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import {
-  db,
   userDislikes,
   UserDislike,
   NewUserDislike,
+  DB,
 } from "@/lib/db";
 import { eq, and, desc, ilike } from "drizzle-orm";
 
@@ -38,182 +37,136 @@ const searchUserDislikesSchema = z.object({
   limit: z.number().positive().default(20),
 });
 
-// Server functions for user dislikes
-export const addUserDislike = createServerFn({
-  method: "POST",
-})
-  .inputValidator(addDislikeSchema)
-  .handler(async ({ data }) => {
-    try {
-      // Check if dislike already exists
-      const existing = await db
-        .select()
-        .from(userDislikes)
-        .where(
-          and(
-            eq(userDislikes.userId, data.userId),
-            eq(userDislikes.preferenceId, data.preferenceId)
-          )
+// Plain functions for user dislikes
+export async function addUserDislike(db: DB, data: z.infer<typeof addDislikeSchema>) {
+  try {
+    // Check if dislike already exists
+    const existing = await db
+      .select()
+      .from(userDislikes)
+      .where(
+        and(
+          eq(userDislikes.userId, data.userId),
+          eq(userDislikes.preferenceId, data.preferenceId)
         )
-        .limit(1);
+      )
+      .limit(1);
 
-      if (existing.length > 0) {
-        // Dislike already exists, return success with the existing dislike
-        return {
-          success: true,
-          dislike: existing[0],
-        };
-      }
+    if (existing.length > 0) {
+      // Dislike already exists, return success with the existing dislike
+      return {
+        success: true,
+        dislike: existing[0],
+      };
+    }
 
-      // Insert new dislike
-      const newDislike: NewUserDislike = {
+    // Insert new dislike
+    const newDislike: NewUserDislike = {
+      userId: data.userId,
+      preferenceId: data.preferenceId,
+      title: data.title,
+      year: data.year,
+      category: data.category,
+    };
+
+    const result = await db
+      .insert(userDislikes)
+      .values(newDislike)
+      .returning();
+
+    return {
+      success: true,
+      dislike: result[0],
+    };
+  } catch (error) {
+    console.error("Failed to add user dislike:", error);
+    // Always return success even on failure as this is not fatal
+    return {
+      success: true,
+      dislike: {
         userId: data.userId,
         preferenceId: data.preferenceId,
         title: data.title,
         year: data.year,
         category: data.category,
-      };
+      },
+    };
+  }
+}
 
-      const result = await db
-        .insert(userDislikes)
-        .values(newDislike)
-        .returning();
+export async function getUserDislikes(db: DB, data: z.infer<typeof getUserDislikesSchema>) {
+  try {
+    const whereConditions = [eq(userDislikes.userId, data.userId)];
 
-      return {
-        success: true,
-        dislike: result[0],
-      };
-    } catch (error) {
-      console.error("Failed to add user dislike:", error);
-      // Always return success even on failure as this is not fatal
-      return {
-        success: true,
-        dislike: {
-          userId: data.userId,
-          preferenceId: data.preferenceId,
-          title: data.title,
-          year: data.year,
-          category: data.category,
-        },
-      };
+    if (data.category) {
+      whereConditions.push(eq(userDislikes.category, data.category));
     }
-  });
 
-export const getUserDislikes = createServerFn({
-  method: "GET",
-})
-  .inputValidator(getUserDislikesSchema)
-  .handler(async ({ data }) => {
-    try {
-      const whereConditions = [eq(userDislikes.userId, data.userId)];
+    const baseQuery = db
+      .select()
+      .from(userDislikes)
+      .where(and(...whereConditions))
+      .orderBy(desc(userDislikes.updatedAt));
 
-      if (data.category) {
-        whereConditions.push(eq(userDislikes.category, data.category));
-      }
+    const dislikes = data.limit
+      ? await baseQuery.limit(data.limit).offset(data.offset || 0)
+      : await baseQuery.offset(data.offset || 0);
 
-      const baseQuery = db
-        .select()
-        .from(userDislikes)
-        .where(and(...whereConditions))
-        .orderBy(desc(userDislikes.updatedAt));
+    return {
+      success: true,
+      dislikes,
+      hasMore: data.limit ? dislikes.length === data.limit : false,
+    };
+  } catch (error) {
+    console.error("Failed to get user dislikes:", error);
+    throw new Error("Failed to fetch dislikes");
+  }
+}
 
-      const dislikes = data.limit
-        ? await baseQuery.limit(data.limit).offset(data.offset || 0)
-        : await baseQuery.offset(data.offset || 0);
+export async function searchUserDislikes(db: DB, data: z.infer<typeof searchUserDislikesSchema>) {
+  try {
+    const whereConditions = [
+      eq(userDislikes.userId, data.userId),
+      ilike(userDislikes.title, `%${data.query}%`),
+    ];
 
-      return {
-        success: true,
-        dislikes,
-        hasMore: data.limit ? dislikes.length === data.limit : false,
-      };
-    } catch (error) {
-      console.error("Failed to get user dislikes:", error);
-      throw new Error("Failed to fetch dislikes");
+    if (data.category) {
+      whereConditions.push(eq(userDislikes.category, data.category));
     }
-  });
 
-export const searchUserDislikes = createServerFn({
-  method: "GET",
-})
-  .inputValidator(searchUserDislikesSchema)
-  .handler(async ({ data }) => {
-    try {
-      const whereConditions = [
-        eq(userDislikes.userId, data.userId),
-        ilike(userDislikes.title, `%${data.query}%`),
-      ];
+    const dislikes = await db
+      .select()
+      .from(userDislikes)
+      .where(and(...whereConditions))
+      .orderBy(desc(userDislikes.updatedAt))
+      .limit(data.limit);
 
-      if (data.category) {
-        whereConditions.push(eq(userDislikes.category, data.category));
-      }
+    return {
+      success: true,
+      dislikes,
+    };
+  } catch (error) {
+    console.error("Failed to search user dislikes:", error);
+    throw new Error("Failed to search dislikes");
+  }
+}
 
-      const dislikes = await db
-        .select()
-        .from(userDislikes)
-        .where(and(...whereConditions))
-        .orderBy(desc(userDislikes.updatedAt))
-        .limit(data.limit);
-
-      return {
-        success: true,
-        dislikes,
-      };
-    } catch (error) {
-      console.error("Failed to search user dislikes:", error);
-      throw new Error("Failed to search dislikes");
-    }
-  });
-
-export const removeUserDislikeByPreferenceId = createServerFn({
-  method: "POST",
-})
-  .inputValidator(removeDislikeByTmdbIdSchema)
-  .handler(async ({ data }) => {
-    try {
-      // First, retrieve the dislike to delete
-      const dislikesToDelete = await db
-        .select()
-        .from(userDislikes)
-        .where(
-          and(
-            eq(userDislikes.userId, data.userId),
-            eq(userDislikes.preferenceId, data.preferenceId)
-          )
+export async function removeUserDislikeByPreferenceId(db: DB, data: z.infer<typeof removeDislikeByTmdbIdSchema>) {
+  try {
+    // First, retrieve the dislike to delete
+    const dislikesToDelete = await db
+      .select()
+      .from(userDislikes)
+      .where(
+        and(
+          eq(userDislikes.userId, data.userId),
+          eq(userDislikes.preferenceId, data.preferenceId)
         )
-        .limit(1);
+      )
+      .limit(1);
 
-      if (dislikesToDelete.length === 0) {
-        // Dislike not found, return success with the input data
-        return {
-          success: true,
-          deletedDislike: {
-            userId: data.userId,
-            preferenceId: data.preferenceId,
-          },
-        };
-      }
-
-      // Proceed with deletion
-      const result = await db
-        .delete(userDislikes)
-        .where(
-          and(
-            eq(userDislikes.userId, data.userId),
-            eq(userDislikes.preferenceId, data.preferenceId)
-          )
-        )
-        .returning();
-
-      // If deletion result is empty, return the previously retrieved item
-      const deletedDislike = result.length > 0 ? result[0] : dislikesToDelete[0];
-
-      return {
-        success: true,
-        deletedDislike,
-      };
-    } catch (error) {
-      console.error("Failed to remove user dislike:", error);
-      // Always return success even on failure as this is not fatal
+    if (dislikesToDelete.length === 0) {
+      // Dislike not found, return success with the input data
       return {
         success: true,
         deletedDislike: {
@@ -222,7 +175,37 @@ export const removeUserDislikeByPreferenceId = createServerFn({
         },
       };
     }
-  });
+
+    // Proceed with deletion
+    const result = await db
+      .delete(userDislikes)
+      .where(
+        and(
+          eq(userDislikes.userId, data.userId),
+          eq(userDislikes.preferenceId, data.preferenceId)
+        )
+      )
+      .returning();
+
+    // If deletion result is empty, return the previously retrieved item
+    const deletedDislike = result.length > 0 ? result[0] : dislikesToDelete[0];
+
+    return {
+      success: true,
+      deletedDislike,
+    };
+  } catch (error) {
+    console.error("Failed to remove user dislike:", error);
+    // Always return success even on failure as this is not fatal
+    return {
+      success: true,
+      deletedDislike: {
+        userId: data.userId,
+        preferenceId: data.preferenceId,
+      },
+    };
+  }
+}
 
 // Export schemas for reuse
 export const schemas = {
