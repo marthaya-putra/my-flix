@@ -11,7 +11,7 @@ import { OnboardingWizard } from "@/components/recommendations/onboarding-wizard
 import { hasSufficientPreferences } from "@/lib/utils/preferences-check";
 import { RecommendationsError } from "@/components/recommendations-error";
 import { getAllUserContent } from "@/lib/data/preferences";
-import { getRecommendationsFn } from "@/lib/data/recommendations";
+import { getRecommendations } from "@/lib/data/recommendations";
 import { authClient } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/recommendations")({
@@ -28,7 +28,7 @@ export const Route = createFileRoute("/recommendations")({
     // Only generate recommendations if user has sufficient preferences
     if (hasSufficientPreferences(userPrefs)) {
       // Get initial recommendations - don't await for streaming
-      const recommendations = getRecommendationsFn({
+      const recommendations = getRecommendations({
         data: {
           userPrefs,
           previousRecommendations: [], // Empty for initial load

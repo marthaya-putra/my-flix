@@ -4,6 +4,20 @@ import { fetchFromTMDB, TMDB_IMAGE_BASE } from "./tmdb";
 import { convertToDiscoverResult } from "../utils";
 import { genres as movieGenres } from "./movies";
 import { genres as tvGenres } from "./tvs";
+import { z } from "zod";
+
+// Plain function types
+type SearchMoviesParams = {
+  query: string;
+  page?: number;
+  primaryReleaseYear?: number;
+};
+
+type SearchTVsParams = {
+  query: string;
+  page?: number;
+  firstAirDateYear?: number;
+};
 
 // TMDB API response types for search
 interface TMDBMovieResult {
@@ -220,33 +234,7 @@ export const searchMovies = createServerFn({
 })
   .inputValidator((params: { query: string; page?: number; primaryReleaseYear?: number }) => params)
   .handler(async ({ data }) => {
-    if (!data.query || data.query.trim().length < 2) {
-      return {
-        page: 1,
-        results: [],
-        totalPages: 0,
-      };
-    }
-
-    try {
-      const includeAdult = process.env.INCLUDE_ADULT_CONTENT === "true";
-      const params = new URLSearchParams({
-        query: data.query,
-        include_adult: includeAdult.toString(),
-        page: (data.page || 1).toString(),
-      });
-
-      if (data.primaryReleaseYear) {
-        params.append('primary_release_year', data.primaryReleaseYear.toString());
-      }
-
-      const searchPath = `/search/movie?${params.toString()}`;
-      const result = await fetchFromTMDB(searchPath);
-      return convertToDiscoverResult(result);
-    } catch (error) {
-      console.error("TMDB movie search error:", error);
-      throw new Error("Failed to fetch movie search results");
-    }
+    return searchMoviesAPI(data);
   });
 
 export const searchTVs = createServerFn({
@@ -254,33 +242,7 @@ export const searchTVs = createServerFn({
 })
   .inputValidator((params: { query: string; page?: number; firstAirDateYear?: number }) => params)
   .handler(async ({ data }) => {
-    if (!data.query || data.query.trim().length < 2) {
-      return {
-        page: 1,
-        results: [],
-        totalPages: 0,
-      };
-    }
-
-    try {
-      const includeAdult = process.env.INCLUDE_ADULT_CONTENT === "true";
-      const params = new URLSearchParams({
-        query: data.query,
-        include_adult: includeAdult.toString(),
-        page: (data.page || 1).toString(),
-      });
-
-      if (data.firstAirDateYear) {
-        params.append('first_air_date_year', data.firstAirDateYear.toString());
-      }
-
-      const searchPath = `/search/tv?${params.toString()}`;
-      const result = await fetchFromTMDB(searchPath);
-      return convertToDiscoverResult(result);
-    } catch (error) {
-      console.error("TMDB TV search error:", error);
-      throw new Error("Failed to fetch TV search results");
-    }
+    return searchTVsAPI(data);
   });
 
 export const searchActors = createServerFn({
@@ -340,3 +302,64 @@ export const searchContent = createServerFn({
       throw new Error("Failed to fetch search results");
     }
   });
+
+// Core search functions for use in other plain functions
+export async function searchMoviesAPI(params: SearchMoviesParams) {
+  if (!params.query || params.query.trim().length < 2) {
+    return {
+      page: 1,
+      results: [],
+      totalPages: 0,
+    };
+  }
+
+  try {
+    const includeAdult = process.env.INCLUDE_ADULT_CONTENT === "true";
+    const urlParams = new URLSearchParams({
+      query: params.query,
+      include_adult: includeAdult.toString(),
+      page: (params.page || 1).toString(),
+    });
+
+    if (params.primaryReleaseYear) {
+      urlParams.append('primary_release_year', params.primaryReleaseYear.toString());
+    }
+
+    const searchPath = `/search/movie?${urlParams.toString()}`;
+    const result = await fetchFromTMDB(searchPath);
+    return convertToDiscoverResult(result);
+  } catch (error) {
+    console.error("TMDB movie search error:", error);
+    throw new Error("Failed to fetch movie search results");
+  }
+}
+
+export async function searchTVsAPI(params: SearchTVsParams) {
+  if (!params.query || params.query.trim().length < 2) {
+    return {
+      page: 1,
+      results: [],
+      totalPages: 0,
+    };
+  }
+
+  try {
+    const includeAdult = process.env.INCLUDE_ADULT_CONTENT === "true";
+    const urlParams = new URLSearchParams({
+      query: params.query,
+      include_adult: includeAdult.toString(),
+      page: (params.page || 1).toString(),
+    });
+
+    if (params.firstAirDateYear) {
+      urlParams.append('first_air_date_year', params.firstAirDateYear.toString());
+    }
+
+    const searchPath = `/search/tv?${urlParams.toString()}`;
+    const result = await fetchFromTMDB(searchPath);
+    return convertToDiscoverResult(result);
+  } catch (error) {
+    console.error("TMDB TV search error:", error);
+    throw new Error("Failed to fetch TV search results");
+  }
+}

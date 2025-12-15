@@ -8,8 +8,8 @@ import {
   addUserDislikeFn,
   removeUserDislikeByPreferenceIdFn,
 } from "@/lib/data/preferences";
-import { getRecommendationsFn } from "@/lib/data/recommendations";
 import { authClient } from "@/lib/auth-client";
+import { getRecommendations } from "@/lib/data/recommendations";
 
 interface Recommendation {
   title: string;
@@ -81,7 +81,7 @@ export function Recommendations({
         category: rec.category,
       }));
 
-      const newRecommendations = await getRecommendationsFn({
+      const newRecommendations = await getRecommendations({
         data: {
           userPrefs,
           previousRecommendations,

@@ -3,6 +3,9 @@ import { generateObject } from "ai";
 import { z } from "zod";
 import { aiClient } from "./client";
 
+// Plain function type
+type GetRecommendationsInput = z.infer<typeof RecommendationInput>;
+
 const RecommendationInput = z.object({
   previouslyLikedTvs: z
     .array(
@@ -60,24 +63,29 @@ export const getRecommendations = createServerFn({
 })
   .inputValidator(RecommendationInput)
   .handler(async ({ data }) => {
-    try {
-      const cleanData = {
-        previouslyLikedMovies: simplifyWatched(data.previouslyLikedMovies),
-        previouslyLikedTvs: simplifyWatched(data.previouslyLikedTvs),
-        dislikedContent: simplifyDisliked(data.dislikedContent),
-        previousRecommendations: simplifyPrevRecs(data.previousRecommendations),
-        favoriteActors: data.favoriteActors ?? [],
-        favoriteDirectors: data.favoriteDirectors ?? [],
-        genres: data.genres ?? [],
-        excludeAdult: data.excludeAdult ?? true,
-      };
+    return getRecommendationsAI(data);
+  });
 
-      const prompt = buildPrompt(cleanData);
-      const { object } = await generateObject({
-        model: aiClient,
-        schema: RecommendationSchema,
-        maxRetries: 0,
-        system: `You are a movie and TV series recommendation expert. Your PRIMARY DUTY is to analyze the user's viewing history and preferences to make PERSONALIZED recommendations.
+// Plain AI recommendation function
+export async function getRecommendationsAI(input: GetRecommendationsInput) {
+  try {
+    const cleanData = {
+      previouslyLikedMovies: simplifyWatched(input.previouslyLikedMovies),
+      previouslyLikedTvs: simplifyWatched(input.previouslyLikedTvs),
+      dislikedContent: simplifyDisliked(input.dislikedContent),
+      previousRecommendations: simplifyPrevRecs(input.previousRecommendations),
+      favoriteActors: input.favoriteActors ?? [],
+      favoriteDirectors: input.favoriteDirectors ?? [],
+      genres: input.genres ?? [],
+      excludeAdult: input.excludeAdult ?? true,
+    };
+
+    const prompt = buildPrompt(cleanData);
+    const { object } = await generateObject({
+      model: aiClient,
+      schema: RecommendationSchema,
+      maxRetries: 0,
+      system: `You are a movie and TV series recommendation expert. Your PRIMARY DUTY is to analyze the user's viewing history and preferences to make PERSONALIZED recommendations.
 
         CRITICAL RULES:
         - User's previously liked content and favorite actors/directors are YOUR GUIDE - use these patterns religiously
@@ -92,32 +100,32 @@ export const getRecommendations = createServerFn({
         - Recommend well-rated, critically acclaimed content that matches their taste
         - The IMDB rating field is REQUIRED for every recommendation - this is the rating users will see
         - Ensure IMDB ratings are accurate and current (use your knowledge of actual IMDB ratings)
-        ${data.excludeAdult ? "- Exclude adult content (NC-17, XXX, etc.)" : ""}
+        ${input.excludeAdult ? "- Exclude adult content (NC-17, XXX, etc.)" : ""}
         - DO NOT recommend any content that has been previously recommended to this user
         - NEVER recommend content the user has already marked as liked - they already know these titles!
         - ABSOLUTELY NO recommendations from their "ALREADY LIKED CONTENT" list
         - CRITICAL: NEVER recommend content from their "DISLIKED CONTENT" list - the user explicitly dislikes these titles!
         - Return exactly 6 recommendations`,
         prompt,
-      });
+    });
 
-      return { success: true, data: object };
-    } catch (error) {
-      console.error("AI Recommendation Error:", error);
-      return {
-        success: false,
-        error:
-          error instanceof Error
-            ? {
-                name: error.name,
-                message: error.message,
-                stack: error.stack,
-                cause: error.cause as any,
-              }
-            : "Unknown error occurred",
-      };
-    }
-  });
+    return { success: true, data: object };
+  } catch (error) {
+    console.error("AI Recommendation Error:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? {
+              name: error.name,
+              message: error.message,
+              stack: error.stack,
+              cause: error.cause as any,
+            }
+          : "Unknown error occurred",
+    };
+  }
+}
 
 function simplifyWatched(items?: Array<{ title: string; year: number }>) {
   return (items ?? []).map((i) => ({

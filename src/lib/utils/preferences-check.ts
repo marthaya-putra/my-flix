@@ -10,7 +10,7 @@ interface UserPreferences {
 export function hasSufficientPreferences(
   preferences: UserPreferences
 ): boolean {
-  return preferences.movies.length > 0 && preferences.tvs.length > 0;
+  return preferences.movies.length > 0 || preferences.tvs.length > 0;
 }
 
 export function isNewUser(preferences: UserPreferences): boolean {
