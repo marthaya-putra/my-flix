@@ -59,7 +59,7 @@ interface Recommendation {
 
 function Recommendations() {
   const { userPrefs, recommendations } = Route.useLoaderData();
-  const data = authClient.useSession();
+  const { data } = authClient.useSession();
 
   // Case 1: User is not authenticated
   if (!data) {
