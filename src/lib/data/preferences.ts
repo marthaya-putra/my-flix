@@ -279,6 +279,7 @@ export const fetchUserPreferences = createServerFn({
         overview: "",
         voteAverage: 0,
         releaseDate: pref.year?.toString() || "",
+        contentType: "movie" as const, // Add contentType to match ContentItem type
       }));
 
     const tvShows = movieTVPreferences
@@ -300,6 +301,7 @@ export const fetchUserPreferences = createServerFn({
         overview: "",
         voteAverage: 0,
         releaseDate: pref.year?.toString() || "",
+        contentType: "tv" as const, // Add contentType to match ContentItem type
       }));
 
     // Convert people preferences
@@ -311,6 +313,7 @@ export const fetchUserPreferences = createServerFn({
       popularity: 0,
       knownFor: [],
       category: pref.personType,
+      contentType: "person" as const, // Add contentType to match ContentItem type
     }));
 
     return {

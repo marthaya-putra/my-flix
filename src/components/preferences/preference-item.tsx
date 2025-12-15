@@ -129,10 +129,27 @@ export function PreferenceItem({ item, onRemove }: PreferenceItemProps) {
               {info.subtitle}
             </p>
 
+            {/* Known For (for people) */}
+            {item.contentType === "person" && info.extraInfo && info.extraInfo.length > 0 && (
+              <div className="mb-2">
+                <p className="text-xs text-muted-foreground mb-1">Known for:</p>
+                <div className="flex flex-wrap gap-1">
+                  {info.extraInfo.map((filmTitle, index) => (
+                    <span
+                      key={index}
+                      className="inline-block text-xs px-2 py-1 bg-muted rounded-md"
+                    >
+                      {filmTitle}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Metadata */}
             <div className="flex items-center gap-3">
               {item.contentType === "person" && (
-                <div className="flex text-white items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium bg-transparent dark:bg-gray-800 dark:text-gray-300">
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">
                   {info.categoryIcon}
                   <span className="capitalize">{info.badgeText}</span>
                 </div>
