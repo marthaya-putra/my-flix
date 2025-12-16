@@ -3,6 +3,7 @@ import { searchMoviesAPI, searchTVsAPI } from "./search";
 import { getRecommendationsAI } from "../ai/recommendations";
 import { z } from "zod";
 import { FilmInfo } from "../types";
+import { ModelName, modelRegistry } from "../ai/models";
 
 // Input validation schemas
 const enrichRecommendationsSchema = z.array(
@@ -140,7 +141,9 @@ export const getRecommendations = createServerFn({
     const { userPrefs, previousRecommendations } = data;
 
     try {
-      const result = await getRecommendationsAI({
+      const models: ModelName[] = ["google", "mistral"];
+      let modelPosition = 0;
+      const data = {
         previouslyLikedMovies: userPrefs.movies,
         previouslyLikedTvs: userPrefs.tvs,
         dislikedContent: userPrefs.dislikedContent,
@@ -149,7 +152,20 @@ export const getRecommendations = createServerFn({
         genres: userPrefs.genres,
         excludeAdult: true,
         previousRecommendations,
-      });
+      };
+
+      let result = await getRecommendationsAI(
+        data,
+        modelRegistry[models[modelPosition]]
+      );
+
+      while (!result.success && modelPosition < models.length - 1) {
+        modelPosition++;
+        result = await getRecommendationsAI(
+          data,
+          modelRegistry[models[modelPosition]]
+        );
+      }
 
       if (result.success && result.data) {
         // Enrich recommendations with TMDB data

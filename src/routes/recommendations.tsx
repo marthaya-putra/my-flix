@@ -11,7 +11,6 @@ import { hasSufficientPreferences } from "@/lib/utils/preferences-check";
 import { RecommendationsError } from "@/components/recommendations-error";
 import { getAllUserContent } from "@/lib/data/preferences";
 import { getRecommendations } from "@/lib/data/recommendations";
-import { authClient } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/recommendations")({
   component: Recommendations,
@@ -19,6 +18,7 @@ export const Route = createFileRoute("/recommendations")({
   loader: async () => {
     // Load user preferences - auth is handled client-side with AuthContext
     // The middleware still protects this route for SSR
+
     const userPrefs = await getAllUserContent();
     if (!userPrefs) {
       return {

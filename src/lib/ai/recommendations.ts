@@ -1,7 +1,6 @@
-import { createServerFn } from "@tanstack/react-start";
 import { generateObject } from "ai";
+import { LanguageModelV2 } from "@ai-sdk/provider";
 import { z } from "zod";
-import { aiClient } from "./client";
 
 // Plain function type
 type GetRecommendationsInput = z.infer<typeof RecommendationInput>;
@@ -58,16 +57,11 @@ const RecommendationSchema = z.object({
   ),
 });
 
-export const getRecommendations = createServerFn({
-  method: "POST",
-})
-  .inputValidator(RecommendationInput)
-  .handler(async ({ data }) => {
-    return getRecommendationsAI(data);
-  });
-
 // Plain AI recommendation function
-export async function getRecommendationsAI(input: GetRecommendationsInput) {
+export async function getRecommendationsAI(
+  input: GetRecommendationsInput,
+  model: LanguageModelV2
+) {
   try {
     const cleanData = {
       previouslyLikedMovies: simplifyWatched(input.previouslyLikedMovies),
@@ -82,7 +76,7 @@ export async function getRecommendationsAI(input: GetRecommendationsInput) {
 
     const prompt = buildPrompt(cleanData);
     const { object } = await generateObject({
-      model: aiClient,
+      model,
       schema: RecommendationSchema,
       maxRetries: 0,
       system: `You are a movie and TV series recommendation expert. Your PRIMARY DUTY is to analyze the user's viewing history and preferences to make PERSONALIZED recommendations.
@@ -106,7 +100,7 @@ export async function getRecommendationsAI(input: GetRecommendationsInput) {
         - ABSOLUTELY NO recommendations from their "ALREADY LIKED CONTENT" list
         - CRITICAL: NEVER recommend content from their "DISLIKED CONTENT" list - the user explicitly dislikes these titles!
         - Return exactly 6 recommendations`,
-        prompt,
+      prompt,
     });
 
     return { success: true, data: object };
