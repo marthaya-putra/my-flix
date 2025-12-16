@@ -15,10 +15,9 @@ export const onlyLoggedIn = createMiddleware()
   .server(async ({ next, context }) => {
     const session = context;
 
-    if (!session) {
+    if (!session?.user) {
       throw redirect({ to: "/login" });
     }
 
     return next();
-  }
-);
+  });

@@ -1,6 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Trash2,
   Calendar,
@@ -11,7 +10,6 @@ import {
   UserIcon,
 } from "lucide-react";
 import { ContentItem } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 interface PreferenceItemProps {
   item: ContentItem;
@@ -106,11 +104,9 @@ export function PreferenceItem({ item, onRemove }: PreferenceItemProps) {
             ) : (
               <div className="w-16 h-24 bg-muted rounded-lg flex items-center justify-center">
                 {item.contentType === "person" ? (
-                  <div className="flex flex-col items-center gap-1">
+                  <div className="flex flex-col items-center gap-1 text-muted-foreground">
                     {info.categoryIcon}
-                    <Badge variant={info.badgeVariant} className="text-xs">
-                      {info.badgeText}
-                    </Badge>
+                    <span className="text-xs capitalize">{info.badgeText}</span>
                   </div>
                 ) : (
                   <Film className="h-8 w-8 text-muted-foreground" />
@@ -129,27 +125,10 @@ export function PreferenceItem({ item, onRemove }: PreferenceItemProps) {
               {info.subtitle}
             </p>
 
-            {/* Known For (for people) */}
-            {item.contentType === "person" && info.extraInfo && info.extraInfo.length > 0 && (
-              <div className="mb-2">
-                <p className="text-xs text-muted-foreground mb-1">Known for:</p>
-                <div className="flex flex-wrap gap-1">
-                  {info.extraInfo.map((filmTitle, index) => (
-                    <span
-                      key={index}
-                      className="inline-block text-xs px-2 py-1 bg-muted rounded-md"
-                    >
-                      {filmTitle}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Metadata */}
             <div className="flex items-center gap-3">
               {item.contentType === "person" && (
-                <div className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-muted-foreground bg-muted">
                   {info.categoryIcon}
                   <span className="capitalize">{info.badgeText}</span>
                 </div>

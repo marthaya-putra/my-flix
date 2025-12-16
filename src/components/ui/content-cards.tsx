@@ -8,11 +8,14 @@ export interface MovieCardProps {
   movie: FilmInfo;
   onAdd?: (content: FilmInfo) => void;
   isAdded?: boolean;
+  isAdding?: boolean;
 }
 
-export function MovieCard({ movie, onAdd, isAdded }: MovieCardProps) {
+export function MovieCard({ movie, onAdd, isAdded, isAdding }: MovieCardProps) {
   return (
-    <Card className={`group hover:shadow-md transition-shadow relative ${isAdded ? 'ring-2 ring-primary/20 bg-primary/5' : ''}`}>
+    <Card
+      className={`group hover:shadow-md transition-shadow relative ${isAdded ? "ring-2 ring-primary/20 bg-primary/5" : ""} ${isAdding ? "opacity-60" : ""}`}
+    >
       {/* Added Badge */}
       {isAdded && (
         <div className="absolute top-2 right-2 z-10 bg-primary text-primary-foreground rounded-full p-1.5 shadow-sm">
@@ -77,9 +80,14 @@ export function MovieCard({ movie, onAdd, isAdded }: MovieCardProps) {
               size="sm"
               variant="outline"
               onClick={() => onAdd?.(movie)}
+              disabled={isAdding}
               className="shrink-0 h-8 w-8 p-0"
             >
-              <Plus className="h-4 w-4" />
+              {isAdding ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
             </Button>
           )}
         </div>
@@ -92,11 +100,14 @@ export interface TVCardProps {
   tvShow: FilmInfo;
   onAdd?: (tvShow: FilmInfo) => void;
   isAdded?: boolean;
+  isAdding?: boolean;
 }
 
-export function TVCard({ tvShow, onAdd, isAdded }: TVCardProps) {
+export function TVCard({ tvShow, onAdd, isAdded, isAdding }: TVCardProps) {
   return (
-    <Card className={`group hover:shadow-md transition-shadow relative ${isAdded ? 'ring-2 ring-primary/20 bg-primary/5' : ''}`}>
+    <Card
+      className={`group hover:shadow-md transition-shadow relative ${isAdded ? "ring-2 ring-primary/20 bg-primary/5" : ""} ${isAdding ? "opacity-60" : ""}`}
+    >
       {/* Added Badge */}
       {isAdded && (
         <div className="absolute top-2 right-2 z-10 bg-primary text-primary-foreground rounded-full p-1.5 shadow-sm">
@@ -161,9 +172,14 @@ export function TVCard({ tvShow, onAdd, isAdded }: TVCardProps) {
               size="sm"
               variant="outline"
               onClick={() => onAdd?.(tvShow)}
+              disabled={isAdding}
               className="shrink-0 h-8 w-8 p-0"
             >
-              <Plus className="h-4 w-4" />
+              {isAdding ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
             </Button>
           )}
         </div>
@@ -176,11 +192,14 @@ export interface PersonCardProps {
   person: Person;
   onAdd?: (person: Person) => void;
   isAdded?: boolean;
+  isAdding?: boolean;
 }
 
-export function PersonCard({ person, onAdd, isAdded }: PersonCardProps) {
+export function PersonCard({ person, onAdd, isAdded, isAdding }: PersonCardProps) {
   return (
-    <Card className={`group hover:shadow-md transition-shadow relative ${isAdded ? 'ring-2 ring-primary/20 bg-primary/5' : ''}`}>
+    <Card
+      className={`group hover:shadow-md transition-shadow relative ${isAdded ? "ring-2 ring-primary/20 bg-primary/5" : ""} ${isAdding ? "opacity-60" : ""}`}
+    >
       {/* Added Badge */}
       {isAdded && (
         <div className="absolute top-2 right-2 z-10 bg-primary text-primary-foreground rounded-full p-1.5 shadow-sm">
@@ -199,8 +218,10 @@ export function PersonCard({ person, onAdd, isAdded }: PersonCardProps) {
               loading="lazy"
             />
           ) : (
-            <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center">
-              <span className="text-xs text-muted-foreground">No photo</span>
+            <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center overflow-hidden">
+              <span className="text-[8px] text-muted-foreground leading-none px-1 text-center">
+                No photo
+              </span>
             </div>
           )}
 
@@ -209,7 +230,9 @@ export function PersonCard({ person, onAdd, isAdded }: PersonCardProps) {
             <h3 className="font-medium text-sm group-hover:text-primary transition-colors truncate">
               {person.name}
             </h3>
-            <p className="text-xs text-muted-foreground">{person.category}</p>
+            <p className="text-xs text-muted-foreground capitalize">
+              {person.category}
+            </p>
           </div>
 
           {/* Add Button */}

@@ -51,6 +51,7 @@ export function usePreferences() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [addingItems, setAddingItems] = useState<Set<number>>(new Set());
 
   // Load preferences on mount
   useEffect(() => {
@@ -77,6 +78,9 @@ export function usePreferences() {
   // Add a movie/TV show to preferences
   const addPreference = async (content: FilmInfo | Person) => {
     try {
+      // Add item to adding set
+      setAddingItems((prev) => new Set(prev).add(content.id));
+
       if ("knownFor" in content) {
         // It's a person/actor
         const person = content as Person;
@@ -141,6 +145,13 @@ export function usePreferences() {
     } catch (err) {
       setError("Failed to add preference");
       console.error("Error adding preference:", err);
+    } finally {
+      // Remove item from adding set
+      setAddingItems((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(content.id);
+        return newSet;
+      });
     }
   };
 
@@ -289,6 +300,9 @@ export function usePreferences() {
     }
   };
 
+  // Check if an item is currently being added
+  const isAdding = (id: number) => addingItems.has(id);
+
   // Get recommendations based on preferences
   const getRecommendations = () => {
     // This would typically call a recommendation engine
@@ -305,12 +319,14 @@ export function usePreferences() {
     isLoading,
     isSaving,
     error,
+    addingItems,
     addPreference,
     removePreference,
     updatePreferences,
     clearPreferences,
     getStats,
     isInPreferences,
+    isAdding,
     getRecommendations,
   };
 }

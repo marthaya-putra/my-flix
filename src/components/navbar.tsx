@@ -1,4 +1,4 @@
-import { Link, useLocation } from "@tanstack/react-router";
+import { Link, useLocation, useRouter } from "@tanstack/react-router";
 import {
   Search,
   Bell,
@@ -27,6 +27,8 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const location = useLocation();
+  const router = useRouter();
+
   const { data, isPending } = authClient.useSession();
   const user = data?.user;
 
@@ -121,7 +123,7 @@ export default function Navbar() {
           </Button>
 
           {isPending ? (
-            <Skeleton className="w-8 h-8 rounded-full" />
+            <Skeleton className="w-8 h-8 rounded-full bg-muted-foreground/30" />
           ) : user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -165,7 +167,13 @@ export default function Navbar() {
                 <DropdownMenuSeparator className="bg-white/10" />
                 <DropdownMenuItem
                   className="cursor-pointer text-red-500 focus:text-red-500 focus:bg-red-500/10"
-                  onClick={() => authClient.signOut()}
+                  onClick={() =>
+                    authClient.signOut({
+                      fetchOptions: {
+                        onSuccess: () => router.navigate({ to: "/" }),
+                      },
+                    })
+                  }
                 >
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>
