@@ -252,7 +252,7 @@ export function Recommendations({
         </div>
       )}
 
-      <div className="flex flex-wrap gap-4 justify-center">
+      <div className="flex flex-wrap gap-4 justify-start">
         {recommendations.map((rec, index) => (
           <RecommendationCard
             key={`${rec.title}-${rec.releasedYear}-${index}`}
