@@ -22,7 +22,15 @@ const RecommendationInput = z.object({
       })
     )
     .optional(),
-  dislikedContent: z
+  dislikedMovies: z
+    .array(
+      z.object({
+        title: z.string(),
+        year: z.number(),
+      })
+    )
+    .optional(),
+  dislikedTvs: z
     .array(
       z.object({
         title: z.string(),
@@ -58,7 +66,7 @@ const RecommendationSchema = z.object({
 });
 
 // Plain AI recommendation function
-export async function getRecommendationsAI(
+export async function getAIRecommendations(
   input: GetRecommendationsInput,
   model: LanguageModelV2
 ) {
@@ -66,7 +74,8 @@ export async function getRecommendationsAI(
     const cleanData = {
       previouslyLikedMovies: simplifyWatched(input.previouslyLikedMovies),
       previouslyLikedTvs: simplifyWatched(input.previouslyLikedTvs),
-      dislikedContent: simplifyDisliked(input.dislikedContent),
+      dislikedMovies: simplifyWatched(input.dislikedMovies),
+      dislikedTvs: simplifyWatched(input.dislikedTvs),
       previousRecommendations: simplifyPrevRecs(input.previousRecommendations),
       favoriteActors: input.favoriteActors ?? [],
       favoriteDirectors: input.favoriteDirectors ?? [],
@@ -99,7 +108,8 @@ export async function getRecommendationsAI(
         - NEVER recommend content the user has already marked as liked - they already know these titles!
         - ABSOLUTELY NO recommendations from their "ALREADY LIKED CONTENT" list
         - CRITICAL: NEVER recommend content from their "DISLIKED CONTENT" list - the user explicitly dislikes these titles!
-        - Return exactly 6 recommendations`,
+        - CRITICAL: ONLY RECOMMEND REAL TITLE! DO NOT CHEAT BY ALTERING THE TITLE like: "The Dark Knight Trilogy (Extended Recommendation: Batman Begins)" or "The Departed (Alternate Recommendation: Scarface)"
+        - Return exactly 6 recommendations (3 MOVIES and 3 TV SERIES)`,
       prompt,
     });
 
@@ -138,20 +148,11 @@ function simplifyPrevRecs(
   }));
 }
 
-function simplifyDisliked(items?: Array<{ title: string; year: number }>) {
-  return (items ?? []).map((i) => ({
-    title: i.title,
-    year: i.year,
-  }));
-}
-
 function buildPrompt(cleanData: {
   previouslyLikedMovies: Array<{ title: string; year: number }>;
   previouslyLikedTvs: Array<{ title: string; year: number }>;
-  dislikedContent: Array<{
-    title: string;
-    year: number;
-  }>;
+  dislikedMovies: Array<{ title: string; year: number }>;
+  dislikedTvs: Array<{ title: string; year: number }>;
   previousRecommendations: Array<{
     title: string;
     year: number;
@@ -162,58 +163,23 @@ function buildPrompt(cleanData: {
   excludeAdult: boolean;
 }) {
   return `
-You are a movie/TV recommendation engine.
-
 The following is the user's taste profile.  
-All data has already been simplified and cleaned by the backend.  
-DO NOT attempt to extract or transform anything further.
+Recommend based on this USER PREFERENCES DATA SECTION:
 
-==================== USER DATA ====================
-${JSON.stringify(cleanData, null, 2)}
-===================================================
+==================== USER PREFERENCES DATA SECTION ========================
+Movies: ${JSON.stringify(cleanData.previouslyLikedMovies, null, 2)}
+TVs: ${JSON.stringify(cleanData.previouslyLikedTvs, null, 2)}
+Actors: ${JSON.stringify(cleanData.favoriteActors, null, 2)}
+Directors: ${JSON.stringify(cleanData.favoriteDirectors, null, 2)}
+Genres: ${JSON.stringify(cleanData.genres, null, 2)}
+===================================================================
 
-The data includes:
-- previouslyLikedMovies: [{ title, year }]
-- previouslyLikedTvs: [{ title, year }]
-- dislikedContent: [{ title, year }]
-- previousRecommendations: [{ title, year, category }]
-- favoriteActors: string[]
-- favoriteDirectors: string[]
-- genres: string[]
-- excludeAdult: boolean
+DO NOT recommend ANY movie or TV series in: DO NOT RECOMMEND SECTION
 
-=====================================================
-= EXCLUSION RULES                                   =
-=====================================================
-
-Before recommending ANY movie or TV series:
-
-1. Reject anything whose title appears in previouslyLikedMovies.
-2. Reject anything whose title appears in previouslyLikedTvs.
-3. Reject anything whose title appears in dislikedContent.
-4. Reject anything whose title appears in previousRecommendations.
-5. If excludeAdult = true → reject adult content.
-6. If a title is already known to user, DO NOT recommend it.
-
-You must strictly follow this. Never break exclusion rules.
-IMPORTANT: The user has explicitly DISLIKED the content in the dislikedContent list - ABSOLUTELY NEVER recommend anything from this list under any circumstances.
-
-=====================================================
-= RECOMMENDATION GUIDELINES                         =
-=====================================================
-
-Recommend EXACTLY 6 NEW titles total.
-
-Rules:
-- They must be a mix of movies or TV series (any balance).
-- Each recommendation must include: title, year, category, AND IMDB rating.
-- Each explanation must be SPECIFIC and PERSONALIZED.
-- IMDB rating should be the actual rating from IMDB (0-10 scale).
-
-Specificity requirements:
-- Mention which genres match.
-- Mention which actors/directors match their favorites.
-- Cite exact previously liked titles (title + year) and explain the connection.
-- Explain tonal / thematic similarity (not generic).
+==================== DO NOT RECOMMEND SECTION =====================================
+User dislike movies: ${JSON.stringify(cleanData.dislikedMovies, null, 2)}
+User dislike TV shows: ${JSON.stringify(cleanData.dislikedTvs, null, 2)}
+Already recommended: ${JSON.stringify(cleanData.previousRecommendations, null, 2)}
+==================================================================================
 `;
 }

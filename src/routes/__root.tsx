@@ -60,7 +60,7 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
               © {new Date().getFullYear()} MyFlix Inc. All rights reserved.
             </div>
             <a
-              href="https://github.com"
+              href="https://github.com/marthaya-putra/my-flix"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 hover:text-gray-300 transition-colors"

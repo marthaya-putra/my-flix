@@ -1,7 +1,8 @@
 interface UserPreferences {
   movies: any[];
   tvs: any[];
-  dislikedContent: any[];
+  dislikedMovies: any[];
+  dislikedTvs: any[];
   actors: string[];
   directors: string[];
   genres: string[];

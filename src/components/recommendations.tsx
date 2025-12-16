@@ -23,11 +23,8 @@ interface Recommendation {
 interface UserPreferences {
   movies: Array<{ title: string; year: number }>;
   tvs: Array<{ title: string; year: number }>;
-  dislikedContent: Array<{
-    title: string;
-    year: number;
-    category: "movie" | "tv";
-  }>;
+  dislikedMovies: Array<{ title: string; year: number }>;
+  dislikedTvs: Array<{ title: string; year: number }>;
   actors: string[];
   directors: string[];
   genres: string[];
@@ -268,12 +265,12 @@ export function Recommendations({
         ))}
       </div>
 
-      <div className="mt-6">
+      <div className="mt-6 flex justify-center">
         <Button
           onClick={handleLoadMore}
           disabled={loadingMore}
           variant="outline"
-          className="w-full"
+          className="w-sm hover:bg-accent"
         >
           {loadingMore ? "Loading more..." : "Load More Recommendations"}
         </Button>

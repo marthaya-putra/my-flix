@@ -626,11 +626,18 @@ export const getAllUserContent = createServerFn().handler(async () => {
           title: p.title,
           year: p.year,
         })),
-      dislikedContent: dislikes.map((d) => ({
-        title: d.title,
-        year: d.year,
-        category: d.category === "movie" ? ("movie" as const) : ("tv" as const),
-      })),
+      dislikedMovies: dislikes
+        .filter((d) => d.category === "movie")
+        .map((d) => ({
+          title: d.title,
+          year: d.year,
+        })),
+      dislikedTvs: dislikes
+        .filter((d) => d.category === "tv-series")
+        .map((d) => ({
+          title: d.title,
+          year: d.year,
+        })),
       actors: people
         .filter((p) => p.personType === "actor")
         .map((p) => p.personName),
@@ -644,7 +651,8 @@ export const getAllUserContent = createServerFn().handler(async () => {
     return {
       movies: [],
       tvs: [],
-      dislikedContent: [],
+      dislikedMovies: [],
+      dislikedTvs: [],
       actors: [],
       directors: [],
       genres: [],

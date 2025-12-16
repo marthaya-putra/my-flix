@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { searchMoviesAPI, searchTVsAPI } from "./search";
-import { getRecommendationsAI } from "../ai/recommendations";
+import { getAIRecommendations } from "../ai/recommendations";
 import { z } from "zod";
 import { FilmInfo } from "../types";
 import { ModelName, modelRegistry } from "../ai/models";
@@ -20,13 +20,8 @@ const getRecommendationsSchema = z.object({
   userPrefs: z.object({
     movies: z.array(z.object({ title: z.string(), year: z.number() })),
     tvs: z.array(z.object({ title: z.string(), year: z.number() })),
-    dislikedContent: z.array(
-      z.object({
-        title: z.string(),
-        year: z.number(),
-        category: z.enum(["movie", "tv"]),
-      })
-    ),
+    dislikedMovies: z.array(z.object({ title: z.string(), year: z.number() })),
+    dislikedTvs: z.array(z.object({ title: z.string(), year: z.number() })),
     actors: z.array(z.string()),
     directors: z.array(z.string()),
     genres: z.array(z.string()),
@@ -141,12 +136,11 @@ export const getRecommendations = createServerFn({
     const { userPrefs, previousRecommendations } = data;
 
     try {
-      const models: ModelName[] = ["google", "mistral"];
-      let modelPosition = 0;
       const data = {
         previouslyLikedMovies: userPrefs.movies,
         previouslyLikedTvs: userPrefs.tvs,
-        dislikedContent: userPrefs.dislikedContent,
+        dislikedMovies: userPrefs.dislikedMovies,
+        dislikedTvs: userPrefs.dislikedTvs,
         favoriteActors: userPrefs.actors,
         favoriteDirectors: userPrefs.directors,
         genres: userPrefs.genres,
@@ -154,16 +148,21 @@ export const getRecommendations = createServerFn({
         previousRecommendations,
       };
 
-      let result = await getRecommendationsAI(
+      const models: ModelName[] = ["google", "mistral"];
+      let modelIdx = 0;
+      let currentModelName = models[modelIdx];
+
+      let result = await getAIRecommendations(
         data,
-        modelRegistry[models[modelPosition]]
+        modelRegistry[currentModelName]
       );
 
-      while (!result.success && modelPosition < models.length - 1) {
-        modelPosition++;
-        result = await getRecommendationsAI(
+      while (!result.success && modelIdx < models.length - 1) {
+        modelIdx++;
+        currentModelName = models[modelIdx];
+        result = await getAIRecommendations(
           data,
-          modelRegistry[models[modelPosition]]
+          modelRegistry[currentModelName]
         );
       }
 
