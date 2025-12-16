@@ -583,14 +583,7 @@ export const getAllUserContent = createServerFn().handler(async () => {
 
   // If no session, return empty preferences
   if (!session?.user?.id) {
-    return {
-      movies: [],
-      tvs: [],
-      dislikedContent: [],
-      actors: [],
-      directors: [],
-      genres: [],
-    };
+    return null;
   }
 
   const userId = session.user.id;

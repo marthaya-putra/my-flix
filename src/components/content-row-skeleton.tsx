@@ -10,7 +10,7 @@ export default function ContentRowSkeleton({
   itemCount = 6,
 }: ContentRowSkeletonProps) {
   return (
-    <div className="px-4 md:px-8 group max-w-7xl mx-auto">
+    <div className="px-4 md:px-8 group max-w-7xl mx-auto overflow-hidden">
       {/* Header Skeleton */}
       <div className="flex items-end gap-2 group/title cursor-pointer justify-between pb-2">
         <div className="relative h-7 md:h-8 w-48 bg-muted rounded overflow-hidden">
@@ -19,7 +19,7 @@ export default function ContentRowSkeleton({
       </div>
 
       <div className="relative">
-        <div className="flex -ml-4 overflow-x-auto scrollbar-hide">
+        <div className="flex -ml-4 overflow-hidden">
           {Array.from({ length: itemCount }).map((_, index) => (
             <div
               key={index}
