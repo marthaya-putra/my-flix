@@ -3,7 +3,10 @@ import { searchMoviesAPI, searchTVsAPI } from "./search";
 import { getAIRecommendations } from "../ai/recommendations";
 import { z } from "zod";
 import { FilmInfo } from "../types";
-import { ModelName, modelRegistry } from "../ai/models";
+import { googleModel, mistralModel } from "../ai/models";
+import { LanguageModelV2 } from "@ai-sdk/provider";
+
+type AIRecommendationsResult = Awaited<ReturnType<typeof getAIRecommendations>>;
 
 // Input validation schemas
 const enrichRecommendationsSchema = z.array(
@@ -148,22 +151,14 @@ export const getRecommendations = createServerFn({
         previousRecommendations,
       };
 
-      const models: ModelName[] = ["google", "mistral"];
+      const models: LanguageModelV2[] = [googleModel, mistralModel];
       let modelIdx = 0;
-      let currentModelName = models[modelIdx];
+      let result: AIRecommendationsResult | undefined;
 
-      let result = await getAIRecommendations(
-        data,
-        modelRegistry[currentModelName]
-      );
-
-      while (!result.success && modelIdx < models.length - 1) {
+      while (!result || (!result.success && modelIdx < models.length)) {
+        const currentModel = models[modelIdx];
+        result = await getAIRecommendations(data, currentModel);
         modelIdx++;
-        currentModelName = models[modelIdx];
-        result = await getAIRecommendations(
-          data,
-          modelRegistry[currentModelName]
-        );
       }
 
       if (result.success && result.data) {

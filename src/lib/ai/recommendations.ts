@@ -1,7 +1,6 @@
 import { generateObject } from "ai";
 import { LanguageModelV2 } from "@ai-sdk/provider";
 import { z } from "zod";
-
 // Plain function type
 type GetRecommendationsInput = z.infer<typeof RecommendationInput>;
 
@@ -86,6 +85,11 @@ export async function getAIRecommendations(
     const prompt = buildPrompt(cleanData);
     const { object } = await generateObject({
       model,
+      providerOptions: {
+        gateway: {
+          models: [],
+        },
+      },
       schema: RecommendationSchema,
       maxRetries: 0,
       system: `You are a movie and TV series recommendation expert. Your PRIMARY DUTY is to analyze the user's viewing history and preferences to make PERSONALIZED recommendations.
