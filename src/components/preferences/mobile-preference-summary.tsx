@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Film, Tv, Users, Star, Heart, TrendingUp, ChevronDown, ChevronUp, Plus, Camera } from "lucide-react";
-import { UserPreferences } from "./use-preferences";
+import { UserPreferences } from "@/lib/types/preferences";
 
 interface MobilePreferenceSummaryProps {
   preferences: UserPreferences;

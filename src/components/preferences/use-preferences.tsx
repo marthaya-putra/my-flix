@@ -1,10 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { FilmInfo, Person } from "@/lib/types";
-
-// Extended Person type that includes dbId from database
-type PersonWithDbId = Person & {
-  dbId?: number;
-};
+import { UserPreferences } from "@/lib/types/preferences";
 import {
   addMoviePreference,
   addPersonPreference,
@@ -13,67 +9,28 @@ import {
   fetchUserPreferences,
 } from "@/lib/data/preferences";
 
-// Types for user preferences
-export interface UserPreferences {
-  id?: string;
-  userId?: string;
-  movies: FilmInfo[];
-  tvShows: FilmInfo[];
-  people: PersonWithDbId[];
-  favoriteGenres: string[];
-  minRating: number;
-  preferredContent: {
-    movie: boolean;
-    tv: boolean;
-  };
-  notes?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
 // Re-export fetchUserPreferences as loadPreferences for consistency
 export const loadPreferences = fetchUserPreferences;
 
 // Hook for managing preferences
-export function usePreferences() {
-  const [preferences, setPreferences] = useState<UserPreferences>({
-    movies: [],
-    tvShows: [],
-    people: [],
-    favoriteGenres: [],
-    minRating: 6,
-    preferredContent: {
-      movie: true,
-      tv: true,
-    },
-    notes: "",
-  });
-  const [isLoading, setIsLoading] = useState(true);
+export function usePreferences(initialPreferences?: UserPreferences) {
+  const [preferences, setPreferences] = useState<UserPreferences>(
+    initialPreferences || {
+      movies: [],
+      tvShows: [],
+      people: [],
+      favoriteGenres: [],
+      minRating: 6,
+      preferredContent: {
+        movie: true,
+        tv: true,
+      },
+      notes: "",
+    }
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [addingItems, setAddingItems] = useState<Set<number>>(new Set());
-
-  // Load preferences on mount
-  useEffect(() => {
-    const loadPrefs = async () => {
-      try {
-        setIsLoading(true);
-        const result = await loadPreferences();
-        if (result.success) {
-          setPreferences(result.data);
-        } else {
-          setError(result.error || "Failed to load preferences");
-        }
-      } catch (err) {
-        setError("Failed to load preferences");
-        console.error("Error loading preferences:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadPrefs();
-  }, []);
 
   // Add a movie/TV show to preferences
   const addPreference = async (content: FilmInfo | Person) => {
@@ -316,7 +273,6 @@ export function usePreferences() {
 
   return {
     preferences,
-    isLoading,
     isSaving,
     error,
     addingItems,

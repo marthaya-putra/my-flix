@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Film, Tv, Users, Star, Heart, TrendingUp } from "lucide-react";
-import { UserPreferences } from "./use-preferences";
+import { UserPreferences } from "@/lib/types/preferences";
 
 interface PreferenceSummaryProps {
   preferences: UserPreferences;

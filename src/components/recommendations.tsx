@@ -20,7 +20,8 @@ interface Recommendation {
   tmdbData: FilmInfo | null;
 }
 
-interface UserPreferences {
+// Type for the structure expected by this component
+interface RecommendationsUserPrefs {
   movies: Array<{ title: string; year: number }>;
   tvs: Array<{ title: string; year: number }>;
   dislikedMovies: Array<{ title: string; year: number }>;
@@ -31,7 +32,7 @@ interface UserPreferences {
 }
 
 interface RecommendationsProps {
-  userPrefs: UserPreferences;
+  userPrefs: RecommendationsUserPrefs;
   initialRecommendations: Recommendation[];
 }
 

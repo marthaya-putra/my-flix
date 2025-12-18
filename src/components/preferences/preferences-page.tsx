@@ -14,10 +14,14 @@ import { Film, Tv, Users, Plus } from "lucide-react";
 import { ContentSearchDialog } from "./content-search-dialog";
 import { PreferenceItem } from "./preference-item";
 import { usePreferences } from "./use-preferences";
+import { UserPreferences } from "@/lib/types/preferences";
 
-export function PreferencesPage() {
-  const { preferences, addPreference, removePreference, isLoading } =
-    usePreferences();
+interface PreferencesPageProps {
+  initialPreferences?: UserPreferences;
+}
+
+export function PreferencesPage({ initialPreferences }: PreferencesPageProps) {
+  const { preferences, addPreference, removePreference } = usePreferences(initialPreferences);
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchType, setSearchType] = useState<"movie" | "tv" | "person">(
@@ -43,14 +47,6 @@ export function PreferencesPage() {
     removePreference(id, type);
     toast.info("Item has been removed from your preferences.");
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
 
   const existingIds = new Set([
     ...preferences.movies.map((item: any) => item.id),
