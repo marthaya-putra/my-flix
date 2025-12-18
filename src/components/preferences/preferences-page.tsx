@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Link } from "@tanstack/react-router";
 
 import { toast } from "sonner";
 import { Film, Tv, Users, Plus } from "lucide-react";
@@ -21,7 +22,8 @@ interface PreferencesPageProps {
 }
 
 export function PreferencesPage({ initialPreferences }: PreferencesPageProps) {
-  const { preferences, addPreference, removePreference } = usePreferences(initialPreferences);
+  const { preferences, addPreference, removePreference } =
+    usePreferences(initialPreferences);
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchType, setSearchType] = useState<"movie" | "tv" | "person">(
@@ -106,6 +108,7 @@ export function PreferencesPage({ initialPreferences }: PreferencesPageProps) {
                         type="movie"
                         onRemove={(id) => handleRemovePreference(id, "movie")}
                         onAdd={() => handleAddContent("movie")}
+                        limitItems
                       />
                     )}
                     {preferences.tvShows.length > 0 && (
@@ -115,6 +118,7 @@ export function PreferencesPage({ initialPreferences }: PreferencesPageProps) {
                         type="tv"
                         onRemove={(id) => handleRemovePreference(id, "tv")}
                         onAdd={() => handleAddContent("tv")}
+                        limitItems
                       />
                     )}
                     {preferences.people.length > 0 && (
@@ -124,6 +128,7 @@ export function PreferencesPage({ initialPreferences }: PreferencesPageProps) {
                         type="person"
                         onRemove={(id) => handleRemovePreference(id, "person")}
                         onAdd={() => handleAddContent("person")}
+                        limitItems
                       />
                     )}
                     {preferences.movies.length === 0 &&
@@ -210,15 +215,21 @@ interface ContentSectionProps {
   onRemove: (id: number) => void;
   onAdd: () => void;
   showEmptyState?: boolean;
+  limitItems?: boolean;
 }
 
 function ContentSection({
   title,
   items,
+  type,
   onRemove,
   onAdd,
   showEmptyState,
+  limitItems = false,
 }: ContentSectionProps) {
+  const displayItems = limitItems ? items.slice(0, 5) : items;
+  const hasMore = limitItems && items.length > 5;
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -242,15 +253,26 @@ function ContentSection({
           </div>
         )
       ) : (
-        <div className="flex flex-wrap gap-3">
-          {items.map((item) => (
-            <PreferenceItem
-              key={item.id}
-              item={item}
-              onRemove={() => onRemove(item.id)}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            {displayItems.map((item) => (
+              <PreferenceItem
+                key={item.id}
+                item={item}
+                onRemove={() => onRemove(item.id)}
+              />
+            ))}
+          </div>
+          {hasMore && (
+            <div className="mt-4 text-center">
+              <Link to={`/preferences/${type}`}>
+                <Button variant="link" className="text-sm">
+                  Show all {items.length} {title.toLowerCase()} →
+                </Button>
+              </Link>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

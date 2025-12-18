@@ -5,7 +5,7 @@ import { PreferencesPage } from "@/components/preferences/preferences-page";
 import { onlyLoggedIn } from "@/middleware/auth";
 import { fetchUserPreferences } from "@/lib/data/preferences";
 
-export const Route = createFileRoute("/preferences")({
+export const Route = createFileRoute("/preferences/")({
   component: PreferencesComponent,
   loader: async () => {
     return {

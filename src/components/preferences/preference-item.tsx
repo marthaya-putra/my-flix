@@ -1,6 +1,12 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Trash2,
   Calendar,
   Film,
@@ -79,7 +85,8 @@ export function PreferenceItem({ item, onRemove }: PreferenceItemProps) {
   const info = getItemInfo(item);
 
   return (
-    <Card className="group hover:shadow-md transition-shadow cursor-pointer relative">
+    <TooltipProvider delayDuration={100}>
+      <Card className="group hover:shadow-md transition-shadow cursor-pointer relative w-full">
       {/* Close Button */}
       <Button
         size="sm"
@@ -117,9 +124,16 @@ export function PreferenceItem({ item, onRemove }: PreferenceItemProps) {
 
           {/* Content */}
           <div className="flex-1 min-w-0 pr-8">
-            <h3 className="font-medium text-sm truncate transition-colors mb-1">
-              {info.title}
-            </h3>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <h3 className="font-medium text-sm truncate transition-colors mb-1">
+                  {info.title}
+                </h3>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{info.title}</p>
+              </TooltipContent>
+            </Tooltip>
 
             <p className="text-xs text-muted-foreground mb-2">
               {info.subtitle}
@@ -144,5 +158,6 @@ export function PreferenceItem({ item, onRemove }: PreferenceItemProps) {
         </div>
       </CardContent>
     </Card>
+    </TooltipProvider>
   );
 }
