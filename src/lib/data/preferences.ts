@@ -22,6 +22,7 @@ import {
   addUserDislike,
   removeUserDislikeByPreferenceId,
 } from "../repositories/user-dislikes";
+import type { UserPreferences } from "@/lib/types/preferences";
 
 // Input validation schemas from repositories
 const AddMoviePreferenceInput = preferenceSchemas.addPreference.omit({
@@ -229,17 +230,25 @@ export const removePersonPreference = createServerFn({
 // Fetch all user preferences for the preferences page
 export const fetchUserPreferences = createServerFn({
   method: "GET",
-}).handler(async () => {
+}).handler(async (): Promise<UserPreferences> => {
   try {
     const session = await auth.api.getSession({
       headers: getRequest().headers,
     });
 
     if (!session?.user?.id) {
+      // Return empty UserPreferences if not authenticated
       return {
-        success: false,
-        error: "User not authenticated",
-        data: { movies: [], tvShows: [], people: [] },
+        movies: [],
+        tvShows: [],
+        people: [],
+        favoriteGenres: [],
+        minRating: 6,
+        preferredContent: {
+          movie: true,
+          tv: true,
+        },
+        notes: "",
       };
     }
 
@@ -316,41 +325,33 @@ export const fetchUserPreferences = createServerFn({
       contentType: "person" as const, // Add contentType to match ContentItem type
     }));
 
+    // Return UserPreferences directly
     return {
-      success: true,
-      data: {
-        movies,
-        tvShows,
-        people,
-        favoriteGenres: [], // This would be stored separately in the future
-        minRating: 6,
-        preferredContent: {
-          movie: true,
-          tv: true,
-        },
-        notes: "",
+      movies,
+      tvShows,
+      people,
+      favoriteGenres: [], // This would be stored separately in the future
+      minRating: 6,
+      preferredContent: {
+        movie: true,
+        tv: true,
       },
+      notes: "",
     };
   } catch (error) {
     console.error("Error fetching user preferences:", error);
+    // Return empty UserPreferences on error
     return {
-      success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Failed to fetch user preferences",
-      data: {
-        movies: [],
-        tvShows: [],
-        people: [],
-        favoriteGenres: [],
-        minRating: 6,
-        preferredContent: {
-          movie: true,
-          tv: true,
-        },
-        notes: "",
+      movies: [],
+      tvShows: [],
+      people: [],
+      favoriteGenres: [],
+      minRating: 6,
+      preferredContent: {
+        movie: true,
+        tv: true,
       },
+      notes: "",
     };
   }
 });

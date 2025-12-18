@@ -184,9 +184,6 @@ export async function removeUserPreferenceByPreferenceId(db: DB, data: {
   }
 }
 
-// Legacy function for backward compatibility
-export const removeMoviePreference = removeUserPreferenceByPreferenceId;
-export const removeTVPreference = removeUserPreferenceByPreferenceId;
 
 export async function searchUserPreferences(db: DB, data: {
   userId: string;

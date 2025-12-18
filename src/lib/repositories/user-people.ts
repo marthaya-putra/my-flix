@@ -78,8 +78,6 @@ export async function addUserPerson(db: DB, data: z.infer<typeof addPersonSchema
   }
 }
 
-// Legacy function for backward compatibility
-export const addUserActor = addUserPerson;
 
 export async function getUserPeople(db: DB, data: z.infer<typeof getUserPeopleSchema>) {
   try {
@@ -117,42 +115,6 @@ export async function getUserPeople(db: DB, data: z.infer<typeof getUserPeopleSc
   }
 }
 
-// Legacy function for backward compatibility (actors only)
-export async function getUserActors(db: DB, data: Omit<z.infer<typeof getUserPeopleSchema>, "personType"> & { personType?: "actor" }) {
-  try {
-    let whereConditions = [eq(userPeople.userId, data.userId)];
-
-    if (data.personType) {
-      whereConditions.push(eq(userPeople.personType, "actor"));
-    }
-
-    let query = db
-      .select()
-      .from(userPeople)
-      .where(and(...whereConditions))
-      .orderBy(desc(userPeople.createdAt))
-      .$dynamic();
-
-    if (data.limit) {
-      query = query.limit(data.limit);
-    }
-
-    if (data.offset && data.offset > 0) {
-      query = query.offset(data.offset);
-    }
-
-    const actors = await query;
-
-    return {
-      success: true,
-      actors,
-      hasMore: data.limit ? actors.length === data.limit : false,
-    };
-  } catch (error) {
-    console.error("Failed to get user actors:", error);
-    throw new Error("Failed to fetch actor preferences");
-  }
-}
 
 export async function updateUserPerson(db: DB, data: z.infer<typeof updatePersonSchema>) {
   try {
@@ -185,8 +147,6 @@ export async function updateUserPerson(db: DB, data: z.infer<typeof updatePerson
   }
 }
 
-// Legacy function for backward compatibility
-export const updateUserActor = updateUserPerson;
 
 export async function removeUserPerson(db: DB, data: z.infer<typeof removePersonSchema>) {
   try {
@@ -215,8 +175,6 @@ export async function removeUserPerson(db: DB, data: z.infer<typeof removePerson
   }
 }
 
-// Legacy function for backward compatibility
-export const removeUserActor = removeUserPerson;
 
 export async function searchUserPeople(db: DB, data: {
   userId: string;
@@ -251,35 +209,6 @@ export async function searchUserPeople(db: DB, data: {
   }
 }
 
-// Legacy function for backward compatibility (actors only)
-export async function searchUserActors(db: DB, data: {
-  userId: string;
-  query: string;
-  limit?: number;
-}) {
-  try {
-    const actors = await db
-      .select()
-      .from(userPeople)
-      .where(
-        and(
-          eq(userPeople.userId, data.userId),
-          eq(userPeople.personType, "actor"),
-          ilike(userPeople.personName, `%${data.query}%`)
-        )
-      )
-      .orderBy(desc(userPeople.createdAt))
-      .limit(data.limit || 20);
-
-    return {
-      success: true,
-      actors,
-    };
-  } catch (error) {
-    console.error("Failed to search user actors:", error);
-    throw new Error("Failed to search actor preferences");
-  }
-}
 
 // Export schemas for reuse
 export const schemas = {
