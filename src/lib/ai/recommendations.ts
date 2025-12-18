@@ -4,6 +4,10 @@ import { z } from "zod";
 // Plain function type
 type GetRecommendationsInput = z.infer<typeof RecommendationInput>;
 
+export type AIRecommendationsResult = Awaited<
+  ReturnType<typeof getAIRecommendations>
+>;
+
 const RecommendationInput = z.object({
   previouslyLikedTvs: z
     .array(

@@ -1,12 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { searchMoviesAPI, searchTVsAPI } from "./search";
-import { getAIRecommendations } from "../ai/recommendations";
+import {
+  AIRecommendationsResult,
+  getAIRecommendations,
+} from "../ai/recommendations";
 import { z } from "zod";
 import { FilmInfo } from "../types";
 import { googleModel, mistralModel } from "../ai/models";
 import { LanguageModelV2 } from "@ai-sdk/provider";
-
-type AIRecommendationsResult = Awaited<ReturnType<typeof getAIRecommendations>>;
 
 // Input validation schemas
 const enrichRecommendationsSchema = z.array(
@@ -138,44 +139,39 @@ export const getRecommendations = createServerFn({
   .handler(async ({ data }) => {
     const { userPrefs, previousRecommendations } = data;
 
-    try {
-      const data = {
-        previouslyLikedMovies: userPrefs.movies,
-        previouslyLikedTvs: userPrefs.tvs,
-        dislikedMovies: userPrefs.dislikedMovies,
-        dislikedTvs: userPrefs.dislikedTvs,
-        favoriteActors: userPrefs.actors,
-        favoriteDirectors: userPrefs.directors,
-        genres: userPrefs.genres,
-        excludeAdult: true,
-        previousRecommendations,
-      };
+    const args = {
+      previouslyLikedMovies: userPrefs.movies,
+      previouslyLikedTvs: userPrefs.tvs,
+      dislikedMovies: userPrefs.dislikedMovies,
+      dislikedTvs: userPrefs.dislikedTvs,
+      favoriteActors: userPrefs.actors,
+      favoriteDirectors: userPrefs.directors,
+      genres: userPrefs.genres,
+      excludeAdult: true,
+      previousRecommendations,
+    };
 
-      const models: LanguageModelV2[] = [googleModel, mistralModel];
-      let modelIdx = 0;
-      let result: AIRecommendationsResult | undefined;
+    const models: LanguageModelV2[] = [googleModel, mistralModel];
+    let modelIdx = 0;
+    let result: AIRecommendationsResult | undefined;
 
-      while (!result || (!result.success && modelIdx < models.length)) {
-        const currentModel = models[modelIdx];
-        result = await getAIRecommendations(data, currentModel);
-        modelIdx++;
-      }
+    while (!result || (!result.success && modelIdx < models.length)) {
+      const currentModel = models[modelIdx];
+      result = await getAIRecommendations(args, currentModel);
+      modelIdx++;
+    }
 
-      if (result.success && result.data) {
-        // Enrich recommendations with TMDB data
-        const enrichedRecommendations = await enrichRecommendationsWithTMDB(
-          result.data.recommendations
-        );
-        return enrichedRecommendations;
-      } else {
-        const errorMsg =
-          typeof result.error === "string"
-            ? result.error
-            : result.error?.message || "Failed to get recommendations";
-        throw new Error(errorMsg);
-      }
-    } catch (error) {
-      console.error("Failed to get recommendations:", error);
-      throw error;
+    if (result.success && result.data) {
+      // Enrich recommendations with TMDB data
+      const enrichedRecommendations = await enrichRecommendationsWithTMDB(
+        result.data.recommendations
+      );
+      return enrichedRecommendations;
+    } else {
+      const errorMsg =
+        typeof result.error === "string"
+          ? result.error
+          : result.error?.message || "Failed to get recommendations";
+      throw new Error(errorMsg);
     }
   });
