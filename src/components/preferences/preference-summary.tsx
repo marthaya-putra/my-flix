@@ -1,4 +1,3 @@
-import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -11,8 +10,14 @@ interface PreferenceSummaryProps {
   className?: string;
 }
 
-export function PreferenceSummary({ preferences, className }: PreferenceSummaryProps) {
-  const totalFavorites = preferences.movies.length + preferences.tvShows.length + preferences.people.length;
+export function PreferenceSummary({
+  preferences,
+  className,
+}: PreferenceSummaryProps) {
+  const totalFavorites =
+    preferences.movies.length +
+    preferences.tvShows.length +
+    preferences.people.length;
   const maxGenres = 20;
   const genreProgress = (preferences.favoriteGenres.length / maxGenres) * 100;
 
@@ -87,7 +92,9 @@ export function PreferenceSummary({ preferences, className }: PreferenceSummaryP
               <div className="flex items-center justify-center mb-2">
                 <Film className="h-5 w-5 text-blue-600" />
               </div>
-              <div className="text-2xl font-bold text-lg">{preferences.movies.length}</div>
+              <div className="text-2xl font-bold text-lg">
+                {preferences.movies.length}
+              </div>
               <div className="text-xs text-muted-foreground">Movies</div>
             </div>
 
@@ -96,7 +103,9 @@ export function PreferenceSummary({ preferences, className }: PreferenceSummaryP
               <div className="flex items-center justify-center mb-2">
                 <Tv className="h-5 w-5 text-purple-600" />
               </div>
-              <div className="text-2xl font-bold text-lg">{preferences.tvShows.length}</div>
+              <div className="text-2xl font-bold text-lg">
+                {preferences.tvShows.length}
+              </div>
               <div className="text-xs text-muted-foreground">TV Shows</div>
             </div>
 
@@ -105,7 +114,9 @@ export function PreferenceSummary({ preferences, className }: PreferenceSummaryP
               <div className="flex items-center justify-center mb-2">
                 <Users className="h-5 w-5 text-green-600" />
               </div>
-              <div className="text-2xl font-bold text-lg">{preferences.people.length}</div>
+              <div className="text-2xl font-bold text-lg">
+                {preferences.people.length}
+              </div>
               <div className="text-xs text-muted-foreground">People</div>
             </div>
 
@@ -149,7 +160,9 @@ export function PreferenceSummary({ preferences, className }: PreferenceSummaryP
 
             {/* Content Preferences */}
             <div>
-              <span className="text-sm font-medium mb-2 block">Content Preferences</span>
+              <span className="text-sm font-medium mb-2 block">
+                Content Preferences
+              </span>
               <div className="grid grid-cols-2 gap-2">
                 <div
                   className={`p-3 rounded-lg border text-center ${
@@ -176,18 +189,26 @@ export function PreferenceSummary({ preferences, className }: PreferenceSummaryP
 
             {/* Rating Preference */}
             <div>
-              <span className="text-sm font-medium mb-2 block">Minimum Rating</span>
+              <span className="text-sm font-medium mb-2 block">
+                Minimum Rating
+              </span>
               <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
                 <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-2xl font-bold">{preferences.minRating}</span>
-                    <span className="text-xs text-muted-foreground">out of 10</span>
+                    <span className="text-2xl font-bold">
+                      {preferences.minRating}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      out of 10
+                    </span>
                   </div>
                   <div className="w-full bg-muted rounded-full h-1.5 mt-2">
                     <div
                       className="bg-yellow-500 h-1.5 rounded-full"
-                      style={{ width: `${(preferences.minRating / 10) * 100}%` }}
+                      style={{
+                        width: `${(preferences.minRating / 10) * 100}%`,
+                      }}
                     ></div>
                   </div>
                 </div>
@@ -199,7 +220,9 @@ export function PreferenceSummary({ preferences, className }: PreferenceSummaryP
               <div>
                 <span className="text-sm font-medium mb-2 block">Notes</span>
                 <div className="p-3 bg-muted/30 rounded-lg">
-                  <p className="text-sm text-muted-foreground">{preferences.notes}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {preferences.notes}
+                  </p>
                 </div>
               </div>
             )}
@@ -221,9 +244,12 @@ export function PreferenceSummary({ preferences, className }: PreferenceSummaryP
               <div className="animate-pulse flex items-center justify-center mb-4">
                 <TrendingUp className="h-12 w-12 text-muted-foreground" />
               </div>
-              <p className="text-sm font-medium mb-2">Personalized recommendations coming soon!</p>
+              <p className="text-sm font-medium mb-2">
+                Personalized recommendations coming soon!
+              </p>
               <p className="text-xs text-muted-foreground">
-                Based on your {totalFavorites} favorites, we'll find content you'll love.
+                Based on your {totalFavorites} favorites, we'll find content
+                you'll love.
               </p>
               <div className="mt-4 p-3 bg-primary/10 rounded-lg">
                 <p className="text-xs text-primary font-medium">

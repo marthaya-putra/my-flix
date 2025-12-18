@@ -15,7 +15,8 @@ import { Film, Tv, Users, Plus } from "lucide-react";
 import { ContentSearchDialog } from "./content-search-dialog";
 import { PreferenceItem } from "./preference-item";
 import { usePreferences } from "./use-preferences";
-import { UserPreferences } from "@/lib/types/preferences";
+import { UserPreferences, FilmInfoWithDbId, PersonWithDbId } from "@/lib/types/preferences";
+import { ContentItem, FilmInfo, Person } from "@/lib/types";
 
 interface PreferencesPageProps {
   initialPreferences?: UserPreferences;
@@ -35,11 +36,37 @@ export function PreferencesPage({ initialPreferences }: PreferencesPageProps) {
     setIsSearchOpen(true);
   };
 
-  const handleContentSelected = (content: any) => {
-    addPreference(content);
-    toast.success(
-      `${content.title || content.name} has been added to your preferences.`
-    );
+  const handleContentSelected = (content: ContentItem) => {
+    // Convert ContentItem to FilmInfo or Person for the addPreference function
+    if (content.contentType === 'person') {
+      const person: Person = {
+        id: content.id,
+        name: content.name,
+        profileImageUrl: content.profileImageUrl,
+        popularity: content.popularity,
+        imdbId: content.imdbId,
+        biography: content.biography,
+        knownFor: content.knownFor,
+        category: content.category,
+      };
+      addPreference(person);
+      toast.success(`${content.name} has been added to your preferences.`);
+    } else {
+      const film: FilmInfo = {
+        id: content.id,
+        posterPath: content.posterPath,
+        backdropPath: content.backdropPath,
+        title: content.title,
+        overview: content.overview,
+        voteAverage: content.voteAverage,
+        releaseDate: content.releaseDate,
+        category: content.contentType === 'movie' ? 'movie' : 'tv',
+        genreIds: content.genreIds,
+        genres: content.genres,
+      };
+      addPreference(film);
+      toast.success(`${content.title} has been added to your preferences.`);
+    }
   };
 
   const handleRemovePreference = (
@@ -50,10 +77,29 @@ export function PreferencesPage({ initialPreferences }: PreferencesPageProps) {
     toast.info("Item has been removed from your preferences.");
   };
 
+  // Helper function to convert preferences items to ContentItem for display
+  const convertToContentItem = (item: FilmInfoWithDbId | PersonWithDbId): ContentItem => {
+    if ('knownFor' in item) {
+      // It's a person
+      const person = item as PersonWithDbId;
+      return {
+        ...person,
+        contentType: 'person',
+      };
+    } else {
+      // It's a film (movie or TV)
+      const film = item as FilmInfoWithDbId;
+      return {
+        ...film,
+        contentType: film.category === 'tv' ? 'tv' : 'movie',
+      };
+    }
+  };
+
   const existingIds = new Set([
-    ...preferences.movies.map((item: any) => item.id),
-    ...preferences.tvShows.map((item: any) => item.id),
-    ...preferences.people.map((item: any) => item.id),
+    ...preferences.movies.map((item: FilmInfoWithDbId) => item.id),
+    ...preferences.tvShows.map((item: FilmInfoWithDbId) => item.id),
+    ...preferences.people.map((item: PersonWithDbId) => item.id),
   ]);
 
   return (
@@ -104,7 +150,7 @@ export function PreferencesPage({ initialPreferences }: PreferencesPageProps) {
                     {preferences.movies.length > 0 && (
                       <ContentSection
                         title="Movies"
-                        items={preferences.movies}
+                        items={preferences.movies.map(convertToContentItem)}
                         type="movie"
                         onRemove={(id) => handleRemovePreference(id, "movie")}
                         onAdd={() => handleAddContent("movie")}
@@ -114,7 +160,7 @@ export function PreferencesPage({ initialPreferences }: PreferencesPageProps) {
                     {preferences.tvShows.length > 0 && (
                       <ContentSection
                         title="TV Shows"
-                        items={preferences.tvShows}
+                        items={preferences.tvShows.map(convertToContentItem)}
                         type="tv"
                         onRemove={(id) => handleRemovePreference(id, "tv")}
                         onAdd={() => handleAddContent("tv")}
@@ -124,7 +170,7 @@ export function PreferencesPage({ initialPreferences }: PreferencesPageProps) {
                     {preferences.people.length > 0 && (
                       <ContentSection
                         title="People"
-                        items={preferences.people}
+                        items={preferences.people.map(convertToContentItem)}
                         type="person"
                         onRemove={(id) => handleRemovePreference(id, "person")}
                         onAdd={() => handleAddContent("person")}
@@ -161,7 +207,7 @@ export function PreferencesPage({ initialPreferences }: PreferencesPageProps) {
                 <TabsContent value="movies" className="mt-6">
                   <ContentSection
                     title="Movies"
-                    items={preferences.movies}
+                    items={preferences.movies.map(convertToContentItem)}
                     type="movie"
                     onRemove={(id) => handleRemovePreference(id, "movie")}
                     onAdd={() => handleAddContent("movie")}
@@ -172,7 +218,7 @@ export function PreferencesPage({ initialPreferences }: PreferencesPageProps) {
                 <TabsContent value="tv" className="mt-6">
                   <ContentSection
                     title="TV Shows"
-                    items={preferences.tvShows}
+                    items={preferences.tvShows.map(convertToContentItem)}
                     type="tv"
                     onRemove={(id) => handleRemovePreference(id, "tv")}
                     onAdd={() => handleAddContent("tv")}
@@ -183,7 +229,7 @@ export function PreferencesPage({ initialPreferences }: PreferencesPageProps) {
                 <TabsContent value="people" className="mt-6">
                   <ContentSection
                     title="People"
-                    items={preferences.people}
+                    items={preferences.people.map(convertToContentItem)}
                     type="person"
                     onRemove={(id) => handleRemovePreference(id, "person")}
                     onAdd={() => handleAddContent("person")}
@@ -210,7 +256,7 @@ export function PreferencesPage({ initialPreferences }: PreferencesPageProps) {
 
 interface ContentSectionProps {
   title: string;
-  items: any[];
+  items: ContentItem[];
   type: "movie" | "tv" | "person";
   onRemove: (id: number) => void;
   onAdd: () => void;
@@ -255,7 +301,7 @@ function ContentSection({
       ) : (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-            {displayItems.map((item) => (
+            {displayItems.map((item: ContentItem) => (
               <PreferenceItem
                 key={item.id}
                 item={item}
