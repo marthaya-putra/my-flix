@@ -28,5 +28,3 @@ dist-ssr
 # TanStack router cache
 .tanstack
 
-# Local Netlify folder
-.netlify

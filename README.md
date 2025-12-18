@@ -74,7 +74,6 @@ npm run build
 The app is ready for deployment on any platform that supports Node.js:
 
 - **Vercel** (recommended for TanStack Start)
-- **Netlify**
 - **AWS Amplify**
 - **Traditional VPS/Docker**
 
