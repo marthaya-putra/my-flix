@@ -116,6 +116,7 @@ export function ContentSelectionStep({
         onOpenChange={setIsSearchOpen}
         searchType={type}
         onContentSelected={handleContentSelected}
+        existingIds={new Set(selectedItems.map((item) => item.id))}
       />
     </div>
   );
