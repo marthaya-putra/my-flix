@@ -82,15 +82,10 @@ export function PeopleSelectionStep({
           </div>
           <div className="flex flex-wrap gap-3">
             {selectedPeople.map((person) => (
-              <div
-                key={person.id}
-                className="flex items-center justify-between p-3 border rounded-lg"
-              >
-                <PreferenceItem
-                  item={person}
-                  onRemove={() => handleRemovePerson(person.id)}
-                />
-              </div>
+              <PreferenceItem
+                item={person}
+                onRemove={() => handleRemovePerson(person.id)}
+              />
             ))}
           </div>
         </div>
@@ -122,6 +117,7 @@ export function PeopleSelectionStep({
         onOpenChange={setIsSearchOpen}
         searchType="person"
         onContentSelected={handlePersonSelected}
+        existingIds={new Set(selectedPeople.map((person) => person.id))}
       />
     </div>
   );
