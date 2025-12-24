@@ -3,7 +3,7 @@ import { ContentSearchDialog } from "@/components/preferences/content-search-dia
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, Plus, X, SkipForward } from "lucide-react";
+import { Users, Plus, SkipForward } from "lucide-react";
 import { PreferenceItem } from "@/components/preferences/preference-item";
 import { toast } from "sonner";
 
@@ -82,10 +82,12 @@ export function PeopleSelectionStep({
           </div>
           <div className="flex flex-wrap gap-3">
             {selectedPeople.map((person) => (
-              <PreferenceItem
-                item={person}
-                onRemove={() => handleRemovePerson(person.id)}
-              />
+              <div key={person.id}>
+                <PreferenceItem
+                  item={person}
+                  onRemove={() => handleRemovePerson(person.id)}
+                />
+              </div>
             ))}
           </div>
         </div>
