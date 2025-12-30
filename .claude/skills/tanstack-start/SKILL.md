@@ -118,3 +118,5 @@ function Recommendations() {
   )
 }
 ```
+
+Consult with: https://tanstack.com/llms.txt for more details

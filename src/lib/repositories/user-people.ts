@@ -48,9 +48,11 @@ export async function addUserPerson(db: DB, data: z.infer<typeof addPersonSchema
       .limit(1);
 
     if (existing.length > 0) {
-      throw new Error(
-        `This ${data.personType} is already in your preferences`
-      );
+      // Person already exists, return success with the existing person
+      return {
+        success: true,
+        person: existing[0],
+      };
     }
 
     // Insert new person preference
@@ -157,13 +159,10 @@ export async function removeUserPerson(db: DB, data: z.infer<typeof removePerson
       )
       .returning();
 
-    if (result.length === 0) {
-      throw new Error("Person not found or access denied");
-    }
-
     return {
       success: true,
-      deletedPerson: result[0],
+      deletedPerson: result.length > 0 ? result[0] : null,
+      deletedCount: result.length,
     };
   } catch (error) {
     console.error("Failed to remove user person:", error);

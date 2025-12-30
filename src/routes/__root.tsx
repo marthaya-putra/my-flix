@@ -49,10 +49,10 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
       <head>
         <HeadContent />
       </head>
-      <body>
+      <body className="grid grid-rows-[auto_1fr_auto]">
         <TooltipProvider>
           <Navbar />
-          <div className="mt-10">{children}</div>
+          <main className="pt-2">{children}</main>
         </TooltipProvider>
         <footer className="py-6 px-4 md:px-12 bg-black/40 border-t border-white/5">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-white">

@@ -56,9 +56,9 @@ export function OnboardingWizard() {
         await addPreference({ ...tv, category: "tv" });
       }
 
-      // Save all people
+      // Save all people (don't override category - it should be "actor", "director", or "other")
       for (const person of selectedPeople) {
-        await addPreference({ ...person, category: "person" });
+        await addPreference(person);
       }
 
       toast.success("Your preferences have been saved!");

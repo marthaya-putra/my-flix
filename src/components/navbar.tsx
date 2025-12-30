@@ -43,7 +43,7 @@ export default function Navbar() {
   return (
     <nav
       className={cn(
-        "fixed top-0 z-50 w-full transition-all duration-500 px-4 md:px-12 py-4",
+        "w-full transition-all duration-500 px-4 md:px-12 py-4",
         scrolled
           ? "bg-background/80 backdrop-blur-md shadow-md"
           : "bg-linear-to-b from-black/80 to-transparent"
