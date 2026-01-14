@@ -8,6 +8,7 @@ import {
 import { useState } from "react";
 import { FilmInfo } from "@/lib/types";
 import { PlayLink } from "./play-link";
+import { authClient } from "@/lib/auth-client";
 
 interface MovieCardProps extends FilmInfo {
   match?: string;
@@ -21,6 +22,7 @@ export default function MovieCard({
   category,
   match,
 }: MovieCardProps) {
+  const { data: session, isPending } = authClient.useSession();
   const [imgSrc, setImgSrc] = useState(posterPath);
   const [hasError, setHasError] = useState(!posterPath);
 
@@ -99,20 +101,22 @@ export default function MovieCard({
                 </Tooltip>
               </div>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    className="w-8 h-8 rounded-full border-gray-400 bg-transparent text-white hover:bg-white/20 hover:text-white"
-                  >
-                    <ThumbsUp className="w-4 h-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>I like this</p>
-                </TooltipContent>
-              </Tooltip>
+              {!isPending && session && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="w-8 h-8 rounded-full border-gray-400 bg-transparent text-white hover:bg-white/20 hover:text-white"
+                    >
+                      <ThumbsUp className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>I like this</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
             </div>
 
             <div className="mt-3 flex items-center gap-1 text-xs text-gray-400">
