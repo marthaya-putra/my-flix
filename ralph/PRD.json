@@ -1,0 +1,137 @@
+{
+  "prds": [
+    {
+      "id": "PRD-001",
+      "title": "Conditional Like Button in MovieCard",
+      "status": "done",
+      "priority": "medium",
+      "created": "2025-01-14",
+      "overview": {
+        "summary": "Hide the ThumbsUp button in MovieCard when user is not logged in",
+        "problem": "Currently all users see the 'I like this' button, but only authenticated users can use it",
+        "solution": "Conditionally render the button based on authentication state"
+      },
+      "requirements": {
+        "functional": [
+          "ThumbsUp button hidden for non-authenticated users",
+          "ThumbsUp button visible for authenticated users",
+          "No layout shifts when toggling visibility"
+        ],
+        "technical": {
+          "component": "src/components/movie-card.tsx",
+          "dependencies": ["@/lib/auth-client"],
+          "implementation": [
+            "Import authClient",
+            "Use useSession() hook",
+            "Conditional rendering based on user state"
+          ]
+        }
+      },
+      "acceptanceCriteria": [
+        "Non-authenticated users do NOT see ThumbsUp button",
+        "Authenticated users DO see ThumbsUp button",
+        "No visual layout shifts",
+        "Loading state handled"
+      ],
+      "testing": [
+        {
+          "scenario": "Not logged in",
+          "expected": "ThumbsUp button hidden"
+        },
+        {
+          "scenario": "Logged in",
+          "expected": "ThumbsUp button visible"
+        },
+        {
+          "scenario": "Session loading",
+          "expected": "Button hidden until resolved"
+        }
+      ],
+      "edgeCases": [
+        "Session loading state - hide button until resolved",
+        "Session expired - hide button after logout"
+      ]
+    },
+    {
+      "id": "PRD-002",
+      "title": "ThumbsUp Toggle Functionality in MovieCard",
+      "status": "done",
+      "priority": "high",
+      "created": "2025-01-20",
+      "overview": {
+        "summary": "Implement toggle functionality for ThumbsUp button to add/remove movies from user preferences",
+        "problem": "ThumbsUp button currently has no click handler - users cannot like/unlike movies",
+        "solution": "Add toggle behavior that syncs with user_preferences table"
+      },
+      "requirements": {
+        "functional": [
+          "Click ThumbsUp on unliked movie → add to user_preferences, button fills",
+          "Click ThumbsUp on liked movie → remove from user_preferences, button unfills",
+          "Button disabled during API call",
+          "Visual feedback for liked/unliked states"
+        ],
+        "technical": {
+          "components": [
+            "src/components/movie-card.tsx",
+            "src/components/content-row.tsx",
+            "src/components/movies-content.tsx"
+          ],
+          "newFiles": [
+            "src/hooks/use-liked-items.ts"
+          ],
+          "serverFunctions": [
+            "src/lib/data/preferences.ts - getUserLikedItems",
+            "src/lib/data/preferences.ts - toggleMoviePreference"
+          ],
+          "pagesRequiringState": [
+            "src/routes/index.tsx",
+            "src/routes/movies.index.tsx",
+            "src/routes/movies.search.tsx",
+            "src/routes/tvs.index.tsx",
+            "src/routes/tvs.airing-today.tsx",
+            "src/routes/tvs.airing-this-week.tsx",
+            "src/routes/tvs.search.tsx"
+          ]
+        }
+      },
+      "acceptanceCriteria": [
+        "Clicking ThumbsUp toggles liked state",
+        "Button styled white/filled when liked",
+        "Button styled gray/outline when not liked",
+        "Button disabled during API operation",
+        "State persists across page navigation (re-fetched on mount)",
+        "Only authenticated users see button (existing PRD-001 behavior)"
+      ],
+      "testing": [
+        {
+          "scenario": "Click unliked movie",
+          "expected": "Item added to user_preferences, button fills white"
+        },
+        {
+          "scenario": "Click liked movie",
+          "expected": "Item removed from user_preferences, button unfills"
+        },
+        {
+          "scenario": "Rapid clicks",
+          "expected": "Button disabled during operation, no duplicate entries"
+        },
+        {
+          "scenario": "Page refresh",
+          "expected": "Liked state restored from database"
+        },
+        {
+          "scenario": "Not logged in",
+          "expected": "Button hidden (PRD-001)"
+        }
+      ],
+      "implementationPlan": {
+        "step1": "Add props to MovieCard: isLiked, isToggling, onToggleLike",
+        "step2": "Create server functions: getUserLikedItems, toggleMoviePreference",
+        "step3": "Create useLikedItems hook for shared state logic",
+        "step4": "Update parent components (ContentRow, MoviesContent) to pass props",
+        "step5": "Add state management to all route pages",
+        "step6": "Update button styling based on isLiked prop"
+      }
+    }
+  ]
+}

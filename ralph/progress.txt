@@ -1,0 +1,2 @@
+2025-01-14: Implemented conditional ThumbsUp button in MovieCard. Button now only shows for authenticated users (when session is loaded and user is logged in). Uses authClient.useSession() hook with isPending state check.
+2025-01-20: Implemented ThumbsUp toggle functionality. Clicking the button adds/removes movies from user_preferences. Added useLikedItems hook for shared state, getUserLikedItems and toggleMoviePreference server functions. Button styled white/filled when liked, gray/outline when not. Integrated into all route pages (index, movies, tvs, search).
