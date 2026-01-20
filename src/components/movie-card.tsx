@@ -13,7 +13,6 @@ import { authClient } from "@/lib/auth-client";
 interface MovieCardProps extends FilmInfo {
   match?: string;
   isLiked?: boolean;
-  isToggling?: boolean;
   onToggleLike?: (filmInfo: FilmInfo) => void;
 }
 
@@ -30,7 +29,6 @@ export default function MovieCard({
   overview,
   genreIds,
   isLiked = false,
-  isToggling = false,
   onToggleLike,
 }: MovieCardProps) {
   const { data: session, isPending: sessionPending } = authClient.useSession();
@@ -51,7 +49,7 @@ export default function MovieCard({
   };
 
   const handleToggleLike = () => {
-    if (onToggleLike && !isToggling) {
+    if (onToggleLike) {
       onToggleLike(filmInfo);
     }
   };
@@ -138,7 +136,6 @@ export default function MovieCard({
                   <Button
                     size="icon"
                     variant="outline"
-                    disabled={isToggling}
                     onClick={handleToggleLike}
                     className={`w-8 h-8 rounded-full transition-colors ${
                       isLiked

@@ -29,7 +29,7 @@ export const Route = createFileRoute("/tvs/airing-today")({
 
 function TvAiringTodayPage() {
   const { movies } = Route.useLoaderData();
-  const { isLiked, isToggling, toggleLike } = useLikedItems();
+  const { isLiked, toggleLike } = useLikedItems();
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -49,7 +49,6 @@ function TvAiringTodayPage() {
               moviesData={moviesData}
               route={Route}
               isLiked={isLiked}
-              isToggling={isToggling}
               onToggleLike={toggleLike}
             />
           )}

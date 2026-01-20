@@ -19,7 +19,6 @@ interface MoviesContentProps {
     | typeof MoviesSearchRoute
     | typeof TvsSearchRoute;
   isLiked?: (id: number) => boolean;
-  isToggling?: (id: number) => boolean;
   onToggleLike?: (filmInfo: FilmInfo) => void;
 }
 
@@ -27,7 +26,6 @@ export default function MoviesContent({
   moviesData,
   route,
   isLiked,
-  isToggling,
   onToggleLike,
 }: MoviesContentProps) {
   const navigate = useNavigate({ from: route.path });
@@ -80,7 +78,6 @@ export default function MoviesContent({
             key={movie.id}
             {...movie}
             isLiked={isLiked?.(movie.id)}
-            isToggling={isToggling?.(movie.id)}
             onToggleLike={onToggleLike}
           />
         ))}

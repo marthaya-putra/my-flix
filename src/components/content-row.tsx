@@ -21,7 +21,6 @@ interface ContentRowProps {
   exploreAllUrl?: string;
   className?: string;
   isLiked?: (id: number) => boolean;
-  isToggling?: (id: number) => boolean;
   onToggleLike?: (filmInfo: FilmInfo) => void;
 }
 
@@ -31,7 +30,6 @@ export default function ContentRow({
   exploreAllUrl,
   className,
   isLiked,
-  isToggling,
   onToggleLike,
 }: ContentRowProps) {
   const carouselButtonClassName =
@@ -74,7 +72,6 @@ export default function ContentRow({
                 <MovieCard
                   {...item}
                   isLiked={isLiked?.(item.id)}
-                  isToggling={isToggling?.(item.id)}
                   onToggleLike={onToggleLike}
                 />
               </CarouselItem>

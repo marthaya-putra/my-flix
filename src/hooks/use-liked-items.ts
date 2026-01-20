@@ -12,7 +12,6 @@ export function useLikedItems() {
     likedIds: new Set<number>(),
     isPending: true,
   });
-  const [togglingIds, setTogglingIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     let mounted = true;
@@ -44,14 +43,24 @@ export function useLikedItems() {
   }, []);
 
   const isLiked = (id: number) => state.likedIds.has(id);
-  const isToggling = (id: number) => togglingIds.has(id);
 
   const toggleLike = async (filmInfo: FilmInfo) => {
     const { id, title, releaseDate, category, genres } = filmInfo;
     const year = releaseDate ? new Date(releaseDate).getFullYear() : new Date().getFullYear();
     const categoryValue = category === "tv" ? "tv-series" : "movie";
 
-    setTogglingIds((prev) => new Set(prev).add(id));
+    const currentlyLiked = state.likedIds.has(id);
+
+    // Optimistically update UI immediately
+    setState((prev) => {
+      const newLikedIds = new Set(prev.likedIds);
+      if (newLikedIds.has(id)) {
+        newLikedIds.delete(id);
+      } else {
+        newLikedIds.add(id);
+      }
+      return { likedIds: newLikedIds, isPending: false };
+    });
 
     try {
       const result = await toggleMoviePreference({
@@ -65,31 +74,34 @@ export function useLikedItems() {
         },
       });
 
-      if (result.success) {
+      // If server failed, revert optimistic update
+      if (!result.success) {
         setState((prev) => {
           const newLikedIds = new Set(prev.likedIds);
-          if (newLikedIds.has(id)) {
-            newLikedIds.delete(id);
-          } else {
+          if (currentlyLiked) {
             newLikedIds.add(id);
+          } else {
+            newLikedIds.delete(id);
           }
           return { likedIds: newLikedIds, isPending: false };
         });
       }
     } catch {
-      // Error - just clear toggling state
-    } finally {
-      setTogglingIds((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(id);
-        return newSet;
+      // On error, revert the optimistic update
+      setState((prev) => {
+        const newLikedIds = new Set(prev.likedIds);
+        if (currentlyLiked) {
+          newLikedIds.add(id);
+        } else {
+          newLikedIds.delete(id);
+        }
+        return { likedIds: newLikedIds, isPending: false };
       });
     }
   };
 
   return {
     isLiked,
-    isToggling,
     toggleLike,
     isPending: state.isPending,
   };

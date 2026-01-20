@@ -35,7 +35,7 @@ function Home() {
   const mostPopularMovie =
     popularMovies.results.length > 0 ? popularMovies.results[0] : undefined;
 
-  const { isLiked, isToggling, toggleLike } = useLikedItems();
+  const { isLiked, toggleLike } = useLikedItems();
 
   return (
     <div className="relative space-y-8 pb-8">
@@ -48,7 +48,6 @@ function Home() {
               title="Trending Movies"
               items={data.results}
               isLiked={isLiked}
-              isToggling={isToggling}
               onToggleLike={toggleLike}
             />
           )}
@@ -62,7 +61,6 @@ function Home() {
               title="Trending TV Shows"
               items={data.results}
               isLiked={isLiked}
-              isToggling={isToggling}
               onToggleLike={toggleLike}
             />
           )}
@@ -77,7 +75,6 @@ function Home() {
               items={data.results}
               exploreAllUrl="/tvs/airing-today"
               isLiked={isLiked}
-              isToggling={isToggling}
               onToggleLike={toggleLike}
             />
           )}
@@ -92,7 +89,6 @@ function Home() {
               items={data.results}
               exploreAllUrl="/tvs/airing-this-week"
               isLiked={isLiked}
-              isToggling={isToggling}
               onToggleLike={toggleLike}
             />
           )}
