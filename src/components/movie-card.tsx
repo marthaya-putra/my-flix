@@ -12,6 +12,9 @@ import { authClient } from "@/lib/auth-client";
 
 interface MovieCardProps extends FilmInfo {
   match?: string;
+  isLiked?: boolean;
+  isToggling?: boolean;
+  onToggleLike?: (filmInfo: FilmInfo) => void;
 }
 
 export default function MovieCard({
@@ -21,10 +24,37 @@ export default function MovieCard({
   releaseDate,
   category,
   match,
+  id,
+  genres,
+  backdropPath,
+  overview,
+  genreIds,
+  isLiked = false,
+  isToggling = false,
+  onToggleLike,
 }: MovieCardProps) {
-  const { data: session, isPending } = authClient.useSession();
+  const { data: session, isPending: sessionPending } = authClient.useSession();
   const [imgSrc, setImgSrc] = useState(posterPath);
   const [hasError, setHasError] = useState(!posterPath);
+
+  const filmInfo: FilmInfo = {
+    id,
+    posterPath,
+    backdropPath,
+    title,
+    overview,
+    voteAverage,
+    releaseDate,
+    category,
+    genreIds,
+    genres,
+  };
+
+  const handleToggleLike = () => {
+    if (onToggleLike && !isToggling) {
+      onToggleLike(filmInfo);
+    }
+  };
 
   const getRatingColor = (rating: number) => {
     if (rating >= 8) return "text-emerald-300 border-emerald-300";
@@ -101,19 +131,25 @@ export default function MovieCard({
                 </Tooltip>
               </div>
 
-              {!isPending && session && (
+              {!sessionPending && session && onToggleLike && (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
                       size="icon"
                       variant="outline"
-                      className="w-8 h-8 rounded-full border-gray-400 bg-transparent text-white hover:bg-white/20 hover:text-white"
+                      disabled={isToggling}
+                      onClick={handleToggleLike}
+                      className={`w-8 h-8 rounded-full transition-colors ${
+                        isLiked
+                          ? "bg-white text-black border-white hover:bg-gray-200"
+                          : "border-gray-400 bg-transparent text-white hover:bg-white/20 hover:text-white"
+                      }`}
                     >
-                      <ThumbsUp className="w-4 h-4" />
+                      <ThumbsUp className={`w-4 h-4 ${isLiked ? "fill-current" : ""}`} />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>I like this</p>
+                    <p>{isLiked ? "Unlike" : "I like this"}</p>
                   </TooltipContent>
                 </Tooltip>
               )}

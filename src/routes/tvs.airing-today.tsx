@@ -5,6 +5,7 @@ import { type MovieRouteSearchParams } from "@/lib/types";
 import MoviesSkeleton from "@/components/movies-skeleton";
 import MoviesContent from "@/components/movies-content";
 import { getUserTimezone } from "@/lib/utils/timezone";
+import { useLikedItems } from "@/hooks/use-liked-items";
 import { z } from "zod";
 
 export const Route = createFileRoute("/tvs/airing-today")({
@@ -28,6 +29,7 @@ export const Route = createFileRoute("/tvs/airing-today")({
 
 function TvAiringTodayPage() {
   const { movies } = Route.useLoaderData();
+  const { isLiked, isToggling, toggleLike } = useLikedItems();
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -43,7 +45,13 @@ function TvAiringTodayPage() {
       <Suspense fallback={<MoviesSkeleton />}>
         <Await promise={movies}>
           {(moviesData) => (
-            <MoviesContent moviesData={moviesData} route={Route} />
+            <MoviesContent
+              moviesData={moviesData}
+              route={Route}
+              isLiked={isLiked}
+              isToggling={isToggling}
+              onToggleLike={toggleLike}
+            />
           )}
         </Await>
       </Suspense>

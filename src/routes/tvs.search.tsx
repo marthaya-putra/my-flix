@@ -3,6 +3,7 @@ import { Await, createFileRoute } from "@tanstack/react-router";
 import { searchTVs } from "@/lib/data/search";
 import MoviesSkeleton from "@/components/movies-skeleton";
 import MoviesContent from "@/components/movies-content";
+import { useLikedItems } from "@/hooks/use-liked-items";
 import { z } from "zod";
 
 export const Route = createFileRoute("/tvs/search")({
@@ -29,6 +30,7 @@ export const Route = createFileRoute("/tvs/search")({
 
 function TvsSearchPage() {
   const { tvs } = Route.useLoaderData();
+  const { isLiked, isToggling, toggleLike } = useLikedItems();
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -45,6 +47,9 @@ function TvsSearchPage() {
             <MoviesContent
               moviesData={tvsData}
               route={Route}
+              isLiked={isLiked}
+              isToggling={isToggling}
+              onToggleLike={toggleLike}
             />
           )}
         />

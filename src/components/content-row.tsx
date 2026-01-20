@@ -20,6 +20,9 @@ interface ContentRowProps {
   >;
   exploreAllUrl?: string;
   className?: string;
+  isLiked?: (id: number) => boolean;
+  isToggling?: (id: number) => boolean;
+  onToggleLike?: (filmInfo: FilmInfo) => void;
 }
 
 export default function ContentRow({
@@ -27,6 +30,9 @@ export default function ContentRow({
   items,
   exploreAllUrl,
   className,
+  isLiked,
+  isToggling,
+  onToggleLike,
 }: ContentRowProps) {
   const carouselButtonClassName =
     "h-15 w-15 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-black/80 disabled:opacity-0  cursor-pointer group-hover:[&_svg]:animate-sliding group-hover:[&_svg]:delay-300";
@@ -65,7 +71,12 @@ export default function ContentRow({
                 key={item.id || index}
                 className="pl-4 basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5 xl:basis-1/6"
               >
-                <MovieCard {...item} />
+                <MovieCard
+                  {...item}
+                  isLiked={isLiked?.(item.id)}
+                  isToggling={isToggling?.(item.id)}
+                  onToggleLike={onToggleLike}
+                />
               </CarouselItem>
             ))}
           </CarouselContent>

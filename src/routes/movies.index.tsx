@@ -9,6 +9,7 @@ import GenreFilter from "@/components/filters/genre-filter";
 import RatingFilter from "@/components/filters/rating-filter";
 import YearFilter from "@/components/filters/year-filter";
 import ClearFilters from "@/components/filters/clear-filters";
+import { useLikedItems } from "@/hooks/use-liked-items";
 import { z } from "zod";
 
 export const Route = createFileRoute("/movies/")({
@@ -42,6 +43,7 @@ export const Route = createFileRoute("/movies/")({
 function MoviesPage() {
   const { movies } = Route.useLoaderData();
   const navigate = useNavigate();
+  const { isLiked, isToggling, toggleLike } = useLikedItems();
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -68,7 +70,13 @@ function MoviesPage() {
         <Await
           promise={movies}
           children={(moviesData) => (
-            <MoviesContent moviesData={moviesData} route={Route} />
+            <MoviesContent
+              moviesData={moviesData}
+              route={Route}
+              isLiked={isLiked}
+              isToggling={isToggling}
+              onToggleLike={toggleLike}
+            />
           )}
         />
       </Suspense>

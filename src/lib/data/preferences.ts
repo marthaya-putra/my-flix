@@ -576,6 +576,114 @@ export const removeUserPreferenceByPreferenceId = createServerFn({
     }
   });
 
+// Get user's liked items (preferenceIds)
+export const getUserLikedItems = createServerFn({
+  method: "GET",
+}).handler(async (): Promise<{ likedIds: number[] }> => {
+  try {
+    const session = await auth.api.getSession({
+      headers: getRequest().headers,
+    });
+
+    if (!session?.user?.id) {
+      return { likedIds: [] };
+    }
+
+    const db = getDb();
+    const result = await getUserPreferences(db, {
+      userId: session.user.id,
+    });
+
+    if (result.success) {
+      const likedIds = result.preferences.map((p) => p.preferenceId);
+      return { likedIds };
+    }
+
+    return { likedIds: [] };
+  } catch {
+    return { likedIds: [] };
+  }
+});
+
+// Toggle movie/TV show preference (add if not liked, remove if liked)
+export const toggleMoviePreference = createServerFn({
+  method: "POST",
+})
+  .inputValidator(
+    z.object({
+      preferenceId: z.number(),
+      title: z.string(),
+      year: z.number(),
+      category: z.enum(["movie", "tv-series"]),
+      genres: z.array(z.string()).optional(),
+      posterPath: z.string().optional(),
+    })
+  )
+  .handler(async ({ data }) => {
+    try {
+      const session = await auth.api.getSession({
+        headers: getRequest().headers,
+      });
+
+      if (!session?.user?.id) {
+        return { success: false, error: "User not authenticated" };
+      }
+
+      const db = getDb();
+      const { preferenceId, title, year, category, genres, posterPath } = data;
+
+      // Check if already liked
+      const existingResult = await getUserPreferences(db, {
+        userId: session.user.id,
+      });
+
+      if (!existingResult.success) {
+        return { success: false, error: "Failed to check preferences" };
+      }
+
+      const existing = existingResult.preferences.find(
+        (p) => p.preferenceId === preferenceId
+      );
+
+      if (existing) {
+        // Remove from preferences
+        const result = await removeUserPreferenceByPreferenceIdRepo(db, {
+          userId: session.user.id,
+          preferenceId,
+        });
+        return {
+          success: result.success,
+          action: "removed" as const,
+        };
+      } else {
+        // Add to preferences
+        const genresString = genres?.join(", ");
+        const result = await addUserPreference(db, {
+          userId: session.user.id,
+          preferenceId,
+          title,
+          year,
+          category,
+          genres: genresString,
+          posterPath,
+        });
+        return {
+          success: result.success,
+          action: "added" as const,
+        };
+      }
+    } catch (error) {
+      console.error("Error toggling movie preference:", error);
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to toggle preference",
+      };
+    }
+  });
+
 export const getAllUserContent = createServerFn().handler(async () => {
   // Get the current session to retrieve authenticated user ID
   const session = await auth.api.getSession({

@@ -9,6 +9,7 @@ import {
   fetchAiringTodayTvs,
   fetchOnTheAirTvs,
 } from "@/lib/data/tvs";
+import { useLikedItems } from "@/hooks/use-liked-items";
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -34,6 +35,8 @@ function Home() {
   const mostPopularMovie =
     popularMovies.results.length > 0 ? popularMovies.results[0] : undefined;
 
+  const { isLiked, isToggling, toggleLike } = useLikedItems();
+
   return (
     <div className="relative space-y-8 pb-8">
       {mostPopularMovie && <Hero {...mostPopularMovie} />}
@@ -41,7 +44,13 @@ function Home() {
         <Await
           promise={trendingMovies}
           children={(data) => (
-            <ContentRow title="Trending Movies" items={data.results} />
+            <ContentRow
+              title="Trending Movies"
+              items={data.results}
+              isLiked={isLiked}
+              isToggling={isToggling}
+              onToggleLike={toggleLike}
+            />
           )}
         />
       </Suspense>
@@ -49,7 +58,13 @@ function Home() {
         <Await
           promise={trendingTvs}
           children={(data) => (
-            <ContentRow title="Trending TV Shows" items={data.results} />
+            <ContentRow
+              title="Trending TV Shows"
+              items={data.results}
+              isLiked={isLiked}
+              isToggling={isToggling}
+              onToggleLike={toggleLike}
+            />
           )}
         />
       </Suspense>
@@ -61,6 +76,9 @@ function Home() {
               title="New Episode Today"
               items={data.results}
               exploreAllUrl="/tvs/airing-today"
+              isLiked={isLiked}
+              isToggling={isToggling}
+              onToggleLike={toggleLike}
             />
           )}
         />
@@ -73,6 +91,9 @@ function Home() {
               title="New Episode This Week"
               items={data.results}
               exploreAllUrl="/tvs/airing-this-week"
+              isLiked={isLiked}
+              isToggling={isToggling}
+              onToggleLike={toggleLike}
             />
           )}
         />

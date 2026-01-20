@@ -9,6 +9,7 @@ import TvGenreFilter from "@/components/filters/tv-genre-filter";
 import RatingFilter from "@/components/filters/rating-filter";
 import YearFilter from "@/components/filters/year-filter";
 import ClearFilters from "@/components/filters/clear-filters";
+import { useLikedItems } from "@/hooks/use-liked-items";
 import { z } from "zod";
 
 export const Route = createFileRoute("/tvs/")({
@@ -41,6 +42,7 @@ export const Route = createFileRoute("/tvs/")({
 
 function TVsPage() {
   const { movies } = Route.useLoaderData();
+  const { isLiked, isToggling, toggleLike } = useLikedItems();
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -66,7 +68,13 @@ function TVsPage() {
       <Suspense fallback={<MoviesSkeleton />}>
         <Await promise={movies}>
           {(moviesData) => (
-            <MoviesContent moviesData={moviesData} route={Route} />
+            <MoviesContent
+              moviesData={moviesData}
+              route={Route}
+              isLiked={isLiked}
+              isToggling={isToggling}
+              onToggleLike={toggleLike}
+            />
           )}
         </Await>
       </Suspense>
