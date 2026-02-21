@@ -48,9 +48,6 @@ export function Recommendations({
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
   const [likedItems, setLikedItems] = useState<Set<string>>(new Set());
   const [dislikedItems, setDislikedItems] = useState<Set<string>>(new Set());
-  const [addingToPreferences, setAddingToPreferences] = useState<Set<string>>(
-    new Set()
-  );
 
   // Get logged-in user ID from auth context
   const { data } = authClient.useSession();
@@ -106,21 +103,35 @@ export function Recommendations({
     }
 
     const itemKey = `${recommendation.tmdbData.id}`;
-    const isCurrentlyLiked = likedItems.has(itemKey);
+    const currentlyLiked = likedItems.has(itemKey);
+    const currentlyDisliked = dislikedItems.has(itemKey);
 
-    setAddingToPreferences((prev) => new Set(prev).add(itemKey));
+    // Optimistic update - update UI immediately
+    setLikedItems((prev) => {
+      const newSet = new Set(prev);
+      if (currentlyLiked) {
+        newSet.delete(itemKey);
+      } else {
+        newSet.add(itemKey);
+      }
+      return newSet;
+    });
+
+    // If liking, also optimistically remove from disliked
+    if (!currentlyLiked && currentlyDisliked) {
+      setDislikedItems((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(itemKey);
+        return newSet;
+      });
+    }
 
     try {
-      if (isCurrentlyLiked) {
+      if (currentlyLiked) {
         await removeUserPreferenceByPreferenceId({
           data: {
             preferenceId: recommendation.tmdbData.id,
           },
-        });
-        setLikedItems((prev) => {
-          const newSet = new Set(prev);
-          newSet.delete(itemKey);
-          return newSet;
         });
       } else {
         await addMoviePreference({
@@ -137,26 +148,28 @@ export function Recommendations({
                 : undefined,
           },
         });
-        setLikedItems((prev) => new Set(prev).add(itemKey));
-
-        // Remove from disliked if it was there
-        if (dislikedItems.has(itemKey)) {
-          setDislikedItems((prev) => {
-            const newSet = new Set(prev);
-            newSet.delete(itemKey);
-            return newSet;
-          });
-        }
       }
     } catch (error) {
       console.error("Error modifying preferences:", error);
-      alert(`Failed to ${isCurrentlyLiked ? "remove" : "add"} to preferences`);
-    } finally {
-      setAddingToPreferences((prev) => {
+      // Revert optimistic update on error
+      setLikedItems((prev) => {
         const newSet = new Set(prev);
-        newSet.delete(itemKey);
+        if (currentlyLiked) {
+          newSet.add(itemKey);
+        } else {
+          newSet.delete(itemKey);
+        }
         return newSet;
       });
+      // Revert disliked state if needed
+      if (!currentlyLiked && currentlyDisliked) {
+        setDislikedItems((prev) => {
+          const newSet = new Set(prev);
+          newSet.add(itemKey);
+          return newSet;
+        });
+      }
+      alert(`Failed to ${currentlyLiked ? "remove" : "add"} to preferences`);
     }
   };
 
@@ -169,21 +182,35 @@ export function Recommendations({
     }
 
     const itemKey = `${recommendation.tmdbData.id}`;
-    const isCurrentlyDisliked = dislikedItems.has(itemKey);
+    const currentlyDisliked = dislikedItems.has(itemKey);
+    const currentlyLiked = likedItems.has(itemKey);
 
-    setAddingToPreferences((prev) => new Set(prev).add(itemKey));
+    // Optimistic update - update UI immediately
+    setDislikedItems((prev) => {
+      const newSet = new Set(prev);
+      if (currentlyDisliked) {
+        newSet.delete(itemKey);
+      } else {
+        newSet.add(itemKey);
+      }
+      return newSet;
+    });
+
+    // If disliking, also optimistically remove from liked
+    if (!currentlyDisliked && currentlyLiked) {
+      setLikedItems((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(itemKey);
+        return newSet;
+      });
+    }
 
     try {
-      if (isCurrentlyDisliked) {
+      if (currentlyDisliked) {
         await removeUserDislikeByPreferenceIdFn({
           data: {
             preferenceId: recommendation.tmdbData.id,
           },
-        });
-        setDislikedItems((prev) => {
-          const newSet = new Set(prev);
-          newSet.delete(itemKey);
-          return newSet;
         });
       } else {
         await addUserDislikeFn({
@@ -195,26 +222,28 @@ export function Recommendations({
               recommendation.category === "movie" ? "movie" : "tv-series",
           },
         });
-        setDislikedItems((prev) => new Set(prev).add(itemKey));
-
-        // Remove from liked if it was there
-        if (likedItems.has(itemKey)) {
-          setLikedItems((prev) => {
-            const newSet = new Set(prev);
-            newSet.delete(itemKey);
-            return newSet;
-          });
-        }
       }
     } catch (error) {
       console.error("Error modifying dislikes:", error);
-      alert(`Failed to ${isCurrentlyDisliked ? "remove" : "add"} to dislikes`);
-    } finally {
-      setAddingToPreferences((prev) => {
+      // Revert optimistic update on error
+      setDislikedItems((prev) => {
         const newSet = new Set(prev);
-        newSet.delete(itemKey);
+        if (currentlyDisliked) {
+          newSet.add(itemKey);
+        } else {
+          newSet.delete(itemKey);
+        }
         return newSet;
       });
+      // Revert liked state if needed
+      if (!currentlyDisliked && currentlyLiked) {
+        setLikedItems((prev) => {
+          const newSet = new Set(prev);
+          newSet.add(itemKey);
+          return newSet;
+        });
+      }
+      alert(`Failed to ${currentlyDisliked ? "remove" : "add"} to dislikes`);
     }
   };
 
@@ -257,7 +286,6 @@ export function Recommendations({
             recommendation={rec}
             likedItems={likedItems}
             dislikedItems={dislikedItems}
-            addingToPreferences={addingToPreferences}
             imageErrors={imageErrors}
             onLike={handleLikeRecommendation}
             onDislike={handleDislikeRecommendation}

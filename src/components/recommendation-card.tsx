@@ -17,7 +17,6 @@ interface RecommendationCardProps {
   recommendation: Recommendation;
   likedItems: Set<string>;
   dislikedItems: Set<string>;
-  addingToPreferences: Set<string>;
   imageErrors: Set<string>;
   onLike: (recommendation: Recommendation) => void;
   onDislike: (recommendation: Recommendation) => void;
@@ -28,7 +27,6 @@ export function RecommendationCard({
   recommendation,
   likedItems,
   dislikedItems,
-  addingToPreferences,
   imageErrors,
   onLike,
   onDislike,
@@ -110,9 +108,6 @@ export function RecommendationCard({
                     size="sm"
                     onClick={() => onDislike(recommendation)}
                     className="p-2 h-8 w-8"
-                    disabled={addingToPreferences.has(
-                      `${recommendation.tmdbData.id}`
-                    )}
                   >
                     <ThumbsDown
                       className={`h-4 w-4 ${
@@ -127,9 +122,6 @@ export function RecommendationCard({
                     size="sm"
                     onClick={() => onLike(recommendation)}
                     className="p-2 h-8 w-8"
-                    disabled={addingToPreferences.has(
-                      `${recommendation.tmdbData.id}`
-                    )}
                   >
                     <ThumbsUp
                       className={`h-4 w-4 ${
