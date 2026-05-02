@@ -41,7 +41,7 @@ export function Recommendations({
   initialRecommendations,
 }: RecommendationsProps) {
   const [recommendations, setRecommendations] = useState<Recommendation[]>(
-    initialRecommendations
+    initialRecommendations,
   );
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -174,7 +174,7 @@ export function Recommendations({
   };
 
   const handleDislikeRecommendation = async (
-    recommendation: Recommendation
+    recommendation: Recommendation,
   ) => {
     if (!recommendation.tmdbData) {
       alert("Cannot modify recommendation without TMDB data");
@@ -279,7 +279,7 @@ export function Recommendations({
         </div>
       )}
 
-      <div className="flex flex-wrap gap-4 justify-start">
+      <div className="flex flex-wrap gap-4 justify-center">
         {recommendations.map((rec, index) => (
           <RecommendationCard
             key={`${rec.title}-${rec.releasedYear}-${index}`}
