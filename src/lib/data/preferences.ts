@@ -726,24 +726,28 @@ export const getAllUserContent = createServerFn().handler(async () => {
       movies: preferences
         .filter((p) => p.category === "movie")
         .map((p) => ({
+          id: p.preferenceId,
           title: p.title,
           year: p.year,
         })),
       tvs: preferences
         .filter((p) => p.category === "tv-series")
         .map((p) => ({
+          id: p.preferenceId,
           title: p.title,
           year: p.year,
         })),
       dislikedMovies: dislikes
         .filter((d) => d.category === "movie")
         .map((d) => ({
+          id: d.preferenceId,
           title: d.title,
           year: d.year,
         })),
       dislikedTvs: dislikes
         .filter((d) => d.category === "tv-series")
         .map((d) => ({
+          id: d.preferenceId,
           title: d.title,
           year: d.year,
         })),

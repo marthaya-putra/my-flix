@@ -34,6 +34,8 @@ export const Route = createFileRoute("/recommendations")({
         data: {
           userPrefs,
           previousRecommendations: [], // Empty for initial load
+          requestedMovies: 3,
+          requestedTvs: 3,
         },
       });
 

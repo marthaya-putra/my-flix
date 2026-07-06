@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { FilmInfo } from "@/lib/types";
 import { RecommendationCard } from "./recommendation-card";
+import { RecommendationCardSkeleton } from "./recommendation-card-skeleton";
 import {
   addMoviePreference,
   removeUserPreferenceByPreferenceId,
@@ -10,6 +11,14 @@ import {
 } from "@/lib/data/preferences";
 import { authClient } from "@/lib/auth-client";
 import { getRecommendations } from "@/lib/data/recommendations";
+
+// Loop config: deficit-incremental, stateless, capped.
+const TARGET_PER_CATEGORY = 3;
+const MAX_ROUNDS = 5;
+// Over-ask buffer: LLM returns more than the deficit so the ID filter has
+// spares to survive collisions against the (large) exclude set. Client
+// truncates appended survivors to preserve the 3/3 split.
+const OVERASK_BUFFER = 2;
 
 interface Recommendation {
   title: string;
@@ -49,6 +58,13 @@ export function Recommendations({
   const [likedItems, setLikedItems] = useState<Set<string>>(new Set());
   const [dislikedItems, setDislikedItems] = useState<Set<string>>(new Set());
 
+  // Loop bookkeeping: round count + settled flag. Loop is gated on
+  // "not yet reached target count" and "rounds remaining".
+  const [loopRound, setLoopRound] = useState(1); // round 1 = initial load
+  const [loopPending, setLoopPending] = useState(false);
+  const [loopSettled, setLoopSettled] = useState(false);
+  const loopInFlight = useRef(false); // guards against StrictMode double-fire
+
   // Get logged-in user ID from auth context
   const { data } = authClient.useSession();
   const userId = data?.user?.id;
@@ -64,26 +80,143 @@ export function Recommendations({
     );
   }
 
+  // Count survivors per category to compute deficit.
+  const categoryCount = (cat: "movie" | "tv") =>
+    recommendations.filter((r) => r.category === cat).length;
+
+  // Stateless exclude set: liked ∪ disliked ∪ previous-shown, ID-keyed.
+  const buildPreviousWithIds = (): Array<{
+    id?: number;
+    title: string;
+    year: number;
+    category: "movie" | "tv";
+  }> =>
+    recommendations
+      .filter((r) => r.tmdbData)
+      .map((r) => ({
+        id: r.tmdbData!.id,
+        title: r.title,
+        year: r.releasedYear,
+        category: r.category,
+      }));
+
+  // Auto-backfill loop: fires rounds 2..MAX_ROUNDS on mount when survivors < 6,
+  // appends survivors incrementally (no full re-render flicker).
+  useEffect(() => {
+    if (loopInFlight.current) return;
+    if (loopSettled) return;
+    if (loopRound >= MAX_ROUNDS) {
+      setLoopSettled(true);
+      return;
+    }
+    const movieDeficit = TARGET_PER_CATEGORY - categoryCount("movie");
+    const tvDeficit = TARGET_PER_CATEGORY - categoryCount("tv");
+    if (movieDeficit <= 0 && tvDeficit <= 0) {
+      setLoopSettled(true);
+      return;
+    }
+    if (movieDeficit <= 0 || tvDeficit <= 0) {
+      // One category satisfied — preserve 3/3 by still asking only for the
+      // deficit side. Cap exhaustion accepts imbalance.
+    }
+
+    loopInFlight.current = true;
+    setLoopPending(true);
+
+    (async () => {
+      try {
+        // Over-ask each deficit side by OVERASK_BUFFER so the ID filter has
+        // spares when the LLM collides with the exclude set. Client truncates
+        // survivors to preserve the 3/3 split.
+        const askMovies =
+          movieDeficit > 0 ? movieDeficit + OVERASK_BUFFER : 0;
+        const askTvs = tvDeficit > 0 ? tvDeficit + OVERASK_BUFFER : 0;
+
+        const newRecs = await getRecommendations({
+          data: {
+            userPrefs,
+            previousRecommendations: buildPreviousWithIds(),
+            requestedMovies: askMovies,
+            requestedTvs: askTvs,
+          },
+        });
+
+        // Truncate survivors per category to the deficit — never overshoot 3/3.
+        let addedMovies = 0;
+        let addedTvs = 0;
+        const capped = newRecs.filter((r) => {
+          if (r.category === "movie") {
+            if (addedMovies < movieDeficit) {
+              addedMovies++;
+              return true;
+            }
+            return false;
+          }
+          if (addedTvs < tvDeficit) {
+            addedTvs++;
+            return true;
+          }
+          return false;
+        });
+
+        setRecommendations((prev) => [...prev, ...capped]);
+        setLoopRound((r) => r + 1);
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : "Failed to load more recommendations";
+        setError(errorMessage);
+        console.error("Backfill loop error:", err);
+        setLoopSettled(true); // bail to avoid tight error loop
+      } finally {
+        setLoopPending(false);
+        loopInFlight.current = false;
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loopRound, loopSettled, recommendations]);
+
   const handleLoadMore = async () => {
+    if (loopPending) return; // disabled while pending
     setLoadingMore(true);
     setError(null);
 
     try {
-      // Create previous recommendations list from all current recommendations
-      const previousRecommendations = recommendations.map((rec) => ({
-        title: rec.title,
-        year: rec.releasedYear,
-        category: rec.category,
-      }));
-
+      // Fresh deficit (3/3) after settled — over-ask to survive collisions,
+      // truncate to 3/3. Resets loop bookkeeping so the loop re-engages to
+      // backfill any shortfall from this batch.
+      const previousRecommendations = buildPreviousWithIds();
       const newRecommendations = await getRecommendations({
         data: {
           userPrefs,
           previousRecommendations,
+          requestedMovies: TARGET_PER_CATEGORY + OVERASK_BUFFER,
+          requestedTvs: TARGET_PER_CATEGORY + OVERASK_BUFFER,
         },
       });
 
-      setRecommendations((prev) => [...prev, ...newRecommendations]);
+      let addedMovies = 0;
+      let addedTvs = 0;
+      const capped = newRecommendations.filter((r) => {
+        if (r.category === "movie") {
+          if (addedMovies < TARGET_PER_CATEGORY) {
+            addedMovies++;
+            return true;
+          }
+          return false;
+        }
+        if (addedTvs < TARGET_PER_CATEGORY) {
+          addedTvs++;
+          return true;
+        }
+        return false;
+      });
+
+      setRecommendations((prev) => [...prev, ...capped]);
+      // Re-arm loop for the new batch: next round = 2, fresh settled=false.
+      setLoopRound(1);
+      setLoopSettled(false);
     } catch (err) {
       const errorMessage =
         err instanceof Error
@@ -292,16 +425,38 @@ export function Recommendations({
             onImageError={handleImageError}
           />
         ))}
+
+        {/* Backfill placeholder: skeleton cards for outstanding deficit */}
+        {loopPending &&
+          Array.from({
+            length: Math.max(
+              0,
+              TARGET_PER_CATEGORY - categoryCount("movie"),
+            ),
+          }).map((_, i) => (
+            <RecommendationCardSkeleton key={`loop-skel-m-${i}`} count={1} />
+          ))}
+        {loopPending &&
+          Array.from({
+            length: Math.max(
+              0,
+              TARGET_PER_CATEGORY - categoryCount("tv"),
+            ),
+          }).map((_, i) => (
+            <RecommendationCardSkeleton key={`loop-skel-t-${i}`} count={1} />
+          ))}
       </div>
 
       <div className="mt-6 flex justify-center">
         <Button
           onClick={handleLoadMore}
-          disabled={loadingMore}
+          disabled={loadingMore || loopPending}
           variant="outline"
           className="w-sm hover:bg-accent"
         >
-          {loadingMore ? "Loading more..." : "Load More Recommendations"}
+          {loadingMore || loopPending
+            ? "Loading more..."
+            : "Load More Recommendations"}
         </Button>
       </div>
     </div>

@@ -44,12 +44,15 @@ const RecommendationInput = z.object({
   previousRecommendations: z
     .array(
       z.object({
+        id: z.number().optional(),
         title: z.string(),
         year: z.number(),
         category: z.enum(["movie", "tv"]),
       })
     )
     .optional(),
+  requestedMovies: z.number().int().min(0).default(3),
+  requestedTvs: z.number().int().min(0).default(3),
   favoriteActors: z.array(z.string()).optional(),
   favoriteDirectors: z.array(z.string()).optional(),
   genres: z.array(z.string()).optional(),
@@ -84,6 +87,8 @@ export async function getAIRecommendations(
       favoriteDirectors: input.favoriteDirectors ?? [],
       genres: input.genres ?? [],
       excludeAdult: input.excludeAdult ?? true,
+      requestedMovies: input.requestedMovies,
+      requestedTvs: input.requestedTvs,
     };
 
     const prompt = buildPrompt(cleanData);
@@ -117,7 +122,7 @@ export async function getAIRecommendations(
         - ABSOLUTELY NO recommendations from their "ALREADY LIKED CONTENT" list
         - CRITICAL: NEVER recommend content from their "DISLIKED CONTENT" list - the user explicitly dislikes these titles!
         - CRITICAL: ONLY RECOMMEND REAL TITLE! DO NOT CHEAT BY ALTERING THE TITLE like: "The Dark Knight Trilogy (Extended Recommendation: Batman Begins)" or "The Departed (Alternate Recommendation: Scarface)"
-        - Return exactly 6 recommendations (3 MOVIES and 3 TV SERIES)`,
+        - Return exactly ${input.requestedMovies} ${input.requestedMovies === 1 ? "MOVIE" : "MOVIES"} and ${input.requestedTvs} ${input.requestedTvs === 1 ? "TV SERIES" : "TV SERIES"}`,
       prompt,
     });
 
@@ -147,8 +152,14 @@ function simplifyWatched(items?: Array<{ title: string; year: number }>) {
 }
 
 function simplifyPrevRecs(
-  items?: Array<{ title: string; year: number; category: "movie" | "tv" }>
+  items?: Array<{
+    id?: number;
+    title: string;
+    year: number;
+    category: "movie" | "tv";
+  }>
 ) {
+  // LLM never sees IDs — strip them so exclude is enforced server-side only.
   return (items ?? []).map((i) => ({
     title: i.title,
     year: i.year,
@@ -169,6 +180,8 @@ function buildPrompt(cleanData: {
   favoriteDirectors: string[];
   genres: string[];
   excludeAdult: boolean;
+  requestedMovies: number;
+  requestedTvs: number;
 }) {
   return `
 The following is the user's taste profile.  
