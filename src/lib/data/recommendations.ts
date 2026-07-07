@@ -158,13 +158,20 @@ export function filterRecommendations(
   });
 }
 
-// Server function for route loaders
-export const getRecommendations = createServerFn({
-  method: "POST",
-})
+// Streaming server function (Spec 0003). Async generator: iterates the
+// batch LLM output, enriches each item with TMDB, runs the 0001 filter
+// (tmdbData null-check + exclude-ID check) per-item, and yields each
+// survivor the instant its enrichment resolves. LLM call stays a single
+// batch generateObject — the latency win is in TMDB enrichment fan-out.
+export const getRecommendationsStream = createServerFn({ method: "POST" })
   .inputValidator(getRecommendationsSchema)
-  .handler(async ({ data }) => {
-    const { userPrefs, previousRecommendations, requestedMovies, requestedTvs } = data;
+  .handler(async function* ({ data }) {
+    const {
+      userPrefs,
+      previousRecommendations,
+      requestedMovies,
+      requestedTvs,
+    } = data;
 
     const args = {
       previouslyLikedMovies: userPrefs.movies,
@@ -185,58 +192,20 @@ export const getRecommendations = createServerFn({
 
     for (let i = 0; i < models.length; i++) {
       const modelLabel = i === 0 ? "google" : "mistral";
-      console.log(`[recommendations] trying model ${i + 1}/${models.length}: ${modelLabel}`);
+      console.log(
+        `[recommendations] trying model ${i + 1}/${models.length}: ${modelLabel}`
+      );
       result = await getAIRecommendations(args, models[i]);
       if (result.success) {
         console.log(`[recommendations] model ${modelLabel} succeeded`);
         break;
       }
-      console.warn(`[recommendations] model ${modelLabel} failed, falling back...`);
+      console.warn(
+        `[recommendations] model ${modelLabel} failed, falling back...`
+      );
     }
 
-    if (result?.success && result.data) {
-      const rawCount = result.data.recommendations.length;
-      console.log(
-        `[recommendations] LLM returned ${rawCount} (asked m=${requestedMovies} t=${requestedTvs})`,
-        result.data.recommendations.map((r) => `${r.category}:${r.title}(${r.releasedYear})`)
-      );
-
-      // Enrich recommendations with TMDB data
-      const enrichedRecommendations = await enrichRecommendationsWithTMDB(
-        result.data.recommendations
-      );
-      const nullTmdb = enrichedRecommendations.filter((r) => !r.tmdbData).length;
-      console.log(
-        `[recommendations] enriched=${enrichedRecommendations.length}, tmdb-null=${nullTmdb}`
-      );
-
-      // Build exclude set from liked ∪ disliked ∪ previous-shown TMDB IDs
-      const excludeIds = new Set<number>();
-      for (const list of [
-        userPrefs.movies,
-        userPrefs.tvs,
-        userPrefs.dislikedMovies,
-        userPrefs.dislikedTvs,
-      ]) {
-        for (const item of list) {
-          if (typeof item.id === "number") excludeIds.add(item.id);
-        }
-      }
-      for (const item of previousRecommendations) {
-        if (typeof item.id === "number") excludeIds.add(item.id);
-      }
-      console.log(
-        `[recommendations] excludeIds size=${excludeIds.size}`,
-        [...excludeIds]
-      );
-
-      const filtered = filterRecommendations(enrichedRecommendations, excludeIds);
-      console.log(
-        `[recommendations] survivors=${filtered.length}`,
-        filtered.map((r) => `${r.category}:${r.title}/${r.tmdbData?.id}`)
-      );
-      return filtered;
-    } else {
+    if (!result?.success || !result.data) {
       const err = result?.error;
       const errorMsg =
         typeof err === "string"
@@ -244,4 +213,61 @@ export const getRecommendations = createServerFn({
           : err?.message || "Failed to get recommendations (all models failed)";
       throw new Error(errorMsg);
     }
+
+    const raw = result.data.recommendations;
+    console.log(
+      `[recommendations] LLM returned ${raw.length} (asked m=${requestedMovies} t=${requestedTvs})`,
+      raw.map((r) => `${r.category}:${r.title}(${r.releasedYear})`)
+    );
+
+    // Build exclude set once (liked ∪ disliked ∪ previous-shown), before
+    // enrichment. Does not depend on survivor results.
+    const excludeIds = new Set<number>();
+    for (const list of [
+      userPrefs.movies,
+      userPrefs.tvs,
+      userPrefs.dislikedMovies,
+      userPrefs.dislikedTvs,
+    ]) {
+      for (const item of list) {
+        if (typeof item.id === "number") excludeIds.add(item.id);
+      }
+    }
+    for (const item of previousRecommendations) {
+      if (typeof item.id === "number") excludeIds.add(item.id);
+    }
+    console.log(
+      `[recommendations] excludeIds size=${excludeIds.size}`,
+      [...excludeIds]
+    );
+
+    // Fire all TMDB enrichments concurrently (fan-out), then yield survivors
+    // in input order as each resolves. Ordered await so later items don't
+    // block earlier yields, but yields still happen one at a time.
+    const enrichedPromises = raw.map(async (recommendation) => {
+      try {
+        const tmdbData = await searchTitleWithYearFallback(
+          recommendation.title,
+          recommendation.category,
+          recommendation.releasedYear
+        );
+        return { ...recommendation, tmdbData };
+      } catch (error: any) {
+        console.error(
+          `Failed to enrich recommendation "${recommendation.title}":`,
+          error
+        );
+        return { ...recommendation, tmdbData: null };
+      }
+    });
+
+    let survivors = 0;
+    for (let i = 0; i < enrichedPromises.length; i++) {
+      const rec = await enrichedPromises[i];
+      if (!rec.tmdbData) continue;
+      if (excludeIds.has(rec.tmdbData.id)) continue;
+      survivors++;
+      yield rec;
+    }
+    console.log(`[recommendations] survivors=${survivors}`);
   });
