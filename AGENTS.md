@@ -1,16 +1,13 @@
 <!-- intent-skills:start -->
-# Skill mappings — load `use` with `npx @tanstack/intent@latest load <use>`.
-skills:
-  - when: "Modifying recommendation generation, backfill loop, model fallback, or StreamEvent types"
-    use: "file://skills/recommendation-pipeline"
-  - when: "Modifying TMDB search, title resolution, or debugging title failures"
-    use: "file://skills/tmdb-title-resolution"
-  - when: "Writing a new spec, reviewing an existing spec, or planning a feature"
-    use: "file://skills/spec-driven-development"
-  - when: "Modifying streaming server functions or adding new streamed endpoints"
-    use: "file://skills/tanstack-streaming"
-  - when: "Modifying schema, DB queries, auth configuration, or category-related bugs"
-    use: "file://skills/db-and-auth-invariants"
-  - when: "Modifying like/dislike handlers or adding new optimistic mutations"
-    use: "file://skills/optimistic-mutations"
+
+## Skill Loading
+
+Before editing files for a substantial task:
+
+- Run `npx @tanstack/intent@latest list` from the workspace root to see available local skills.
+- If a listed skill matches the task, run `npx @tanstack/intent@latest load <package>#<skill>` before changing files.
+- Use the loaded `SKILL.md` guidance while making the change.
+- Monorepos: when working across packages, run the skill check from the workspace root and prefer the local skill for the package being changed.
+- Multiple matches: prefer the most specific local skill for the package or concern you are changing; load additional skills only when the task spans multiple packages or concerns.
+
 <!-- intent-skills:end -->

@@ -21,8 +21,8 @@ export default function SearchContent<T>({
   renderItem,
   searchParams,
 }: SearchContentProps<T>) {
-  const navigate = useNavigate({ from: routePath });
-  const search = useSearch({ from: routePath });
+  const navigate = useNavigate({ from: routePath } as any);
+  const search = useSearch({ from: routePath, strict: false } as any);
 
   const currentPage = page;
   const hasNextPage = currentPage < totalPages;
