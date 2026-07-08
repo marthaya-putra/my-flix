@@ -11,6 +11,8 @@
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "preview": "npm run build && vite preview --port 3000",
+    "skills:validate": "npx @tanstack/intent@latest validate",
+    "skills:stale": "npx @tanstack/intent@latest stale",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
@@ -18,7 +20,13 @@
     "db:check": "drizzle-kit check",
     "db:drop": "drizzle-kit drop"
   },
-  "keywords": [],
+  "files": [
+    "skills/",
+    "!skills/_artifacts"
+  ],
+  "keywords": [
+    "tanstack-intent"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
