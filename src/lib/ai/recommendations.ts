@@ -53,6 +53,7 @@ const RecommendationInput = z.object({
     .optional(),
   requestedMovies: z.number().int().min(0).default(3),
   requestedTvs: z.number().int().min(0).default(3),
+  onlyCategory: z.enum(["movie", "tv"]),
   favoriteActors: z.array(z.string()).optional(),
   favoriteDirectors: z.array(z.string()).optional(),
   genres: z.array(z.string()).optional(),
@@ -77,18 +78,29 @@ export async function getAIRecommendations(
   model: LanguageModelV2
 ) {
   try {
-    const cleanData = {
-      previouslyLikedMovies: simplifyWatched(input.previouslyLikedMovies),
-      previouslyLikedTvs: simplifyWatched(input.previouslyLikedTvs),
-      dislikedMovies: simplifyWatched(input.dislikedMovies),
-      dislikedTvs: simplifyWatched(input.dislikedTvs),
-      previousRecommendations: simplifyPrevRecs(input.previousRecommendations),
+    // Spec 0005: translate to a category-flat shape here so buildPrompt is
+    // a dumb template. Wrong-category liked/disliked lists are dropped
+    // (token + focus win); favoriteActors/Directors/genres are category-
+    // agnostic, kept on both. previousRecommendations scoped to same
+    // category — cross-category dedup is enforced server-side by the ID
+    // filter at survivor resolution.
+    const isMovie = input.onlyCategory === "movie";
+    const cleanData: PromptData = {
+      role: isMovie ? "movie" : "TV series",
+      likedLabel: isMovie ? "Liked movies" : "Liked TV shows",
+      dislikedLabel: isMovie ? "User dislike movies" : "User dislike TV shows",
+      liked: simplifyWatched(
+        isMovie ? input.previouslyLikedMovies : input.previouslyLikedTvs
+      ),
+      disliked: simplifyWatched(
+        isMovie ? input.dislikedMovies : input.dislikedTvs
+      ),
+      previousRecommendations: simplifyPrevRecs(input.previousRecommendations)
+        .filter((r) => r.category === input.onlyCategory)
+        .map(({ category, ...rest }) => rest),
       favoriteActors: input.favoriteActors ?? [],
       favoriteDirectors: input.favoriteDirectors ?? [],
       genres: input.genres ?? [],
-      excludeAdult: input.excludeAdult ?? true,
-      requestedMovies: input.requestedMovies,
-      requestedTvs: input.requestedTvs,
     };
 
     const prompt = buildPrompt(cleanData);
@@ -101,7 +113,7 @@ export async function getAIRecommendations(
       },
       schema: RecommendationSchema,
       maxRetries: 0,
-      system: `You are a movie and TV series recommendation expert. Your PRIMARY DUTY is to analyze the user's viewing history and preferences to make PERSONALIZED recommendations.
+      system: `You are a ${cleanData.role} recommendation expert. Your PRIMARY DUTY is to analyze the user's viewing history and preferences to make PERSONALIZED recommendations.
 
         CRITICAL RULES:
         - User's previously liked content and favorite actors/directors are YOUR GUIDE - use these patterns religiously
@@ -122,7 +134,13 @@ export async function getAIRecommendations(
         - ABSOLUTELY NO recommendations from their "ALREADY LIKED CONTENT" list
         - CRITICAL: NEVER recommend content from their "DISLIKED CONTENT" list - the user explicitly dislikes these titles!
         - CRITICAL: ONLY RECOMMEND REAL TITLE! DO NOT CHEAT BY ALTERING THE TITLE like: "The Dark Knight Trilogy (Extended Recommendation: Batman Begins)" or "The Departed (Alternate Recommendation: Scarface)"
-        - Return exactly ${input.requestedMovies} ${input.requestedMovies === 1 ? "MOVIE" : "MOVIES"} and ${input.requestedTvs} ${input.requestedTvs === 1 ? "TV SERIES" : "TV SERIES"}`,
+        ${
+          input.onlyCategory === "movie"
+            ? `Return exactly ${input.requestedMovies} ${
+                input.requestedMovies === 1 ? "MOVIE" : "MOVIES"
+              }`
+            : `Return exactly ${input.requestedTvs} TV SERIES`
+        }`,
       prompt,
     });
 
@@ -167,40 +185,37 @@ function simplifyPrevRecs(
   }));
 }
 
-function buildPrompt(cleanData: {
-  previouslyLikedMovies: Array<{ title: string; year: number }>;
-  previouslyLikedTvs: Array<{ title: string; year: number }>;
-  dislikedMovies: Array<{ title: string; year: number }>;
-  dislikedTvs: Array<{ title: string; year: number }>;
-  previousRecommendations: Array<{
-    title: string;
-    year: number;
-  }>;
+// Spec 0005: buildPrompt takes a single flat, category-resolved shape —
+// no branching inside. All category translation lives in cleanData above.
+type PromptData = {
+  role: string;
+  likedLabel: string;
+  dislikedLabel: string;
+  liked: Array<{ title: string; year: number }>;
+  disliked: Array<{ title: string; year: number }>;
+  previousRecommendations: Array<{ title: string; year: number }>;
   favoriteActors: string[];
   favoriteDirectors: string[];
   genres: string[];
-  excludeAdult: boolean;
-  requestedMovies: number;
-  requestedTvs: number;
-}) {
+};
+
+function buildPrompt(d: PromptData) {
   return `
 The following is the user's taste profile.  
 Recommend based on this USER PREFERENCES DATA SECTION:
 
 ==================== USER PREFERENCES DATA SECTION ========================
-Movies: ${JSON.stringify(cleanData.previouslyLikedMovies, null, 2)}
-TVs: ${JSON.stringify(cleanData.previouslyLikedTvs, null, 2)}
-Actors: ${JSON.stringify(cleanData.favoriteActors, null, 2)}
-Directors: ${JSON.stringify(cleanData.favoriteDirectors, null, 2)}
-Genres: ${JSON.stringify(cleanData.genres, null, 2)}
+${d.likedLabel}: ${JSON.stringify(d.liked, null, 2)}
+Actors: ${JSON.stringify(d.favoriteActors, null, 2)}
+Directors: ${JSON.stringify(d.favoriteDirectors, null, 2)}
+Genres: ${JSON.stringify(d.genres, null, 2)}
 ===================================================================
 
 DO NOT recommend ANY movie or TV series in: DO NOT RECOMMEND SECTION
 
 ==================== DO NOT RECOMMEND SECTION =====================================
-User dislike movies: ${JSON.stringify(cleanData.dislikedMovies, null, 2)}
-User dislike TV shows: ${JSON.stringify(cleanData.dislikedTvs, null, 2)}
-Already recommended: ${JSON.stringify(cleanData.previousRecommendations, null, 2)}
+${d.dislikedLabel}: ${JSON.stringify(d.disliked, null, 2)}
+Already recommended: ${JSON.stringify(d.previousRecommendations, null, 2)}
 ==================================================================================
 `;
 }

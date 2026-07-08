@@ -684,6 +684,20 @@ export const toggleMoviePreference = createServerFn({
     }
   });
 
+// Shape of a user's full preference/dislike/people profile. The canonical
+// source of truth is the server (DB) — never trust a client-supplied copy.
+// Exported so the streaming route and other server callers share one type.
+// Type-only — safe for the client to import without pulling server runtime.
+export interface UserContent {
+  movies: Array<{ id: number; title: string; year: number }>;
+  tvs: Array<{ id: number; title: string; year: number }>;
+  dislikedMovies: Array<{ id: number; title: string; year: number }>;
+  dislikedTvs: Array<{ id: number; title: string; year: number }>;
+  actors: string[];
+  directors: string[];
+  genres: string[];
+}
+
 export const getAllUserContent = createServerFn().handler(async () => {
   // Get the current session to retrieve authenticated user ID
   const session = await auth.api.getSession({
@@ -695,80 +709,10 @@ export const getAllUserContent = createServerFn().handler(async () => {
     return null;
   }
 
-  const userId = session.user.id;
-
-  try {
-    const db = getDb();
-    const [preferencesResponse, peopleResponse, dislikesResponse] =
-      await Promise.all([
-        getUserPreferences(db, { userId }),
-        getUserPeople(db, { userId }),
-        getUserDislikes(db, { userId }),
-      ]);
-
-    const preferences = preferencesResponse.success
-      ? preferencesResponse.preferences
-      : [];
-    const people = peopleResponse.success ? peopleResponse.people : [];
-    const dislikes = dislikesResponse.success ? dislikesResponse.dislikes : [];
-
-    // Extract genres from preferences
-    const allGenres = preferences
-      .filter((p) => p.genres)
-      .map((p) => p.genres!.split(",").map((genre) => genre.trim()))
-      .flat()
-      .filter((genre) => genre.length > 0);
-
-    // Remove duplicates
-    const uniqueGenres = [...new Set(allGenres)];
-
-    return {
-      movies: preferences
-        .filter((p) => p.category === "movie")
-        .map((p) => ({
-          id: p.preferenceId,
-          title: p.title,
-          year: p.year,
-        })),
-      tvs: preferences
-        .filter((p) => p.category === "tv-series")
-        .map((p) => ({
-          id: p.preferenceId,
-          title: p.title,
-          year: p.year,
-        })),
-      dislikedMovies: dislikes
-        .filter((d) => d.category === "movie")
-        .map((d) => ({
-          id: d.preferenceId,
-          title: d.title,
-          year: d.year,
-        })),
-      dislikedTvs: dislikes
-        .filter((d) => d.category === "tv-series")
-        .map((d) => ({
-          id: d.preferenceId,
-          title: d.title,
-          year: d.year,
-        })),
-      actors: people
-        .filter((p) => p.personType === "actor")
-        .map((p) => p.personName),
-      directors: people
-        .filter((p) => p.personType === "director")
-        .map((p) => p.personName),
-      genres: uniqueGenres,
-    };
-  } catch (error) {
-    console.error("Failed to load user preferences:", error);
-    return {
-      movies: [],
-      tvs: [],
-      dislikedMovies: [],
-      dislikedTvs: [],
-      actors: [],
-      directors: [],
-      genres: [],
-    };
-  }
+  // loadUserContent lives in ./preferences-server so its getDb()/postgres
+  // import is never reachable from the client bundle. This createServerFn
+  // handler is stripped on the client, so its static import of that module
+  // is tree-shaken away there.
+  const { loadUserContent } = await import("./preferences-server");
+  return loadUserContent(session.user.id);
 });

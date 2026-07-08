@@ -10,15 +10,19 @@ import {
   removeUserDislikeByPreferenceIdFn,
 } from "@/lib/data/preferences";
 import { authClient } from "@/lib/auth-client";
-import { getRecommendationsStream } from "@/lib/data/recommendations";
+import { type StreamEvent } from "@/lib/data/stream-events";
 
-// Loop config: deficit-incremental, stateless, capped.
+// Spec 0006: manual NDJSON transport. We POST to the raw route and read
+// response.body ourselves — the server writes one JSON object + "\n" per
+// StreamEvent, and we split on "\n" so chunk boundaries never corrupt a
+// frame (the bug that killed the TanStack async-generator RPC).
+const STREAM_ROUTE = "/api/recommendations/stream";
+
+// Server owns the deficit loop now (Spec 0004). Client is a dumb consumer
+// of the StreamEvent sentinel protocol — it renders skeletons on
+// groupStart, appends cards on item, swaps in an error card on
+// groupEnd{error}.
 const TARGET_PER_CATEGORY = 3;
-const MAX_ROUNDS = 5;
-// Over-ask buffer: LLM returns more than the deficit so the ID filter has
-// spares to survive collisions against the (large) exclude set. Client
-// truncates appended survivors to preserve the 3/3 split.
-const OVERASK_BUFFER = 2;
 
 interface Recommendation {
   title: string;
@@ -29,22 +33,15 @@ interface Recommendation {
   tmdbData: FilmInfo | null;
 }
 
-// Type for the structure expected by this component
-interface RecommendationsUserPrefs {
-  movies: Array<{ title: string; year: number }>;
-  tvs: Array<{ title: string; year: number }>;
-  dislikedMovies: Array<{ title: string; year: number }>;
-  dislikedTvs: Array<{ title: string; year: number }>;
-  actors: string[];
-  directors: string[];
-  genres: string[];
-}
+type CategoryStatus = "pending" | "ok" | "error";
 
-interface RecommendationsProps {
-  userPrefs: RecommendationsUserPrefs;
-}
+const STATUS_MESSAGES: Record<string, string> = {
+  generation_failed: "Couldn't generate recommendations. Try again.",
+  exhausted: "Couldn't find fresh recommendations — try again.",
+  enrichment_empty: "Recommendations failed to resolve. Try again.",
+};
 
-export function Recommendations({ userPrefs }: RecommendationsProps) {
+export function Recommendations() {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,34 +49,28 @@ export function Recommendations({ userPrefs }: RecommendationsProps) {
   const [likedItems, setLikedItems] = useState<Set<string>>(new Set());
   const [dislikedItems, setDislikedItems] = useState<Set<string>>(new Set());
 
-  // Loop state: pending drives skeleton/button UI; settled gates the empty
-  // state. Round count is local to runBackfill — no self-retriggering effect.
-  const [loopPending, setLoopPending] = useState(true);
-  const [loopSettled, setLoopSettled] = useState(false);
-  // Guards against StrictMode's double-invoked mount effect: only one
-  // runBackfill in flight at a time, so dev mode doesn't fire two concurrent
-  // streams against the same empty exclude set.
-  const backfillInFlight = useRef(false);
+  // Per-category lifecycle state driven by StreamEvent protocol.
+  const [categoryStatus, setCategoryStatus] = useState<
+    Record<"movie" | "tv", CategoryStatus>
+  >({ movie: "pending", tv: "pending" });
+  const [categoryError, setCategoryError] = useState<
+    Record<"movie" | "tv", string | null>
+  >({ movie: null, tv: null });
+  const [hasStarted, setHasStarted] = useState(false);
 
-  // Get logged-in user ID from auth context. NOTE: all hooks below
-  // (useEffect) must run unconditionally — auth early-return is moved
-  // past them to keep hook order stable across the session-load render.
   const { data, isPending: sessionPending } = authClient.useSession();
   const userId = data?.user?.id;
 
-  // Count survivors per category to compute deficit.
-  const categoryCount = (cat: "movie" | "tv") =>
-    recommendations.filter((r) => r.category === cat).length;
+  // Dedupe StrictMode's double-invoked mount effect.
+  const inFlight = useRef(false);
+  // Abort the in-flight fetch on unmount or a second Load More. Preserved
+  // from the old async-generator path — fetch rejects with AbortError and
+  // the catch swallows it.
+  const abortRef = useRef<AbortController | null>(null);
 
-  // Stateless exclude set: liked ∪ disliked ∪ previous-shown, ID-keyed.
-  const buildPreviousWithIds = (
-    recs: Recommendation[],
-  ): Array<{
-    id?: number;
-    title: string;
-    year: number;
-    category: "movie" | "tv";
-  }> =>
+  // Build previousRecommendations payload from shown survivors. IDs are
+  // needed server-side for the ID filter.
+  const buildPreviousWithIds = (recs: Recommendation[]) =>
     recs
       .filter((r) => r.tmdbData)
       .map((r) => ({
@@ -89,90 +80,132 @@ export function Recommendations({ userPrefs }: RecommendationsProps) {
         category: r.category,
       }));
 
-  // Deficit-incremental backfill: fire up to MAX_ROUNDS stream calls, append
-  // survivors per-item, stop once 3/3 is satisfied. Runs as one async loop
-  // driven by local counts — no self-retriggering effect, no ref bookkeeping.
-  // `seed` lets Load More resume from the existing shown set. The
-  // backfillInFlight ref dedups StrictMode's double-invoked mount effect:
-  // the first call runs to completion, the second is a no-op.
-  const runBackfill = async (seed: Recommendation[] = []) => {
-    if (backfillInFlight.current) return;
-    backfillInFlight.current = true;
-    setLoopPending(true);
+  // Consume the StreamEvent protocol. ONE call per load — the server runs
+  // both category pipelines in parallel and emits groupStart/item/groupEnd
+  // sentinels. No client-side deficit math. Transport is manual NDJSON
+  // (Spec 0006): fetch + ReadableStream reader + buffer/split on "\n".
+  const consumeStream = async (seed: Recommendation[]) => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setHasStarted(true);
     setError(null);
+    setCategoryStatus({ movie: "pending", tv: "pending" });
+    setCategoryError({ movie: null, tv: null });
+
     const local: Recommendation[] = [...seed];
 
-    try {
-      for (let round = 1; round <= MAX_ROUNDS; round++) {
-        const movieDeficit =
-          TARGET_PER_CATEGORY -
-          local.filter((r) => r.category === "movie").length;
-        const tvDeficit =
-          TARGET_PER_CATEGORY - local.filter((r) => r.category === "tv").length;
-        if (movieDeficit <= 0 && tvDeficit <= 0) break;
+    // Cancel any prior in-flight stream before starting a new one.
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
 
-        try {
-          // Over-ask each deficit side by OVERASK_BUFFER so the ID filter has
-          // spares when the LLM collides with the exclude set. Client truncates
-          // survivors to preserve the 3/3 split.
-          const askMovies =
-            movieDeficit > 0 ? movieDeficit + OVERASK_BUFFER : 0;
-          const askTvs = tvDeficit > 0 ? tvDeficit + OVERASK_BUFFER : 0;
-
-          const stream = await getRecommendationsStream({
-            data: {
-              userPrefs,
-              previousRecommendations: buildPreviousWithIds(local),
-              requestedMovies: askMovies,
-              requestedTvs: askTvs,
-            },
-          });
-          const startMovies = local.filter(
-            (r) => r.category === "movie",
-          ).length;
-          const startTvs = local.filter((r) => r.category === "tv").length;
-          let addedMovies = 0;
-          let addedTvs = 0;
-          for await (const rec of stream) {
-            if (rec.category === "movie") {
-              if (startMovies + addedMovies >= TARGET_PER_CATEGORY) continue;
-              addedMovies++;
-            } else {
-              if (startTvs + addedTvs >= TARGET_PER_CATEGORY) continue;
-              addedTvs++;
-            }
-            local.push(rec as Recommendation);
-            setRecommendations((prev) => [...prev, rec as Recommendation]);
-          }
-        } catch (err) {
-          if (err instanceof DOMException && err.name === "AbortError") return;
-          const errorMessage =
-            err instanceof Error
-              ? err.message
-              : "Failed to load more recommendations";
-          setError(errorMessage);
-          console.error("Backfill loop error:", err);
-          break; // bail to avoid tight error loop
+    // Per-event dispatch. Lifted verbatim from the old for-await body —
+    // only the read loop changed.
+    const dispatch = (evt: StreamEvent) => {
+      if (evt.type === "groupStart") {
+        setCategoryStatus((prev) => ({ ...prev, [evt.category]: "pending" }));
+      } else if (evt.type === "item") {
+        local.push(evt.rec as Recommendation);
+        setRecommendations((prev) => [...prev, evt.rec as Recommendation]);
+      } else if (evt.type === "groupEnd") {
+        const isError =
+          evt.status === "generation_failed" ||
+          evt.status === "exhausted" ||
+          evt.status === "enrichment_empty";
+        setCategoryStatus((prev) => ({
+          ...prev,
+          [evt.category]: isError ? "error" : "ok",
+        }));
+        if (isError) {
+          setCategoryError((prev) => ({
+            ...prev,
+            [evt.category]:
+              evt.error ?? STATUS_MESSAGES[evt.status] ?? "Failed.",
+          }));
         }
       }
+    };
 
-      setLoopPending(false);
-      setLoopSettled(true);
+    try {
+      const response = await fetch(STREAM_ROUTE, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        // Server loads userPrefs from the DB (authoritative). Client sends
+        // only previousRecommendations — transient shown-not-yet-liked
+        // state the server can't derive.
+        body: JSON.stringify({
+          previousRecommendations: buildPreviousWithIds(local),
+        }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok || !response.body) {
+        const text = await response.text().catch(() => "");
+        throw new Error(
+          `Stream request failed (${response.status}) ${text}`.trim()
+        );
+      }
+
+      // Manual NDJSON read loop. Chunks may contain multiple frames or
+      // split a frame mid-line, so we buffer and split on "\n". Each
+      // complete line is one StreamEvent; the trailing partial stays in
+      // the buffer until the next chunk (or close).
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let nl: number;
+        while ((nl = buffer.indexOf("\n")) >= 0) {
+          const line = buffer.slice(0, nl).trim();
+          buffer = buffer.slice(nl + 1);
+          if (!line) continue;
+          // A malformed line is a transport-level corruption we can't
+          // recover from mid-stream — surface and abort, matching the
+          // old throw path.
+          let evt: StreamEvent;
+          try {
+            evt = JSON.parse(line) as StreamEvent;
+          } catch (parseErr) {
+            console.error("Invalid JSON line:", line, parseErr);
+            throw new Error("Malformed stream frame.");
+          }
+          dispatch(evt);
+        }
+      }
+      // Flush any trailing partial frame (no terminal "\n"). A well-formed
+      // server always ends with "\n", but being defensive costs nothing.
+      const tail = buffer.trim();
+      if (tail) {
+        try {
+          dispatch(JSON.parse(tail) as StreamEvent);
+        } catch {
+          /* ignore trailing garbage */
+        }
+      }
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to load recommendations";
+      setError(errorMessage);
+      console.error("Stream error:", err);
     } finally {
-      backfillInFlight.current = false;
+      inFlight.current = false;
     }
   };
 
-  // Single external trigger: session id. Once we have it, fire the loop.
+  // Single external trigger: session id. Once we have it, fire the stream.
   useEffect(() => {
     if (!userId) return;
-    void runBackfill();
+    consumeStream([]);
+    // Cancel the in-flight fetch if the component unmounts mid-stream.
+    return () => abortRef.current?.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
-  // If session is still loading, show skeletons (avoids the auth
-  // early-return flashing the "please log in" message on first paint).
-  // Truly-unauthenticated case is handled below once pending clears.
   if (sessionPending) {
     return (
       <div className="flex flex-wrap gap-4 justify-center">
@@ -186,52 +219,18 @@ export function Recommendations({ userPrefs }: RecommendationsProps) {
     );
   }
 
+  // Load More / retry: whole-fn re-call with the full shown set as
+  // previousRecommendations. Both pipelines re-run (documented oddity).
   const handleLoadMore = async () => {
-    if (loopPending) return; // disabled while pending
+    if (loadingMore) return;
     setLoadingMore(true);
-    setError(null);
-    setLoopSettled(false);
-
-    try {
-      // Fresh deficit (3/3) after settled — over-ask to survive collisions,
-      // truncate to 3/3. Track appended items locally so we can seed the
-      // shared backfill with the full shown set (state closure is stale
-      // once we start appending). Per-item stream.
-      const appended: Recommendation[] = [];
-      let addedMovies = 0;
-      let addedTvs = 0;
-      const stream = await getRecommendationsStream({
-        data: {
-          userPrefs,
-          previousRecommendations: buildPreviousWithIds(recommendations),
-          requestedMovies: TARGET_PER_CATEGORY + OVERASK_BUFFER,
-          requestedTvs: TARGET_PER_CATEGORY + OVERASK_BUFFER,
-        },
-      });
-      for await (const rec of stream) {
-        if (rec.category === "movie") {
-          if (addedMovies >= TARGET_PER_CATEGORY) continue;
-          addedMovies++;
-        } else {
-          if (addedTvs >= TARGET_PER_CATEGORY) continue;
-          addedTvs++;
-        }
-        appended.push(rec as Recommendation);
-        setRecommendations((prev) => [...prev, rec as Recommendation]);
-      }
-      // Resume the shared backfill to top up any shortfall from this batch.
-      await runBackfill([...recommendations, ...appended]);
-    } catch (err) {
-      if (err instanceof DOMException && err.name === "AbortError") return;
-      const errorMessage =
-        err instanceof Error
-          ? err.message
-          : "Failed to load more recommendations";
-      setError(errorMessage);
-      console.error("Error loading more recommendations:", err);
-    } finally {
-      setLoadingMore(false);
-    }
+    // Surface pending skeletons for any side not yet "ok".
+    setCategoryStatus((prev) => ({
+      movie: prev.movie === "ok" ? "ok" : "pending",
+      tv: prev.tv === "ok" ? "ok" : "pending",
+    }));
+    await consumeStream(recommendations);
+    setLoadingMore(false);
   };
 
   const handleLikeRecommendation = async (recommendation: Recommendation) => {
@@ -244,7 +243,6 @@ export function Recommendations({ userPrefs }: RecommendationsProps) {
     const currentlyLiked = likedItems.has(itemKey);
     const currentlyDisliked = dislikedItems.has(itemKey);
 
-    // Optimistic update - update UI immediately
     setLikedItems((prev) => {
       const newSet = new Set(prev);
       if (currentlyLiked) {
@@ -255,7 +253,6 @@ export function Recommendations({ userPrefs }: RecommendationsProps) {
       return newSet;
     });
 
-    // If liking, also optimistically remove from disliked
     if (!currentlyLiked && currentlyDisliked) {
       setDislikedItems((prev) => {
         const newSet = new Set(prev);
@@ -289,7 +286,6 @@ export function Recommendations({ userPrefs }: RecommendationsProps) {
       }
     } catch (error) {
       console.error("Error modifying preferences:", error);
-      // Revert optimistic update on error
       setLikedItems((prev) => {
         const newSet = new Set(prev);
         if (currentlyLiked) {
@@ -299,7 +295,6 @@ export function Recommendations({ userPrefs }: RecommendationsProps) {
         }
         return newSet;
       });
-      // Revert disliked state if needed
       if (!currentlyLiked && currentlyDisliked) {
         setDislikedItems((prev) => {
           const newSet = new Set(prev);
@@ -323,7 +318,6 @@ export function Recommendations({ userPrefs }: RecommendationsProps) {
     const currentlyDisliked = dislikedItems.has(itemKey);
     const currentlyLiked = likedItems.has(itemKey);
 
-    // Optimistic update - update UI immediately
     setDislikedItems((prev) => {
       const newSet = new Set(prev);
       if (currentlyDisliked) {
@@ -334,7 +328,6 @@ export function Recommendations({ userPrefs }: RecommendationsProps) {
       return newSet;
     });
 
-    // If disliking, also optimistically remove from liked
     if (!currentlyDisliked && currentlyLiked) {
       setLikedItems((prev) => {
         const newSet = new Set(prev);
@@ -363,7 +356,6 @@ export function Recommendations({ userPrefs }: RecommendationsProps) {
       }
     } catch (error) {
       console.error("Error modifying dislikes:", error);
-      // Revert optimistic update on error
       setDislikedItems((prev) => {
         const newSet = new Set(prev);
         if (currentlyDisliked) {
@@ -373,7 +365,6 @@ export function Recommendations({ userPrefs }: RecommendationsProps) {
         }
         return newSet;
       });
-      // Revert liked state if needed
       if (!currentlyDisliked && currentlyLiked) {
         setLikedItems((prev) => {
           const newSet = new Set(prev);
@@ -389,6 +380,16 @@ export function Recommendations({ userPrefs }: RecommendationsProps) {
     setImageErrors((prev) => new Set(prev).add(key));
   };
 
+  const movieCount = recommendations.filter(
+    (r) => r.category === "movie",
+  ).length;
+  const tvCount = recommendations.filter((r) => r.category === "tv").length;
+  const moviePending = categoryStatus.movie === "pending";
+  const tvPending = categoryStatus.tv === "pending";
+  const allSettled = !moviePending && !tvPending;
+  const empty =
+    hasStarted && allSettled && recommendations.length === 0 && !error;
+
   if (error && recommendations.length === 0) {
     return (
       <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -397,7 +398,7 @@ export function Recommendations({ userPrefs }: RecommendationsProps) {
     );
   }
 
-  if (loopSettled && !loopPending && recommendations.length === 0) {
+  if (empty) {
     return (
       <div className="text-center py-8">
         <p className="text-gray-500">
@@ -410,7 +411,6 @@ export function Recommendations({ userPrefs }: RecommendationsProps) {
 
   return (
     <div>
-      {/* Error Display */}
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-lg mb-6">
           <p className="text-red-700">{error}</p>
@@ -431,29 +431,46 @@ export function Recommendations({ userPrefs }: RecommendationsProps) {
           />
         ))}
 
-        {/* Backfill placeholder: skeleton cards for outstanding deficit */}
-        {loopPending &&
-          Array.from({
-            length: Math.max(0, TARGET_PER_CATEGORY - categoryCount("movie")),
-          }).map((_, i) => (
+        {/* Per-category skeletons while that side's pipeline is pending.
+            Each load fetches a fresh batch of TARGET_PER_CATEGORY per side,
+            so show that many skeletons regardless of how many cards from
+            prior loads are already on screen. The old TARGET-count-minus-
+            current-count math showed 0 skeletons once a side had already
+            rendered a full batch, hiding the loading state on Load More. */}
+        {moviePending &&
+          Array.from({ length: TARGET_PER_CATEGORY }).map((_, i) => (
             <RecommendationCardSkeleton key={`loop-skel-m-${i}`} count={1} />
           ))}
-        {loopPending &&
-          Array.from({
-            length: Math.max(0, TARGET_PER_CATEGORY - categoryCount("tv")),
-          }).map((_, i) => (
+        {tvPending &&
+          Array.from({ length: TARGET_PER_CATEGORY }).map((_, i) => (
             <RecommendationCardSkeleton key={`loop-skel-t-${i}`} count={1} />
           ))}
+
+        {/* Per-category error card on groupEnd{error}: survivor side keeps streaming */}
+        {categoryStatus.movie === "error" &&
+          movieCount === 0 &&
+          categoryError.movie && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg max-w-sm">
+              <p className="text-sm text-red-700">
+                Movies: {categoryError.movie}
+              </p>
+            </div>
+          )}
+        {categoryStatus.tv === "error" && tvCount === 0 && categoryError.tv && (
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg max-w-sm">
+            <p className="text-sm text-red-700">TV: {categoryError.tv}</p>
+          </div>
+        )}
       </div>
 
       <div className="mt-6 flex justify-center">
         <Button
           onClick={handleLoadMore}
-          disabled={loadingMore || loopPending}
+          disabled={loadingMore || moviePending || tvPending}
           variant="outline"
           className="w-sm hover:bg-accent"
         >
-          {loadingMore || loopPending
+          {loadingMore || moviePending || tvPending
             ? "Loading more..."
             : "Load More Recommendations"}
         </Button>
