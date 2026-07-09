@@ -20,13 +20,7 @@
     "db:check": "drizzle-kit check",
     "db:drop": "drizzle-kit drop"
   },
-  "files": [
-    "skills/",
-    "!skills/_artifacts"
-  ],
-  "keywords": [
-    "tanstack-intent"
-  ],
+  "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {

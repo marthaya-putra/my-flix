@@ -127,9 +127,9 @@ export interface FileRoutesByFullPath {
   '/tvs/airing-this-week': typeof TvsAiringThisWeekRoute
   '/tvs/airing-today': typeof TvsAiringTodayRoute
   '/tvs/search': typeof TvsSearchRoute
-  '/movies': typeof MoviesIndexRoute
-  '/preferences': typeof PreferencesIndexRoute
-  '/tvs': typeof TvsIndexRoute
+  '/movies/': typeof MoviesIndexRoute
+  '/preferences/': typeof PreferencesIndexRoute
+  '/tvs/': typeof TvsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/recommendations/stream': typeof ApiRecommendationsStreamRoute
 }
@@ -187,9 +187,9 @@ export interface FileRouteTypes {
     | '/tvs/airing-this-week'
     | '/tvs/airing-today'
     | '/tvs/search'
-    | '/movies'
-    | '/preferences'
-    | '/tvs'
+    | '/movies/'
+    | '/preferences/'
+    | '/tvs/'
     | '/api/auth/$'
     | '/api/recommendations/stream'
   fileRoutesByTo: FileRoutesByTo
@@ -285,21 +285,21 @@ declare module '@tanstack/react-router' {
     '/tvs/': {
       id: '/tvs/'
       path: '/tvs'
-      fullPath: '/tvs'
+      fullPath: '/tvs/'
       preLoaderRoute: typeof TvsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/preferences/': {
       id: '/preferences/'
       path: '/preferences'
-      fullPath: '/preferences'
+      fullPath: '/preferences/'
       preLoaderRoute: typeof PreferencesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/movies/': {
       id: '/movies/'
       path: '/movies'
-      fullPath: '/movies'
+      fullPath: '/movies/'
       preLoaderRoute: typeof MoviesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
