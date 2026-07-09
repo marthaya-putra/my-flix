@@ -15,8 +15,13 @@ export type StreamStatus =
   | "exhausted"
   | "enrichment_empty";
 
+export type StreamStage =
+  | "finding_titles"
+  | "looking_up_posters"
+  | "finalizing";
+
 export type StreamEvent =
-  | { type: "groupStart"; category: StreamCategory }
+  | { type: "groupStart"; category: StreamCategory; target: number }
   | {
       type: "item";
       rec: {
@@ -33,4 +38,10 @@ export type StreamEvent =
       category: StreamCategory;
       status: StreamStatus;
       error?: string;
+    }
+  | {
+      type: "progress";
+      category: StreamCategory;
+      stage: StreamStage;
+      found: number;
     };

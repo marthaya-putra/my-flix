@@ -13,6 +13,7 @@ export type {
   StreamEvent,
   StreamCategory,
   StreamStatus,
+  StreamStage,
 } from "./stream-events";
 import type { StreamEvent, StreamCategory, StreamStatus } from "./stream-events";
 
@@ -193,6 +194,13 @@ async function* backfillCategory(
         `[recommendations:${category}] round ${round} deficit=${deficit} ask=${ask} telling LLM to avoid ${localPrevRecs.length} titles: [${localPrevRecs.map((r) => r.title).join(", ")}]`
       );
 
+      yield {
+        type: "progress",
+        category,
+        stage: "finding_titles",
+        found: totalSurvivors,
+      };
+
       // Model-fallback chain (google → mistral). First success wins.
       type RawRec = {
         title: string;
@@ -246,6 +254,14 @@ async function* backfillCategory(
       if (raw.length === 0) break;
 
       totalRawProduced += raw.length;
+
+      // Emit progress before the TMDB enrichment fan-out.
+      yield {
+        type: "progress",
+        category,
+        stage: "looking_up_posters",
+        found: totalSurvivors,
+      };
 
       // Per-round reject breakdown (Spec 0005 diagnostic). Survivors +
       // excluded + enrichFail should reconcile to raw.
@@ -309,11 +325,26 @@ async function* backfillCategory(
           category,
         });
         yield { type: "item", rec: { ...rec, tmdbData: rec.tmdbData } };
+        // Tick progress so the count updates live as items land.
+        yield {
+          type: "progress",
+          category,
+          stage: "looking_up_posters",
+          found: totalSurvivors,
+        };
       }
       console.log(
         `[recommendations:${category}] round ${round} reject breakdown: excluded=${roundExcluded} enrichFail=${roundEnrichFail} capped=${roundCapped} survivors_this_round_ended_at=${totalSurvivors} prevRecsFedToLLM=${localPrevRecs.length}`
       );
     }
+
+    // Emit finalizing before terminal status classification.
+    yield {
+      type: "progress",
+      category,
+      stage: "finalizing",
+      found: totalSurvivors,
+    };
 
     // Terminal status classification (acceptance criteria 4–6).
     let status: StatusCode;
@@ -353,10 +384,11 @@ async function* backfillCategory(
 // once (the generator guarantees it, even on throw).
 async function* raceMerge(
   movieGen: AsyncGenerator<StreamEvent>,
-  tvGen: AsyncGenerator<StreamEvent>
+  tvGen: AsyncGenerator<StreamEvent>,
+  target: number
 ): AsyncGenerator<StreamEvent> {
-  yield { type: "groupStart", category: "movie" };
-  yield { type: "groupStart", category: "tv" };
+  yield { type: "groupStart", category: "movie", target };
+  yield { type: "groupStart", category: "tv", target };
 
   type Tagged = { cat: Category; result: IteratorResult<StreamEvent> };
   const nextTagged = (
@@ -462,5 +494,5 @@ export async function* runPipelines(input: {
   const movieGen = backfillCategory("movie", baseArgs, excludeIds, models);
   const tvGen = backfillCategory("tv", baseArgs, excludeIds, models);
 
-  yield* raceMerge(movieGen, tvGen);
+  yield* raceMerge(movieGen, tvGen, TARGET_PER_CATEGORY);
 }
