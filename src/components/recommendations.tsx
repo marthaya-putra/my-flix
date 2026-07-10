@@ -13,6 +13,7 @@ import {
   type Category,
   type Recommendation,
 } from "./recommendations/category-section";
+import { InitialLoadComposition } from "./recommendations/initial-load-composition";
 
 // Spec 0006: manual NDJSON transport.
 const STREAM_ROUTE = "/api/recommendations/stream";
@@ -25,7 +26,10 @@ const STATUS_MESSAGES: Record<string, string> = {
 
 export function Recommendations() {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState<Record<Category, boolean>>({
+    movie: false,
+    tv: false,
+  });
   const [error, setError] = useState<string | null>(null);
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
   const [likedItems, setLikedItems] = useState<Set<string>>(new Set());
@@ -39,19 +43,19 @@ export function Recommendations() {
     Record<Category, string | null>
   >({ movie: null, tv: null });
 
-  // Spec 0009: per-category progress (stage + found count).
+  // Spec 0010: per-category stage — drives the in-content loading copy
+  // (LoadMoreCard), NOT the header.
   const [categoryStage, setCategoryStage] = useState<
     Record<Category, StreamStage | undefined>
   >({ movie: undefined, tv: undefined });
-  const [categoryFound, setCategoryFound] = useState<
-    Record<Category, number>
-  >({ movie: 0, tv: 0 });
+  // Per-category target — how many skeletons to render while pending so the
+  // carousel layout stays stable through the deficit-retry loop.
   const [categoryTarget, setCategoryTarget] = useState<
     Record<Category, number>
   >({ movie: 3, tv: 3 });
 
-  // Slide-to-latest triggers (incremented when a category receives new items via load-more).
-  const [scrollToLatest, setScrollToLatest] = useState<
+  // Scroll-to-first-new triggers (index to scroll to after load-more append).
+  const [scrollToFirstNew, setScrollToFirstNew] = useState<
     Record<Category, number>
   >({ movie: 0, tv: 0 });
 
@@ -76,23 +80,31 @@ export function Recommendations() {
     async (
       seed: Recommendation[],
       categories?: Category[],
-    ): Promise<Recommendation[]> => {
+      isLoadMore = false,
+    ): Promise<{ items: Recommendation[]; error: string | null }> => {
       setHasStarted(true);
       setError(null);
 
       const cats = categories ?? (["movie", "tv"] as Category[]);
 
-      // Reset only the requested categories.
-      const prevStatus = { ...categoryStatus };
-      const prevError = { ...categoryError };
-      cats.forEach((c) => {
-        prevStatus[c] = "pending";
-        prevError[c] = null;
-      });
-      setCategoryStatus(prevStatus);
-      setCategoryError(prevError);
+      // Reset only the requested categories (but NOT during load-more —
+      // status stays `ok` so the header remains settled).
+      if (!isLoadMore) {
+        const prevStatus = { ...categoryStatus };
+        const prevError = { ...categoryError };
+        cats.forEach((c) => {
+          prevStatus[c] = "pending";
+          prevError[c] = null;
+        });
+        setCategoryStatus(prevStatus);
+        setCategoryError(prevError);
+      }
 
       const local: Recommendation[] = [...seed];
+      // Track the terminal error per requested category for this run.
+      // Returned to the caller so it can react WITHOUT reading stale state
+      // (the setState calls in dispatch are not visible to the awaiting caller).
+      const runError: Partial<Record<Category, string | null>> = {};
 
       abortRef.current?.abort();
       const controller = new AbortController();
@@ -100,33 +112,40 @@ export function Recommendations() {
 
       const dispatch = (evt: StreamEvent) => {
         if (evt.type === "groupStart") {
-          setCategoryStatus((prev) => ({ ...prev, [evt.category]: "pending" }));
+          // During load-more, do NOT flip status to pending.
+          if (!isLoadMore) {
+            setCategoryStatus((prev) => ({ ...prev, [evt.category]: "pending" }));
+          }
           setCategoryTarget((prev) => ({ ...prev, [evt.category]: evt.target }));
-          setCategoryFound((prev) => ({ ...prev, [evt.category]: 0 }));
           setCategoryStage((prev) => ({ ...prev, [evt.category]: undefined }));
         } else if (evt.type === "item") {
           local.push(evt.rec as Recommendation);
           setRecommendations((prev) => [...prev, evt.rec as Recommendation]);
         } else if (evt.type === "progress") {
           setCategoryStage((prev) => ({ ...prev, [evt.category]: evt.stage }));
-          setCategoryFound((prev) => ({ ...prev, [evt.category]: evt.found }));
         } else if (evt.type === "groupEnd") {
           const isError =
             evt.status === "generation_failed" ||
             evt.status === "exhausted" ||
             evt.status === "enrichment_empty";
-          setCategoryStatus((prev) => ({
-            ...prev,
-            [evt.category]: isError ? "error" : "ok",
-          }));
-          if (isError) {
-            setCategoryError((prev) => ({
+          // During load-more, do NOT flip status — it stays `ok`.
+          // Only set categoryError so the trailing card can show it.
+          if (!isLoadMore) {
+            setCategoryStatus((prev) => ({
               ...prev,
-              [evt.category]:
-                evt.error ?? STATUS_MESSAGES[evt.status] ?? "Failed.",
+              [evt.category]: isError ? "error" : "ok",
             }));
           }
-          // Clear stage/found on completion — header collapses to settled label.
+          if (isError) {
+            const msg =
+              evt.error ?? STATUS_MESSAGES[evt.status] ?? "Failed.";
+            runError[evt.category] = msg;
+            setCategoryError((prev) => ({
+              ...prev,
+              [evt.category]: msg,
+            }));
+          }
+          // Clear stage on completion.
           setCategoryStage((prev) => ({ ...prev, [evt.category]: undefined }));
         }
       };
@@ -181,13 +200,19 @@ export function Recommendations() {
           }
         }
       } catch (err) {
-        if (err instanceof DOMException && err.name === "AbortError") return local;
+        if (err instanceof DOMException && err.name === "AbortError")
+          return { items: local, error: null };
         const errorMessage =
           err instanceof Error ? err.message : "Failed to load recommendations";
         setError(errorMessage);
+        cats.forEach((c) => {
+          if (!(c in runError)) runError[c] = errorMessage;
+        });
         console.error("Stream error:", err);
       }
-      return local;
+      const firstCat = cats[0];
+      const terminalError = firstCat ? runError[firstCat] ?? null : null;
+      return { items: local, error: terminalError };
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [categoryStatus, categoryError],
@@ -205,7 +230,7 @@ export function Recommendations() {
     // (it stayed true until the abort propagated), causing infinite loading.
     let cancelled = false;
     const timer = setTimeout(() => {
-      if (!cancelled) consumeStream([]);
+      if (!cancelled) void consumeStream([]);
     }, 0);
     return () => {
       cancelled = true;
@@ -217,32 +242,52 @@ export function Recommendations() {
 
   if (sessionPending) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <div className="text-muted-foreground animate-pulse">
-          Loading recommendations…
-        </div>
+      <div className="space-y-8">
+        {(["Movies", "TV"] as const).map((label) => (
+          <div key={label} className="space-y-3">
+            <h2 className="text-lg md:text-xl font-display font-semibold text-white">
+              {label}
+            </h2>
+            <InitialLoadComposition />
+          </div>
+        ))}
       </div>
     );
   }
 
   const handleCategoryLoadMore = async (category: Category) => {
-    if (loadingMore) return;
-    setLoadingMore(true);
+    if (loadingMore[category]) return;
+    setLoadingMore((prev) => ({ ...prev, [category]: true }));
+    setCategoryError((prev) => ({ ...prev, [category]: null }));
 
-    // Snapshot current items for this category to send as exclusions.
+    // Snapshot current item count for this category.
     const catRecs = recommendations.filter((r) => r.category === category);
-    const prevCount = catRecs.length;
+    const previousTailIndex = catRecs.length;
 
-    // consumeStream returns the final local list (avoids stale-closure reads).
-    const next = await consumeStream(catRecs, [category]);
+    // consumeStream with isLoadMore=true — status stays ok, only stage/found/target update.
+    const { items: next, error: streamError } = await consumeStream(
+      catRecs,
+      [category],
+      true,
+    );
 
-    // If new items arrived, trigger scroll-to-latest.
-    const newCount = next.filter((r) => r.category === category).length;
-    if (newCount > prevCount) {
-      setScrollToLatest((prev) => ({ ...prev, [category]: prev[category] + 1 }));
+    if (streamError) {
+      // Leave loadingMore false but categoryError is set by consumeStream,
+      // so the trailing card shows the error + retry affordance.
+      setLoadingMore((prev) => ({ ...prev, [category]: false }));
+      return;
     }
 
-    setLoadingMore(false);
+    // If new items arrived, scroll to the first new card.
+    const newCount = next.filter((r) => r.category === category).length;
+    if (newCount > previousTailIndex) {
+      setScrollToFirstNew((prev) => ({
+        ...prev,
+        [category]: previousTailIndex,
+      }));
+    }
+
+    setLoadingMore((prev) => ({ ...prev, [category]: false }));
   };
 
   const handleLikeRecommendation = async (recommendation: Recommendation) => {
@@ -438,14 +483,13 @@ export function Recommendations() {
           items={items}
           status={categoryStatus[category]}
           stage={categoryStage[category]}
-          found={categoryFound[category]}
           target={categoryTarget[category]}
           errorMessage={categoryError[category]}
-          loadingMore={loadingMore && categoryStatus[category] === "pending"}
+          loadingMore={loadingMore[category]}
           likedItems={likedItems}
           dislikedItems={dislikedItems}
           imageErrors={imageErrors}
-          scrollToLatest={scrollToLatest[category]}
+          scrollToFirstNew={scrollToFirstNew[category]}
           onLoadMore={() => handleCategoryLoadMore(category)}
           onLike={handleLikeRecommendation}
           onDislike={handleDislikeRecommendation}

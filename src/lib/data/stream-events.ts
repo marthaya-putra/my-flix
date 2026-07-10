@@ -20,6 +20,46 @@ export type StreamStage =
   | "looking_up_posters"
   | "finalizing";
 
+export const STAGE_LABELS: Record<StreamStage, string> = {
+  finding_titles: "Finding your titles",
+  looking_up_posters: "Gathering posters & details",
+  finalizing: "Finishing up",
+};
+
+/** Friendlier UI copy per stage — communicates *what* is happening. */
+export const STAGE_COPY: Record<StreamStage, string> = {
+  finding_titles: "Thinking up titles you'll love",
+  looking_up_posters: "Sprucing up your recommendations",
+  finalizing: "Putting on the finishing touches",
+};
+
+/** Bundled progress for a category stream. */
+export interface StreamProgress {
+  stage?: StreamStage;
+  found?: number;
+  target?: number;
+}
+
+/**
+ * Derive display values from a raw progress triple.
+ * Returns `null` before the first progress event (no stage/target/found yet).
+ */
+export function computeProgress(
+  progress: StreamProgress,
+): { label: string; found: number; target: number; pct: number } | null {
+  const { stage, found, target } = progress;
+  const has = stage != null && target != null && found != null;
+  if (!has) return null;
+  const safeFound = Math.min(found!, target!);
+  const pct = target! > 0 ? (safeFound / target!) * 100 : 0;
+  return {
+    label: `${STAGE_LABELS[stage!]} · ${safeFound} of ${target}`,
+    found: safeFound,
+    target: target!,
+    pct,
+  };
+}
+
 export type StreamEvent =
   | { type: "groupStart"; category: StreamCategory; target: number }
   | {

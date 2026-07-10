@@ -12,8 +12,8 @@ import { cn } from "@/lib/utils";
 interface RecommendationCarouselProps {
   children: React.ReactNode;
   itemCount: number;
-  /** Imperatively scroll to the last slide after a load-more append. */
-  scrollToLatest?: number;
+  /** Scroll to the slide at this index (the first new card after load-more). */
+  scrollToFirstNew?: number;
 }
 
 const CAROUSEL_BTN =
@@ -22,7 +22,7 @@ const CAROUSEL_BTN =
 export function RecommendationCarousel({
   children,
   itemCount,
-  scrollToLatest,
+  scrollToFirstNew,
 }: RecommendationCarouselProps) {
   const apiRef = useRef<CarouselApi | null>(null);
 
@@ -30,23 +30,20 @@ export function RecommendationCarousel({
     apiRef.current = api;
   };
 
-  // After itemCount changes (load-more append), reInit + scroll to last slide.
+  // After load-more append, reInit + scroll to the first new card.
   useEffect(() => {
-    if (scrollToLatest == null || scrollToLatest === 0) return;
+    if (scrollToFirstNew == null || scrollToFirstNew === 0) return;
     const api = apiRef.current;
     if (!api) return;
 
     // Small delay to let React commit the new CarouselItems.
     const timer = setTimeout(() => {
       api.reInit();
-      const lastIndex = api.scrollSnapList().length - 1;
-      if (lastIndex >= 0) {
-        api.scrollTo(lastIndex);
-      }
+      api.scrollTo(scrollToFirstNew);
     }, 50);
 
     return () => clearTimeout(timer);
-  }, [scrollToLatest, itemCount]);
+  }, [scrollToFirstNew, itemCount]);
 
   return (
     <Carousel
@@ -81,7 +78,7 @@ export function RecommendationCarouselItem({
   children,
 }: RecommendationCarouselItemProps) {
   return (
-    <CarouselItem className="pl-4 basis-full sm:basis-1/2 lg:basis-1/3">
+    <CarouselItem className="pl-4 basis-1/2 sm:basis-1/3 lg:basis-1/4 xl:basis-1/5 2xl:basis-1/6">
       {children}
     </CarouselItem>
   );
