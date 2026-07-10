@@ -47,7 +47,7 @@ export const Route = createFileRoute("/api/recommendations/stream")({
         const { getRequest } = await import("@tanstack/react-start/server");
         const { auth } = await import("@/lib/auth");
         const { loadUserContent } = await import("@/lib/data/preferences-server");
-        const { runPipelines, streamRequestSchema } = await import(
+        const { runPipelines, streamRequestSchema, resolveCategories } = await import(
           "@/lib/data/recommendations"
         );
 
@@ -82,6 +82,10 @@ export const Route = createFileRoute("/api/recommendations/stream")({
           );
         }
 
+        // Resolve requested categories once so both the success and error
+        // paths agree on the same deduped list.
+        const requestedCategories = resolveCategories(parsed.data.categories);
+
         // Load prefs authoritatively from the DB. No client trust.
         const userPrefs = await loadUserContent(session.user.id);
 
@@ -109,11 +113,13 @@ export const Route = createFileRoute("/api/recommendations/stream")({
             };
             try {
               // Each yielded StreamEvent becomes one self-delimited
-              // NDJSON line. raceMerge guarantees groupStart×2 up front,
-              // interleaved items, and exactly one groupEnd per category.
+              // NDJSON line. raceMerge guarantees groupStart per category
+              // up front, interleaved items, and exactly one groupEnd per
+              // requested category.
               for await (const evt of runPipelines({
                 userPrefs,
                 previousRecommendations: parsed.data.previousRecommendations,
+                categories: parsed.data.categories,
               })) {
                 if (clientGone) break;
                 enqueueSafe(encoder.encode(JSON.stringify(evt) + "\n"));
@@ -134,14 +140,21 @@ export const Route = createFileRoute("/api/recommendations/stream")({
                 return;
               }
               console.error("[stream] pipeline fatal:", error);
-              const fail = (category: "movie" | "tv") => ({
-                type: "groupEnd" as const,
-                category,
-                status: "generation_failed" as const,
-                error: "Stream failed.",
-              });
-              enqueueSafe(encoder.encode(JSON.stringify(fail("movie")) + "\n"));
-              enqueueSafe(encoder.encode(JSON.stringify(fail("tv")) + "\n"));
+              // Emit terminal groupEnds only for requested categories so a
+              // category-scoped request doesn't emit spurious events for the
+              // unrequested side.
+              for (const category of requestedCategories) {
+                enqueueSafe(
+                  encoder.encode(
+                    JSON.stringify({
+                      type: "groupEnd",
+                      category,
+                      status: "generation_failed",
+                      error: "Stream failed.",
+                    }) + "\n"
+                  )
+                );
+              }
             } finally {
               request.signal.removeEventListener("abort", onAbort);
               // close() throws if already closed; guard it.

@@ -326,18 +326,21 @@ async function* backfillCategory(
   }
 }
 
-// Race-merge two category generators into one interleaved stream.
-// Emits groupStart for both categories up front (so the client renders
-// skeletons immediately), then forwards item + groupEnd events from
-// whichever side resolves next. Each side's groupEnd is emitted exactly
-// once (the generator guarantees it, even on throw).
+// Race-merge N category generators into one interleaved stream.
+// Emits groupStart for each category up front (so the client renders
+// skeletons immediately), then forwards events from whichever generator
+// resolves next. Each generator's groupEnd is emitted exactly once (the
+// generator guarantees it, even on throw).
 async function* raceMerge(
-  movieGen: AsyncGenerator<StreamEvent>,
-  tvGen: AsyncGenerator<StreamEvent>,
+  generators: { category: Category; gen: AsyncGenerator<StreamEvent> }[],
   target: number
 ): AsyncGenerator<StreamEvent> {
-  yield { type: "groupStart", category: "movie", target };
-  yield { type: "groupStart", category: "tv", target };
+  if (generators.length === 0) return;
+
+  // Emit groupStart for every requested category up front.
+  for (const { category } of generators) {
+    yield { type: "groupStart", category, target };
+  }
 
   type Tagged = { cat: Category; result: IteratorResult<StreamEvent> };
   const nextTagged = (
@@ -345,34 +348,30 @@ async function* raceMerge(
     gen: AsyncGenerator<StreamEvent>
   ): Promise<Tagged> => gen.next().then((result) => ({ cat, result }));
 
-  let movieDone = false;
-  let tvDone = false;
-  let moviePromise: Promise<Tagged> | null = nextTagged("movie", movieGen);
-  let tvPromise: Promise<Tagged> | null = nextTagged("tv", tvGen);
+  // Track in-flight promises. Nulling a promise and decrementing remaining
+  // happen together, so #non-null-promises === remaining at all times — the
+  // loop never races an empty pending list and never hangs.
+  const promises = new Map<Category, Promise<Tagged> | null>();
+  for (const { category, gen } of generators) {
+    promises.set(category, nextTagged(category, gen));
+  }
 
-  while (!movieDone || !tvDone) {
-    const pending: Promise<Tagged>[] = [];
-    if (moviePromise) pending.push(moviePromise);
-    if (tvPromise) pending.push(tvPromise);
+  let remaining = generators.length;
+
+  while (remaining > 0) {
+    const pending = [...promises.entries()]
+      .filter(([, p]) => p !== null)
+      .map(([, p]) => p!);
 
     const { cat, result } = await Promise.race(pending);
 
-    if (cat === "movie") {
-      if (result.done) {
-        movieDone = true;
-        moviePromise = null;
-      } else {
-        yield result.value;
-        moviePromise = nextTagged("movie", movieGen);
-      }
+    if (result.done) {
+      promises.set(cat, null);
+      remaining--;
     } else {
-      if (result.done) {
-        tvDone = true;
-        tvPromise = null;
-      } else {
-        yield result.value;
-        tvPromise = nextTagged("tv", tvGen);
-      }
+      yield result.value;
+      const gen = generators.find((g) => g.category === cat)!;
+      promises.set(cat, nextTagged(cat, gen.gen));
     }
   }
 }
@@ -394,15 +393,31 @@ export const streamRequestSchema = z.object({
 });
 export type StreamRequest = z.infer<typeof streamRequestSchema>;
 
+// Resolve the category list from an optional raw array. Undefined or empty
+// = both categories (backward compatible). Dedupes to avoid running the same
+// pipeline twice. Exported so the route error handler can reuse the same
+// resolution without re-deriving it.
+const ALL_CATEGORIES: Category[] = ["movie", "tv"];
+export function resolveCategories(
+  raw?: Category[]
+): Category[] {
+  return !raw || raw.length === 0
+    ? ALL_CATEGORIES
+    : [...new Set(raw)];
+}
+
 // Pure pipeline entry point (Spec 0006). Takes the server-authoritative
-// userPrefs + previousRecommendations and drives raceMerge over two
-// parallel backfillCategory generators. No transport concerns — the NDJSON
+// userPrefs + previousRecommendations and drives raceMerge over the
+// requested category generators. No transport concerns — the NDJSON
 // route drains the yielded StreamEvents however it likes.
 export async function* runPipelines(input: {
   userPrefs: UserContent;
   previousRecommendations: StreamRequest["previousRecommendations"];
+  categories?: Category[];
 }): AsyncGenerator<StreamEvent> {
-  const { userPrefs, previousRecommendations } = input;
+  const { userPrefs, previousRecommendations, categories: rawCategories } = input;
+
+  const requested = resolveCategories(rawCategories);
 
   const baseArgs: CategoryArgs = {
     previouslyLikedMovies: userPrefs.movies,
@@ -435,10 +450,12 @@ export async function* runPipelines(input: {
     { label: "mistral", model: mistralModel },
   ];
 
-  // Two independent parallel pipelines. Generators are lazy — they only
-  // progress as raceMerge drains them, but both advance concurrently.
-  const movieGen = backfillCategory("movie", baseArgs, excludeIds, models);
-  const tvGen = backfillCategory("tv", baseArgs, excludeIds, models);
+  // Build generator list only for requested categories. Generators are
+  // lazy — they only progress as raceMerge drains them.
+  const generators = requested.map((category) => ({
+    category,
+    gen: backfillCategory(category, baseArgs, excludeIds, models),
+  }));
 
-  yield* raceMerge(movieGen, tvGen, TARGET_PER_CATEGORY);
+  yield* raceMerge(generators, TARGET_PER_CATEGORY);
 }

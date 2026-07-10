@@ -5,17 +5,11 @@ import { UnauthenticatedPrompt } from "@/components/recommendations/unauthentica
 import { OnboardingWizard } from "@/components/recommendations/onboarding-wizard";
 import { hasSufficientPreferences } from "@/lib/utils/preferences-check";
 import { RecommendationsError } from "@/components/recommendations-error";
-import { RecommendationCardSkeleton } from "@/components/recommendation-card-skeleton";
 import { getAllUserContent } from "@/lib/data/preferences";
-
-const TARGET_PER_CATEGORY = 3;
 
 export const Route = createFileRoute("/recommendations")({
   component: Recommendations,
   errorComponent: RecommendationsError,
-  // pendingComponent renders immediately on navigation while the loader
-  // resolves, so the user sees skeletons without waiting for the loader +
-  // auth check to finish.
   pendingComponent: () => (
     <div className="container mx-auto p-4 mt-8">
       <Card>
@@ -23,13 +17,10 @@ export const Route = createFileRoute("/recommendations")({
           <CardTitle>AI Movie/TV Recommendations</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-4 justify-center">
-            {Array.from({ length: TARGET_PER_CATEGORY }).map((_, i) => (
-              <RecommendationCardSkeleton key={`skel-m-${i}`} count={1} />
-            ))}
-            {Array.from({ length: TARGET_PER_CATEGORY }).map((_, i) => (
-              <RecommendationCardSkeleton key={`skel-t-${i}`} count={1} />
-            ))}
+          <div className="flex items-center justify-center py-16">
+            <div className="text-muted-foreground animate-pulse">
+              Loading recommendations…
+            </div>
           </div>
         </CardContent>
       </Card>
