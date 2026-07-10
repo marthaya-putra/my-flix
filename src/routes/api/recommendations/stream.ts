@@ -86,8 +86,27 @@ export const Route = createFileRoute("/api/recommendations/stream")({
         const userPrefs = await loadUserContent(session.user.id);
 
         const encoder = new TextEncoder();
+        // Track whether the client has disconnected (abort/navigation). When
+        // it has, the stream controller is closed and enqueue() would throw
+        // ERR_INVALID_STATE ("Controller is already closed"). We stop draining
+        // the generator instead of crashing into the catch.
+        let clientGone = false;
+        const onAbort = () => {
+          clientGone = true;
+        };
+        request.signal.addEventListener("abort", onAbort);
         const stream = new ReadableStream<Uint8Array>({
           async start(controller) {
+            const enqueueSafe = (chunk: Uint8Array) => {
+              if (clientGone) return;
+              try {
+                controller.enqueue(chunk);
+              } catch {
+                // Controller was closed under us (client disconnect) — stop
+                // trying to write. Mark clientGone so the loop exits.
+                clientGone = true;
+              }
+            };
             try {
               // Each yielded StreamEvent becomes one self-delimited
               // NDJSON line. raceMerge guarantees groupStart×2 up front,
@@ -96,16 +115,24 @@ export const Route = createFileRoute("/api/recommendations/stream")({
                 userPrefs,
                 previousRecommendations: parsed.data.previousRecommendations,
               })) {
-                controller.enqueue(
-                  encoder.encode(JSON.stringify(evt) + "\n")
-                );
+                if (clientGone) break;
+                enqueueSafe(encoder.encode(JSON.stringify(evt) + "\n"));
               }
             } catch (error: any) {
               // Pipeline throws are normally converted to
               // groupEnd{generation_failed} inside backfillCategory, so we
-              // rarely land here. If we do, emit terminal groupEnds for
-              // both categories so the client's reader sees a clean
-              // end-of-stream instead of a truncated body.
+              // rarely land here. If we do (and the client is still
+              // connected), emit terminal groupEnds for both categories so
+              // the client's reader sees a clean end-of-stream instead of a
+              // truncated body. If the client already left, there's no one
+              // to read it — just log.
+              if (clientGone) {
+                console.info(
+                  "[stream] pipeline error after client disconnect, not emitting terminal groupEnds:",
+                  error
+                );
+                return;
+              }
               console.error("[stream] pipeline fatal:", error);
               const fail = (category: "movie" | "tv") => ({
                 type: "groupEnd" as const,
@@ -113,18 +140,16 @@ export const Route = createFileRoute("/api/recommendations/stream")({
                 status: "generation_failed" as const,
                 error: "Stream failed.",
               });
-              try {
-                controller.enqueue(
-                  encoder.encode(JSON.stringify(fail("movie")) + "\n")
-                );
-                controller.enqueue(
-                  encoder.encode(JSON.stringify(fail("tv")) + "\n")
-                );
-              } catch {
-                /* controller already closed */
-              }
+              enqueueSafe(encoder.encode(JSON.stringify(fail("movie")) + "\n"));
+              enqueueSafe(encoder.encode(JSON.stringify(fail("tv")) + "\n"));
             } finally {
-              controller.close();
+              request.signal.removeEventListener("abort", onAbort);
+              // close() throws if already closed; guard it.
+              try {
+                controller.close();
+              } catch {
+                /* already closed */
+              }
             }
           },
         });

@@ -61,8 +61,6 @@ export function Recommendations() {
   const { data, isPending: sessionPending } = authClient.useSession();
   const userId = data?.user?.id;
 
-  // Dedupe StrictMode's double-invoked mount effect.
-  const inFlight = useRef(false);
   // Abort the in-flight fetch on unmount or a second Load More. Preserved
   // from the old async-generator path — fetch rejects with AbortError and
   // the catch swallows it.
@@ -85,8 +83,6 @@ export function Recommendations() {
   // sentinels. No client-side deficit math. Transport is manual NDJSON
   // (Spec 0006): fetch + ReadableStream reader + buffer/split on "\n".
   const consumeStream = async (seed: Recommendation[]) => {
-    if (inFlight.current) return;
-    inFlight.current = true;
     setHasStarted(true);
     setError(null);
     setCategoryStatus({ movie: "pending", tv: "pending" });
@@ -192,16 +188,20 @@ export function Recommendations() {
         err instanceof Error ? err.message : "Failed to load recommendations";
       setError(errorMessage);
       console.error("Stream error:", err);
-    } finally {
-      inFlight.current = false;
     }
   };
 
   // Single external trigger: session id. Once we have it, fire the stream.
+  // StrictMode in dev double-invokes effects: mount → unmount → mount. The
+  // first invocation starts a stream and aborts it on cleanup; the second
+  // starts the real one. We don't guard with a ref — abort ensures the
+  // first (aborted) stream's fetch rejects and its reader loop exits
+  // immediately via AbortError. Both streams hit the server, but only the
+  // second's events reach dispatch because the first is aborted before it
+  // can process any chunks.
   useEffect(() => {
     if (!userId) return;
     consumeStream([]);
-    // Cancel the in-flight fetch if the component unmounts mid-stream.
     return () => abortRef.current?.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
