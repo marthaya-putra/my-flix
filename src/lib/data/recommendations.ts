@@ -15,7 +15,7 @@ export type {
   StreamStatus,
   StreamStage,
 } from "./stream-events";
-import type { StreamEvent, StreamCategory, StreamStatus } from "./stream-events";
+import type { StreamEvent, StreamCategory, StreamStatus, StreamStage } from "./stream-events";
 
 // ---- Spec 0004 tuning constants (server-side deficit loop) ----
 // Per-category target + over-ask buffer. Worst case = 2 sides × MAX_ROUNDS.
@@ -24,20 +24,23 @@ const MAX_ROUNDS = 5;
 const OVERASK_BUFFER = 2;
 
 type Category = StreamCategory;
-type StatusCode = StreamStatus;
 
-// Input validation schemas
-const enrichRecommendationsSchema = z.array(
-  z.object({
-    title: z.string(),
-    category: z.enum(["movie", "tv"]),
-    releasedYear: z.number(),
-    reason: z.string(),
-    imdbRating: z.number(),
-  })
-);
+// The LLM's raw recommendation before TMDB lookup.
+type RawRec = {
+  title: string;
+  category: Category;
+  releasedYear: number;
+  reason: string;
+  imdbRating: number;
+};
 
-type EnrichRecommendationsInput = z.infer<typeof enrichRecommendationsSchema>;
+// A RawRec after its TMDB lookup attempt. tmdbData is null on lookup
+// failure (search returned nothing, or the search threw).
+type EnrichedRec = RawRec & { tmdbData: FilmInfo | null };
+
+// A labelled model in the fallback chain. The label flows into logs so the
+// chain is self-describing rather than relying on array index.
+type ModelEntry = { label: string; model: LanguageModelV2 };
 
 // Year-extract helper (handles both movie release_date and tv first_air_date).
 function releaseYear(releaseDate: string): number | null {
@@ -46,6 +49,19 @@ function releaseYear(releaseDate: string): number | null {
   return Number.isNaN(y) ? null : y;
 }
 
+// Per-category TMDB search adapter. Replaces the repeated
+// `category === "movie" ? searchMoviesAPI : searchTVsAPI` ternary that
+// appeared at both the exact-year and loose-year search sites.
+const categorySearch: Record<
+  Category,
+  (query: string, year?: number) => Promise<{ results: FilmInfo[] }>
+> = {
+  movie: (query, year) =>
+    searchMoviesAPI({ query, primaryReleaseYear: year, page: 1 }),
+  tv: (query, year) =>
+    searchTVsAPI({ query, firstAirDateYear: year, page: 1 }),
+};
+
 // Search TMDB for a title+year. The LLM's year is often off-by-one
 // (festival vs wide release) or otherwise slightly wrong, so an exact
 // year match returns nothing. Strategy: try the exact year first; if that
@@ -53,31 +69,15 @@ function releaseYear(releaseDate: string): number | null {
 // year is closest to the requested one.
 async function searchTitleWithYearFallback(
   title: string,
-  category: "movie" | "tv",
+  category: Category,
   requestedYear: number
 ): Promise<FilmInfo | null> {
-  const exact =
-    category === "movie"
-      ? await searchMoviesAPI({
-          query: title,
-          primaryReleaseYear: requestedYear,
-          page: 1,
-        })
-      : await searchTVsAPI({
-          query: title,
-          firstAirDateYear: requestedYear,
-          page: 1,
-        });
-
+  const exact = await categorySearch[category](title, requestedYear);
   if (exact.results.length > 0) return exact.results[0];
 
   // Year-filtered search returned nothing — retry without the year and
   // pick the closest match by release year to avoid grabbing a wrong title.
-  const loose =
-    category === "movie"
-      ? await searchMoviesAPI({ query: title, page: 1 })
-      : await searchTVsAPI({ query: title, page: 1 });
-
+  const loose = await categorySearch[category](title);
   if (loose.results.length === 0) return null;
 
   const scored = loose.results
@@ -90,59 +90,71 @@ async function searchTitleWithYearFallback(
   return scored[0].r;
 }
 
-// Bulk search function to get TMDB data for multiple recommendations
-export async function enrichRecommendationsWithTMDB(
-  recommendations: EnrichRecommendationsInput
-): Promise<
-  Array<{
-    title: string;
-    category: "movie" | "tv";
-    releasedYear: number;
-    reason: string;
-    imdbRating: number;
-    tmdbData: FilmInfo | null;
-  }>
-> {
+// Enrich one raw recommendation with its TMDB data. A lookup failure never
+// throws outwards — it resolves to tmdbData: null so the caller can count
+// it as an enrich failure and keep draining the round.
+async function enrichOne(rec: RawRec): Promise<EnrichedRec> {
   try {
-    // Create search promises for all recommendations without awaiting them
-    const searchPromises = recommendations.map(async (recommendation) => {
-      try {
-        const tmdbData = await searchTitleWithYearFallback(
-          recommendation.title,
-          recommendation.category,
-          recommendation.releasedYear
-        );
-        return { ...recommendation, tmdbData };
-      } catch (error: any) {
-        console.error(
-          `Failed to enrich recommendation "${recommendation.title}":`,
-          error
-        );
-        return { ...recommendation, tmdbData: null };
-      }
-    });
-
-    // Fire all searches concurrently with Promise.all
-    const enrichedRecommendations = await Promise.all(searchPromises);
-    return enrichedRecommendations.filter(
-      (rec): rec is NonNullable<typeof rec> => rec !== undefined
+    const tmdbData = await searchTitleWithYearFallback(
+      rec.title,
+      rec.category,
+      rec.releasedYear
     );
+    return { ...rec, tmdbData };
   } catch (error) {
-    console.error("Failed to enrich recommendations with TMDB data:", error);
-    throw new Error("Failed to enrich recommendations");
+    console.error(`Failed to enrich recommendation "${rec.title}":`, error);
+    return { ...rec, tmdbData: null };
   }
 }
 
-// Drop items with a failed TMDB lookup and items whose TMDB ID is in the
-// exclude set (liked ∪ disliked). No ID → no sound filter, so drop them.
-export function filterRecommendations(
-  enriched: Awaited<ReturnType<typeof enrichRecommendationsWithTMDB>>,
-  excludeIds: Set<number>
-) {
-  return enriched.filter((rec) => {
-    if (!rec.tmdbData) return false;
-    return !excludeIds.has(rec.tmdbData.id);
-  });
+// Drive the model-fallback chain (google → mistral). Returns the first
+// model's category-scoped raw recs, or { raw: [], threw: true } if every
+// model failed. `threw` distinguishes "LLM emitted nothing successfully"
+// (raw empty, threw false) from "all models errored" (raw empty, threw true)
+// — the deficit loop treats them differently.
+async function fetchWithModelFallback(
+  args: Parameters<typeof getAIRecommendations>[0],
+  models: ModelEntry[],
+  category: Category,
+  round: number
+): Promise<{ raw: RawRec[]; threw: boolean }> {
+  for (let i = 0; i < models.length; i++) {
+    const { label, model } = models[i];
+    console.log(
+      `[recommendations:${category}] round ${round} model ${i + 1}/${models.length}: ${label}`
+    );
+    const res = await getAIRecommendations(args, model);
+    if (res.success && res.data) {
+      // LLM may still emit the other category despite the prompt —
+      // filter to this side only.
+      const raw = res.data.recommendations.filter(
+        (r): r is RawRec => r.category === category
+      );
+      console.log(
+        `[recommendations:${category}] round ${round} ${label} ok, raw=${raw.length}`
+      );
+      return { raw, threw: false };
+    }
+    console.warn(
+      `[recommendations:${category}] round ${round} ${label} failed`
+    );
+  }
+  return { raw: [], threw: true };
+}
+
+// Terminal status classification (acceptance criteria 4–6). Pure: maps the
+// pipeline's accumulated counters onto exactly one StreamStatus. Kept out
+// of backfillCategory so the rules are legible and unit-testable.
+function classifyStatus(s: {
+  survivors: number;
+  allRoundsThrew: boolean;
+  rawProduced: number;
+  enrichFailures: number;
+}): StreamStatus {
+  if (s.survivors > 0) return "ok";
+  if (s.allRoundsThrew || s.rawProduced === 0) return "generation_failed";
+  if (s.rawProduced === s.enrichFailures) return "enrichment_empty";
+  return "exhausted";
 }
 
 // Shared base args passed into getAIRecommendations for each category.
@@ -163,16 +175,16 @@ type CategoryArgs = {
   }>;
 };
 
-// Per-category pipeline (Spec 0004). Owns its model-fallback chain, deficit
-// loop (≤MAX_ROUNDS), TMDB enrichment fan-out, ID-filter accumulation, and
-// terminal status classification. Yields item events then exactly one
-// groupEnd. Any throw is converted to a generation_failed groupEnd so the
-// survivor category is unaffected.
+// Per-category pipeline (Spec 0004). Drives the deficit loop (≤MAX_ROUNDS)
+// and yields StreamEvents in order: finding_titles → looking_up_posters →
+// interleaved item/progress → finalizing → exactly one groupEnd. Delegates
+// the model-fallback chain, single-item enrichment, and terminal status
+// classification to their helpers so this body reads as a recipe.
 async function* backfillCategory(
   category: Category,
   baseArgs: CategoryArgs,
   excludeIds: Set<number>,
-  models: LanguageModelV2[]
+  models: ModelEntry[]
 ): AsyncGenerator<StreamEvent> {
   // Per-side accumulator: round-N survivors feed both the next round's
   // exclude set (TMDB IDs) and the LLM's previousRecommendations (titles).
@@ -184,6 +196,14 @@ async function* backfillCategory(
   let totalEnrichFailures = 0;
   let allRoundsThrew = true;
 
+  // Build a progress event for the current pipeline state (Spec 0007).
+  const progress = (stage: StreamStage): StreamEvent => ({
+    type: "progress",
+    category,
+    stage,
+    found: totalSurvivors,
+  });
+
   try {
     for (let round = 1; round <= MAX_ROUNDS; round++) {
       const deficit = TARGET_PER_CATEGORY - totalSurvivors;
@@ -194,54 +214,20 @@ async function* backfillCategory(
         `[recommendations:${category}] round ${round} deficit=${deficit} ask=${ask} telling LLM to avoid ${localPrevRecs.length} titles: [${localPrevRecs.map((r) => r.title).join(", ")}]`
       );
 
-      yield {
-        type: "progress",
-        category,
-        stage: "finding_titles",
-        found: totalSurvivors,
-      };
+      yield progress("finding_titles");
 
-      // Model-fallback chain (google → mistral). First success wins.
-      type RawRec = {
-        title: string;
-        category: Category;
-        releasedYear: number;
-        reason: string;
-        imdbRating: number;
-      };
-      let raw: RawRec[] = [];
-      let roundThrew = true;
-      for (let i = 0; i < models.length; i++) {
-        const modelLabel = i === 0 ? "google" : "mistral";
-        console.log(
-          `[recommendations:${category}] round ${round} model ${i + 1}/${models.length}: ${modelLabel}`
-        );
-        const res = await getAIRecommendations(
-          {
-            ...baseArgs,
-            previousRecommendations: localPrevRecs,
-            requestedMovies: category === "movie" ? ask : 0,
-            requestedTvs: category === "tv" ? ask : 0,
-            onlyCategory: category,
-          },
-          models[i]
-        );
-        if (res.success && res.data) {
-          // LLM may still emit the other category despite the prompt —
-          // filter to this side only.
-          raw = res.data.recommendations.filter(
-            (r): r is RawRec => r.category === category
-          );
-          roundThrew = false;
-          console.log(
-            `[recommendations:${category}] round ${round} ${modelLabel} ok, raw=${raw.length}`
-          );
-          break;
-        }
-        console.warn(
-          `[recommendations:${category}] round ${round} ${modelLabel} failed`
-        );
-      }
+      const { raw, threw: roundThrew } = await fetchWithModelFallback(
+        {
+          ...baseArgs,
+          previousRecommendations: localPrevRecs,
+          requestedMovies: category === "movie" ? ask : 0,
+          requestedTvs: category === "tv" ? ask : 0,
+          onlyCategory: category,
+        },
+        models,
+        category,
+        round
+      );
       if (!roundThrew) allRoundsThrew = false;
 
       // Criterion 6: round 1 returning 0 raw items (LLM emitted nothing)
@@ -256,12 +242,7 @@ async function* backfillCategory(
       totalRawProduced += raw.length;
 
       // Emit progress before the TMDB enrichment fan-out.
-      yield {
-        type: "progress",
-        category,
-        stage: "looking_up_posters",
-        found: totalSurvivors,
-      };
+      yield progress("looking_up_posters");
 
       // Per-round reject breakdown (Spec 0005 diagnostic). Survivors +
       // excluded + enrichFail should reconcile to raw.
@@ -269,24 +250,9 @@ async function* backfillCategory(
       let roundEnrichFail = 0;
       let roundCapped = 0;
 
-      // Fan out TMDB enrichment, yield survivors in input order as each
-      // resolves (ordered await so later items don't block earlier yields).
-      const enrichedPromises = raw.map(async (recommendation) => {
-        try {
-          const tmdbData = await searchTitleWithYearFallback(
-            recommendation.title,
-            recommendation.category,
-            recommendation.releasedYear
-          );
-          return { ...recommendation, tmdbData };
-        } catch (error: any) {
-          console.error(
-            `Failed to enrich recommendation "${recommendation.title}":`,
-            error
-          );
-          return { ...recommendation, tmdbData: null };
-        }
-      });
+      // Fan out enrichment, then await in input order so survivors yield as
+      // they resolve without later items blocking earlier yields.
+      const enrichedPromises = raw.map(enrichOne);
 
       for (let i = 0; i < enrichedPromises.length; i++) {
         // Over-ask buffer is for resilience, not for yielding extras.
@@ -326,12 +292,7 @@ async function* backfillCategory(
         });
         yield { type: "item", rec: { ...rec, tmdbData: rec.tmdbData } };
         // Tick progress so the count updates live as items land.
-        yield {
-          type: "progress",
-          category,
-          stage: "looking_up_posters",
-          found: totalSurvivors,
-        };
+        yield progress("looking_up_posters");
       }
       console.log(
         `[recommendations:${category}] round ${round} reject breakdown: excluded=${roundExcluded} enrichFail=${roundEnrichFail} capped=${roundCapped} survivors_this_round_ended_at=${totalSurvivors} prevRecsFedToLLM=${localPrevRecs.length}`
@@ -339,26 +300,14 @@ async function* backfillCategory(
     }
 
     // Emit finalizing before terminal status classification.
-    yield {
-      type: "progress",
-      category,
-      stage: "finalizing",
-      found: totalSurvivors,
-    };
+    yield progress("finalizing");
 
-    // Terminal status classification (acceptance criteria 4–6).
-    let status: StatusCode;
-    if (totalSurvivors > 0) {
-      status = "ok";
-    } else if (allRoundsThrew) {
-      status = "generation_failed";
-    } else if (totalRawProduced === 0) {
-      status = "generation_failed";
-    } else if (totalRawProduced === totalEnrichFailures) {
-      status = "enrichment_empty";
-    } else {
-      status = "exhausted";
-    }
+    const status = classifyStatus({
+      survivors: totalSurvivors,
+      allRoundsThrew,
+      rawProduced: totalRawProduced,
+      enrichFailures: totalEnrichFailures,
+    });
     console.log(
       `[recommendations:${category}] groupEnd status=${status} survivors=${totalSurvivors} raw=${totalRawProduced} enrichFail=${totalEnrichFailures}`
     );
@@ -433,6 +382,7 @@ async function* raceMerge(
 // can't derive). userPrefs is loaded server-side from the DB via
 // loadUserContent(userId) — never trusted from the client.
 export const streamRequestSchema = z.object({
+  categories: z.array(z.enum(["movie", "tv"])).optional(),
   previousRecommendations: z.array(
     z.object({
       id: z.number().optional(),
@@ -468,26 +418,22 @@ export async function* runPipelines(input: {
 
   // Shared exclude set (liked ∪ disliked ∪ previous-shown). TMDB IDs are
   // globally unique, so a single set safely filters both categories.
-  const excludeIds = new Set<number>();
-  for (const list of [
-    userPrefs.movies,
-    userPrefs.tvs,
-    userPrefs.dislikedMovies,
-    userPrefs.dislikedTvs,
-  ]) {
-    for (const item of list) {
-      if (typeof item.id === "number") excludeIds.add(item.id);
-    }
-  }
-  for (const item of previousRecommendations) {
-    if (typeof item.id === "number") excludeIds.add(item.id);
-  }
+  const excludeIds = new Set<number>([
+    ...userPrefs.movies.map((m) => m.id),
+    ...userPrefs.tvs.map((t) => t.id),
+    ...userPrefs.dislikedMovies.map((m) => m.id),
+    ...userPrefs.dislikedTvs.map((t) => t.id),
+    ...previousRecommendations.map((r) => r.id).filter((id): id is number => typeof id === "number"),
+  ]);
   console.log(
     `[recommendations] excludeIds size=${excludeIds.size}`,
     [...excludeIds]
   );
 
-  const models: LanguageModelV2[] = [googleModel, mistralModel];
+  const models: ModelEntry[] = [
+    { label: "google", model: googleModel },
+    { label: "mistral", model: mistralModel },
+  ];
 
   // Two independent parallel pipelines. Generators are lazy — they only
   // progress as raceMerge drains them, but both advance concurrently.
