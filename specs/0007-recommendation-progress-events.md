@@ -4,6 +4,11 @@
 Spec 0006 deployed (manual NDJSON transport, `groupStart`/`item`/`groupEnd`
 sentinel protocol, server-authoritative prefs).
 
+> **Amended by [Spec 0011](./0011-loading-preferences-stage.md):**
+> `StreamStage` gains a fourth value `loading_preferences` (pref DB fetch);
+> `runPipelines`' `userPrefs` arg becomes `loadPrefs: () => Promise<UserContent>`;
+> `computeProgress` gains a label-only render path for countless stages.
+
 ## Problem
 The stream protocol (`src/lib/data/stream-events.ts:18-36`) carries only
 three event variants. `groupStart` has no target count, so the client cannot
@@ -31,7 +36,8 @@ spec 0009 consumes them.
 ## Decisions
 - **New `StreamStage` type** = `"finding_titles" | "looking_up_posters" |
   "finalizing"`. Three user-meaningful stages mapping to internal pipeline
-  phases:
+  phases. *(Spec 0011 adds `"loading_preferences"` as a fourth stage and moves
+  the pref fetch into the generator; see that spec.)*
   - `finding_titles` — the LLM model-fallback chain is running
     (`backfillCategory` lines `:206-237`).
   - `looking_up_posters` — the TMDB enrichment fan-out is running
