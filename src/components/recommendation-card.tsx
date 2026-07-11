@@ -124,8 +124,8 @@ export function RecommendationCard({
           </div>
         </div>
 
-        {/* Reason — scrolls inside the card if longer than the space. */}
-        <div className="flex-1 min-h-0 overflow-y-auto pr-1 -mr-1 my-2">
+        {/* Reason — fills available card height. */}
+        <div className="flex-1 min-h-0 my-2 overflow-hidden">
           <p className="text-sm md:text-[15px] text-white/90 leading-relaxed">
             {recommendation.reason}
           </p>

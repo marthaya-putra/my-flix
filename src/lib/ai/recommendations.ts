@@ -14,7 +14,7 @@ const RecommendationInput = z.object({
       z.object({
         title: z.string(),
         year: z.number(),
-      })
+      }),
     )
     .optional(),
   previouslyLikedMovies: z
@@ -22,7 +22,7 @@ const RecommendationInput = z.object({
       z.object({
         title: z.string(),
         year: z.number(),
-      })
+      }),
     )
     .optional(),
   dislikedMovies: z
@@ -30,7 +30,7 @@ const RecommendationInput = z.object({
       z.object({
         title: z.string(),
         year: z.number(),
-      })
+      }),
     )
     .optional(),
   dislikedTvs: z
@@ -38,7 +38,7 @@ const RecommendationInput = z.object({
       z.object({
         title: z.string(),
         year: z.number(),
-      })
+      }),
     )
     .optional(),
   previousRecommendations: z
@@ -48,7 +48,7 @@ const RecommendationInput = z.object({
         title: z.string(),
         year: z.number(),
         category: z.enum(["movie", "tv"]),
-      })
+      }),
     )
     .optional(),
   requestedMovies: z.number().int().min(0).default(3),
@@ -67,15 +67,19 @@ const RecommendationSchema = z.object({
       category: z.enum(["movie", "tv"]).describe("Either 'movie' or 'tv'"),
       releasedYear: z.number().describe("Year the content was released"),
       imdbRating: z.number().describe("IMDB rating for the title"),
-      reason: z.string().describe("Brief reason why this is recommended"),
-    })
+      reason: z
+        .string()
+        .describe(
+          "Casual, chatty tone — like texting a friend. 150 to 250 characters. No lists, no restating the title.",
+        ),
+    }),
   ),
 });
 
 // Plain AI recommendation function
 export async function getAIRecommendations(
   input: GetRecommendationsInput,
-  model: LanguageModelV2
+  model: LanguageModelV2,
 ) {
   try {
     // Spec 0005: translate to a category-flat shape here so buildPrompt is
@@ -90,10 +94,10 @@ export async function getAIRecommendations(
       likedLabel: isMovie ? "Liked movies" : "Liked TV shows",
       dislikedLabel: isMovie ? "User dislike movies" : "User dislike TV shows",
       liked: simplifyWatched(
-        isMovie ? input.previouslyLikedMovies : input.previouslyLikedTvs
+        isMovie ? input.previouslyLikedMovies : input.previouslyLikedTvs,
       ),
       disliked: simplifyWatched(
-        isMovie ? input.dislikedMovies : input.dislikedTvs
+        isMovie ? input.dislikedMovies : input.dislikedTvs,
       ),
       previousRecommendations: simplifyPrevRecs(input.previousRecommendations)
         .filter((r) => r.category === input.onlyCategory)
@@ -122,7 +126,8 @@ export async function getAIRecommendations(
         - If user likes an actor, prioritize other content with that actor
         - If user likes a director, prioritize other films/shows by that director
         - If user likes specific genres, heavily favor those genres
-        - Each recommendation reason MUST mention specific preferences it's based on
+        - Each recommendation reason MUST name the specific preference it's based on
+        - REASON LENGTH IS CRITICAL: 150 to 250 characters. Write it like you're texting a friend — casual, chatty, fun. No lists, no restating the title.
 
         QUALITY CONTROL:
         - Recommend well-rated, critically acclaimed content that matches their taste
@@ -175,7 +180,7 @@ function simplifyPrevRecs(
     title: string;
     year: number;
     category: "movie" | "tv";
-  }>
+  }>,
 ) {
   // LLM never sees IDs — strip them so exclude is enforced server-side only.
   return (items ?? []).map((i) => ({

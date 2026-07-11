@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "npm run dev:check && vite dev",
+    "dev": "lsof -ti :3000 | xargs kill -9 2>/dev/null; lsof -ti :3001 | xargs kill -9 2>/dev/null; vite dev",
     "dev:check": "! lsof -i :3000 && ! lsof -i :3001",
     "dev:force": "vite dev",
     "build": "vite build",
