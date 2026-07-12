@@ -69,8 +69,9 @@ const RecommendationSchema = z.object({
       imdbRating: z.number().describe("IMDB rating for the title"),
       reason: z
         .string()
+        .max(220)
         .describe(
-          "Casual, chatty tone — like texting a friend. 150 to 250 characters. No lists, no restating the title.",
+          "Casual, chatty tone — like texting a friend. Aim for ~180 characters (min 100, HARD MAX 220). No lists, no restating the title.",
         ),
     }),
   ),
@@ -127,7 +128,7 @@ export async function getAIRecommendations(
         - If user likes a director, prioritize other films/shows by that director
         - If user likes specific genres, heavily favor those genres
         - Each recommendation reason MUST name the specific preference it's based on
-        - REASON LENGTH IS CRITICAL: 150 to 250 characters. Write it like you're texting a friend — casual, chatty, fun. No lists, no restating the title.
+        - REASON LENGTH IS CRITICAL: Aim for ~180 characters (min 100, HARD MAX 220 — enforced, longer ones get REJECTED). Write it like you're texting a friend — casual, chatty, fun. No lists, no restating the title.
 
         QUALITY CONTROL:
         - Recommend well-rated, critically acclaimed content that matches their taste
