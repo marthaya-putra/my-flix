@@ -17,7 +17,7 @@ interface RecommendationCarouselProps {
 }
 
 const CAROUSEL_BTN =
-  "h-15 w-15 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-black/80 disabled:opacity-0 cursor-pointer";
+  "h-15 w-15 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-black/80 disabled:opacity-0 cursor-pointer group-hover:[&_svg]:animate-sliding group-hover:[&_svg]:delay-300";
 
 export function RecommendationCarousel({
   children,
@@ -59,12 +59,14 @@ export function RecommendationCarousel({
           "left-0 -translate-x-1/2 top-1/2 -translate-y-1/2",
           CAROUSEL_BTN,
         )}
+        style={{ "--slide-animation-from": "5px" } as React.CSSProperties}
       />
       <CarouselNext
         className={cn(
           "right-0 translate-x-1/2 top-1/2 -translate-y-1/2",
           CAROUSEL_BTN,
         )}
+        style={{ "--slide-animation-from": "-5px" } as React.CSSProperties}
       />
     </Carousel>
   );
