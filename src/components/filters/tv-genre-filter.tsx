@@ -7,7 +7,7 @@ import { Route } from "@/routes/tvs.index";
 
 export default function TvGenreFilter() {
   const search = useSearch({ from: Route.id });
-  const navigate = useNavigate({ from: Route.path });
+  const navigate = useNavigate({ from: Route.id });
 
   const selectedGenres =
     typeof search.genres === "string" && search.genres

@@ -28,7 +28,7 @@ export default function MoviesContent({
   isLiked,
   onToggleLike,
 }: MoviesContentProps) {
-  const navigate = useNavigate({ from: route.path });
+  const navigate = useNavigate({ from: route.id });
   const search = useSearch({
     from: route.id,
   });

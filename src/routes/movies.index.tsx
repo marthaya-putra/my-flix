@@ -14,10 +14,10 @@ import { z } from "zod";
 
 export const Route = createFileRoute("/movies/")({
   validateSearch: z.object({
-    page: z.number().default(1),
+    page: z.coerce.number().default(1),
     genres: z.string().optional(),
-    rating: z.number().optional(),
-    year: z.number().optional(),
+    rating: z.coerce.number().optional(),
+    year: z.coerce.number().optional(),
   }),
   component: MoviesPage,
   loaderDeps: ({ search }: { search?: MovieRouteSearchParams }) => ({

@@ -18,7 +18,7 @@ interface RatingFilterProps {
 
 export default function RatingFilter({ route }: RatingFilterProps) {
   const search = useSearch({ from: route.id });
-  const navigate = useNavigate({ from: route.path });
+  const navigate = useNavigate({ from: route.id });
 
   const selectedRating = "rating" in search ? search.rating : undefined;
 

@@ -13,7 +13,7 @@ interface ClearFiltersProps {
 }
 
 export default function ClearFilters({ route }: ClearFiltersProps) {
-  const navigate = useNavigate({ from: route.path });
+  const navigate = useNavigate({ from: route.id });
   const search = useSearch({ from: route.id });
 
   const genres = "genres" in search ? search.genres : undefined;

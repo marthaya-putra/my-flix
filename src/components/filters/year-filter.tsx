@@ -17,7 +17,7 @@ interface YearFilterProps {
 
 export default function YearFilter({ route }: YearFilterProps) {
   const search = useSearch({ from: route.id });
-  const navigate = useNavigate({ from: route.path });
+  const navigate = useNavigate({ from: route.id });
 
   const selectedYear = "year" in search ? search.year : undefined;
 

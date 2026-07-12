@@ -9,7 +9,7 @@ import { z } from "zod";
 export const Route = createFileRoute("/movies/search")({
   validateSearch: z.object({
     query: z.string(),
-    page: z.number().default(1),
+    page: z.coerce.number().default(1),
   }),
   component: MoviesSearchPage,
   loaderDeps: ({ search }) => ({

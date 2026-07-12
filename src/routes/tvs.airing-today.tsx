@@ -10,7 +10,7 @@ import { z } from "zod";
 
 export const Route = createFileRoute("/tvs/airing-today")({
   validateSearch: z.object({
-    page: z.number().default(1),
+    page: z.coerce.number().default(1),
     timezone: z.string().optional(),
   }),
   component: TvAiringTodayPage,
