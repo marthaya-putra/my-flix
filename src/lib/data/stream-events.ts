@@ -16,11 +16,18 @@ export type StreamStatus =
   | "enrichment_empty";
 
 export type StreamStage =
+  | "loading_preferences"
   | "finding_titles"
   | "looking_up_posters"
   | "finalizing";
 
+/** Stages that show a label only — no "· found of target" suffix. */
+const COUNTLESS_STAGES: ReadonlySet<StreamStage> = new Set([
+  "loading_preferences",
+]);
+
 export const STAGE_LABELS: Record<StreamStage, string> = {
+  loading_preferences: "Loading your preferences",
   finding_titles: "Finding your titles",
   looking_up_posters: "Gathering posters & details",
   finalizing: "Finishing up",
@@ -28,6 +35,7 @@ export const STAGE_LABELS: Record<StreamStage, string> = {
 
 /** Friendlier UI copy per stage — communicates *what* is happening. */
 export const STAGE_COPY: Record<StreamStage, string> = {
+  loading_preferences: "Loading your preferences",
   finding_titles: "Thinking up titles you'll love",
   looking_up_posters: "Sprucing up your recommendations",
   finalizing: "Putting on the finishing touches",
@@ -48,14 +56,26 @@ export function computeProgress(
   progress: StreamProgress,
 ): { label: string; found: number; target: number; pct: number } | null {
   const { stage, found, target } = progress;
-  const has = stage != null && target != null && found != null;
-  if (!has) return null;
-  const safeFound = Math.min(found!, target!);
-  const pct = target! > 0 ? (safeFound / target!) * 100 : 0;
+  if (stage == null) return null;
+
+  // Countless stages (e.g. loading_preferences) have no target — return
+  // a label-only result so the client still shows status text.
+  if (COUNTLESS_STAGES.has(stage)) {
+    return {
+      label: STAGE_LABELS[stage],
+      found: 0,
+      target: 0,
+      pct: 0,
+    };
+  }
+
+  if (target == null || found == null) return null;
+  const safeFound = Math.min(found, target);
+  const pct = target > 0 ? (safeFound / target) * 100 : 0;
   return {
-    label: `${STAGE_LABELS[stage!]} · ${safeFound} of ${target}`,
+    label: `${STAGE_LABELS[stage]} · ${safeFound} of ${target}`,
     found: safeFound,
-    target: target!,
+    target,
     pct,
   };
 }

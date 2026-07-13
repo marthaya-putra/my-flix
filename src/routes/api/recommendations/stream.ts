@@ -86,8 +86,10 @@ export const Route = createFileRoute("/api/recommendations/stream")({
         // paths agree on the same deduped list.
         const requestedCategories = resolveCategories(parsed.data.categories);
 
-        // Load prefs authoritatively from the DB. No client trust.
-        const userPrefs = await loadUserContent(session.user.id);
+        // Spec 0011: inject a lazy loadPrefs thunk so the DB fetch happens
+        // inside the generator (after the loading_preferences stage is
+        // yielded) instead of before the stream is created.
+        const loadPrefs = () => loadUserContent(session.user.id);
 
         const encoder = new TextEncoder();
         // Track whether the client has disconnected (abort/navigation). When
@@ -117,7 +119,7 @@ export const Route = createFileRoute("/api/recommendations/stream")({
               // up front, interleaved items, and exactly one groupEnd per
               // requested category.
               for await (const evt of runPipelines({
-                userPrefs,
+                loadPrefs,
                 previousRecommendations: parsed.data.previousRecommendations,
                 categories: parsed.data.categories,
               })) {

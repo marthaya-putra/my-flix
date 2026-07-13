@@ -55,9 +55,17 @@ first LLM call — giving the stage honest timing.
 
   So the wire order per category is strictly: `groupStart` →
   `progress{loading_preferences}` → `progress{finding_titles}` → ...
-- **`loadUserContent` is infallible** — returns `EMPTY_USER_CONTENT` on error
-  (`src/lib/data/preferences-server.ts:18–26`). No new error handling in the
-  generator. The stream continues with empty prefs if the DB read fails.
+- **`loadUserContent` throws on DB failure** (Spec 0011 AC9, revised).
+  A successful read with zero rows returns a `UserContent` of empty arrays
+  (legit new-user profile). A DB error — connection loss, malformed row —
+  propagates as a thrown error. `loadPrefs()` rejects → the generator's
+  existing `catch` emits `groupEnd{generation_failed}` → the stream
+  terminates for that category instead of silently degrading with empty
+  prefs. The UI surfaces the existing retry copy
+  (`STATUS_MESSAGES.generation_failed`). The route loader
+  (`getAllUserContent`) does not catch — a thrown error there propagates to
+  TanStack Router's error boundary, rendering `RecommendationsError` with a
+  "Try Again" button.
 - **Backward compatibility: wire-safe.** An old client ignores the unknown
   `loading_preferences` stage value. The `progress` event variant and
   `groupStart.target` are unchanged from 0007. **Compile-time:** adding the
@@ -96,9 +104,12 @@ first LLM call — giving the stage honest timing.
    `groupStart{category, target}` → `progress{loading_preferences}` →
    `progress{finding_titles}` → .... `groupStart` strictly precedes every
    `progress` event for that category.
-9. If `loadUserContent` fails internally (returns `EMPTY_USER_CONTENT`), the
-   stream continues — generators proceed with empty prefs, no crash, no
-   spurious `groupEnd`.
+9. If `loadUserContent` throws (DB failure), `loadPrefs()` rejects and the
+   generator's existing `catch` emits `groupEnd{generation_failed}` for that
+   category. The stream terminates — no silent degradation, no crash, no
+   spurious `groupEnd` (exactly one per category). The UI shows the existing
+   retry copy. A successful read with zero rows returns empty arrays and
+   proceeds normally (legit new-user profile, not a failure).
 10. Existing `item`/`groupEnd` semantics, ordering, counts, and the deficit
     loop are unchanged. `raceMerge` forwards `progress{loading_preferences}`
     transparently like any other `progress` event.

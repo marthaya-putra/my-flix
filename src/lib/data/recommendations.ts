@@ -175,22 +175,18 @@ type CategoryArgs = {
   }>;
 };
 
-// Per-category pipeline (Spec 0004). Drives the deficit loop (≤MAX_ROUNDS)
-// and yields StreamEvents in order: finding_titles → looking_up_posters →
-// interleaved item/progress → finalizing → exactly one groupEnd. Delegates
-// the model-fallback chain, single-item enrichment, and terminal status
-// classification to their helpers so this body reads as a recipe.
+// Per-category pipeline (Spec 0004 + 0011). Drives the deficit loop
+// (≤MAX_ROUNDS) and yields StreamEvents in order: loading_preferences →
+// finding_titles → looking_up_posters → interleaved item/progress →
+// finalizing → exactly one groupEnd. Delegates the model-fallback chain,
+// single-item enrichment, and terminal status classification to their
+// helpers so this body reads as a recipe.
 async function* backfillCategory(
   category: Category,
-  baseArgs: CategoryArgs,
-  excludeIds: Set<number>,
+  loadPrefs: () => Promise<UserContent>,
+  previousRecommendations: CategoryArgs["previousRecommendations"],
   models: ModelEntry[]
 ): AsyncGenerator<StreamEvent> {
-  // Per-side accumulator: round-N survivors feed both the next round's
-  // exclude set (TMDB IDs) and the LLM's previousRecommendations (titles).
-  const localExcludeIds = new Set(excludeIds);
-  const localPrevRecs = [...baseArgs.previousRecommendations];
-
   let totalSurvivors = 0;
   let totalRawProduced = 0;
   let totalEnrichFailures = 0;
@@ -205,6 +201,38 @@ async function* backfillCategory(
   });
 
   try {
+    // Spec 0011: yield loading_preferences first, before any await,
+    // so the client shows status during the DB fetch.
+    yield progress("loading_preferences");
+
+    const userPrefs = await loadPrefs();
+
+    // Build baseArgs + excludeIds from the shared userPrefs (moved from
+    // runPipelines — see Spec 0011). Each generator builds its own copies;
+    // they're identical at construction; divergence happens as each
+    // category's localExcludeIds grows.
+    const baseArgs: CategoryArgs = {
+      previouslyLikedMovies: userPrefs.movies,
+      previouslyLikedTvs: userPrefs.tvs,
+      dislikedMovies: userPrefs.dislikedMovies,
+      dislikedTvs: userPrefs.dislikedTvs,
+      favoriteActors: userPrefs.actors,
+      favoriteDirectors: userPrefs.directors,
+      genres: userPrefs.genres,
+      excludeAdult: true,
+      previousRecommendations,
+    };
+
+    const localExcludeIds = new Set<number>([
+      ...userPrefs.movies.map((m) => m.id),
+      ...userPrefs.tvs.map((t) => t.id),
+      ...userPrefs.dislikedMovies.map((m) => m.id),
+      ...userPrefs.dislikedTvs.map((t) => t.id),
+      ...previousRecommendations.map((r) => r.id).filter((id): id is number => typeof id === "number"),
+    ]);
+
+    const localPrevRecs = [...previousRecommendations];
+
     for (let round = 1; round <= MAX_ROUNDS; round++) {
       const deficit = TARGET_PER_CATEGORY - totalSurvivors;
       if (deficit <= 0) break;
@@ -406,44 +434,28 @@ export function resolveCategories(
     : [...new Set(raw)];
 }
 
-// Pure pipeline entry point (Spec 0006). Takes the server-authoritative
-// userPrefs + previousRecommendations and drives raceMerge over the
-// requested category generators. No transport concerns — the NDJSON
-// route drains the yielded StreamEvents however it likes.
+// Pipeline entry point (Spec 0006 + 0011). Takes a lazy loadPrefs thunk
+// + previousRecommendations and drives raceMerge over the requested
+// category generators. The loadPrefs call is memoized so exactly one DB
+// round-trip occurs regardless of category count. No transport concerns —
+// the NDJSON route drains the yielded StreamEvents however it likes.
 export async function* runPipelines(input: {
-  userPrefs: UserContent;
+  loadPrefs: () => Promise<UserContent>;
   previousRecommendations: StreamRequest["previousRecommendations"];
   categories?: Category[];
 }): AsyncGenerator<StreamEvent> {
-  const { userPrefs, previousRecommendations, categories: rawCategories } = input;
+  const { loadPrefs, previousRecommendations, categories: rawCategories } = input;
 
   const requested = resolveCategories(rawCategories);
 
-  const baseArgs: CategoryArgs = {
-    previouslyLikedMovies: userPrefs.movies,
-    previouslyLikedTvs: userPrefs.tvs,
-    dislikedMovies: userPrefs.dislikedMovies,
-    dislikedTvs: userPrefs.dislikedTvs,
-    favoriteActors: userPrefs.actors,
-    favoriteDirectors: userPrefs.directors,
-    genres: userPrefs.genres,
-    excludeAdult: true,
-    previousRecommendations,
+  // Memoize loadPrefs: first caller triggers the single DB round-trip;
+  // subsequent callers await the same in-flight promise.
+  let cached: Promise<UserContent> | null = null;
+  const memoizedLoadPrefs = (): Promise<UserContent> => {
+    if (cached) return cached;
+    cached = loadPrefs();
+    return cached;
   };
-
-  // Shared exclude set (liked ∪ disliked ∪ previous-shown). TMDB IDs are
-  // globally unique, so a single set safely filters both categories.
-  const excludeIds = new Set<number>([
-    ...userPrefs.movies.map((m) => m.id),
-    ...userPrefs.tvs.map((t) => t.id),
-    ...userPrefs.dislikedMovies.map((m) => m.id),
-    ...userPrefs.dislikedTvs.map((t) => t.id),
-    ...previousRecommendations.map((r) => r.id).filter((id): id is number => typeof id === "number"),
-  ]);
-  console.log(
-    `[recommendations] excludeIds size=${excludeIds.size}`,
-    [...excludeIds]
-  );
 
   const models: ModelEntry[] = [
     { label: "google", model: googleModel },
@@ -454,7 +466,7 @@ export async function* runPipelines(input: {
   // lazy — they only progress as raceMerge drains them.
   const generators = requested.map((category) => ({
     category,
-    gen: backfillCategory(category, baseArgs, excludeIds, models),
+    gen: backfillCategory(category, memoizedLoadPrefs, previousRecommendations, models),
   }));
 
   yield* raceMerge(generators, TARGET_PER_CATEGORY);

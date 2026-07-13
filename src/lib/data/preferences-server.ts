@@ -15,66 +15,58 @@ import type { UserContent } from "./preferences";
 // wrapped in createServerFn (the NDJSON stream route) must reach this via a
 // dynamic import() inside a server-only code path.
 
-const EMPTY_USER_CONTENT: UserContent = {
-  movies: [],
-  tvs: [],
-  dislikedMovies: [],
-  dislikedTvs: [],
-  actors: [],
-  directors: [],
-  genres: [],
-};
-
 // Load a user's full preference/dislike/people profile from the DB.
 // Pure (no request context) so any server code with a userId can call it —
 // the streaming route uses this to build its exclude set authoritatively
 // instead of trusting a client payload.
+//
+// Throws on DB failure (Spec 0011 AC9): the streaming route's generator
+// catches the throw and emits groupEnd{generation_failed}, terminating the
+// stream rather than silently degrading with empty prefs. A successful read
+// with zero rows returns a UserContent of empty arrays — that's a legit
+// new-user profile, not an error. Callers that must stay infallible (e.g.
+// the route loader) catch and map to their own fallback.
 export async function loadUserContent(userId: string): Promise<UserContent> {
-  try {
-    const db = getDb();
-    const [preferencesResponse, peopleResponse, dislikesResponse] =
-      await Promise.all([
-        getUserPreferences(db, { userId }),
-        getUserPeople(db, { userId }),
-        getUserDislikes(db, { userId }),
-      ]);
+  const db = getDb();
+  const [preferencesResponse, peopleResponse, dislikesResponse] =
+    await Promise.all([
+      getUserPreferences(db, { userId }),
+      getUserPeople(db, { userId }),
+      getUserDislikes(db, { userId }),
+    ]);
 
-    const preferences = preferencesResponse.success
-      ? preferencesResponse.preferences
-      : [];
-    const people = peopleResponse.success ? peopleResponse.people : [];
-    const dislikes = dislikesResponse.success ? dislikesResponse.dislikes : [];
+  const preferences = preferencesResponse.success
+    ? preferencesResponse.preferences
+    : [];
+  const people = peopleResponse.success ? peopleResponse.people : [];
+  const dislikes = dislikesResponse.success ? dislikesResponse.dislikes : [];
 
-    const allGenres = preferences
-      .filter((p) => p.genres)
-      .map((p) => p.genres!.split(",").map((genre) => genre.trim()))
-      .flat()
-      .filter((genre) => genre.length > 0);
-    const uniqueGenres = [...new Set(allGenres)];
+  const allGenres = preferences
+    .filter((p) => p.genres)
+    .map((p) => p.genres!.split(",").map((genre) => genre.trim()))
+    .flat()
+    .filter((genre) => genre.length > 0);
+  const uniqueGenres = [...new Set(allGenres)];
 
-    return {
-      movies: preferences
-        .filter((p) => p.category === "movie")
-        .map((p) => ({ id: p.preferenceId, title: p.title, year: p.year })),
-      tvs: preferences
-        .filter((p) => p.category === "tv-series")
-        .map((p) => ({ id: p.preferenceId, title: p.title, year: p.year })),
-      dislikedMovies: dislikes
-        .filter((d) => d.category === "movie")
-        .map((d) => ({ id: d.preferenceId, title: d.title, year: d.year })),
-      dislikedTvs: dislikes
-        .filter((d) => d.category === "tv-series")
-        .map((d) => ({ id: d.preferenceId, title: d.title, year: d.year })),
-      actors: people
-        .filter((p) => p.personType === "actor")
-        .map((p) => p.personName),
-      directors: people
-        .filter((p) => p.personType === "director")
-        .map((p) => p.personName),
-      genres: uniqueGenres,
-    };
-  } catch (error) {
-    console.error("Failed to load user preferences:", error);
-    return EMPTY_USER_CONTENT;
-  }
+  return {
+    movies: preferences
+      .filter((p) => p.category === "movie")
+      .map((p) => ({ id: p.preferenceId, title: p.title, year: p.year })),
+    tvs: preferences
+      .filter((p) => p.category === "tv-series")
+      .map((p) => ({ id: p.preferenceId, title: p.title, year: p.year })),
+    dislikedMovies: dislikes
+      .filter((d) => d.category === "movie")
+      .map((d) => ({ id: d.preferenceId, title: d.title, year: d.year })),
+    dislikedTvs: dislikes
+      .filter((d) => d.category === "tv-series")
+      .map((d) => ({ id: d.preferenceId, title: d.title, year: d.year })),
+    actors: people
+      .filter((p) => p.personType === "actor")
+      .map((p) => p.personName),
+    directors: people
+      .filter((p) => p.personType === "director")
+      .map((p) => p.personName),
+    genres: uniqueGenres,
+  };
 }
