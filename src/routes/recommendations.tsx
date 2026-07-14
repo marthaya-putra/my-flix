@@ -1,58 +1,25 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Recommendations as RecommendationsList } from "@/components/recommendations";
-import { UnauthenticatedPrompt } from "@/components/recommendations/unauthenticated-prompt";
-import { OnboardingWizard } from "@/components/recommendations/onboarding-wizard";
-import { hasSufficientPreferences } from "@/lib/utils/preferences-check";
-import { RecommendationsError } from "@/components/recommendations-error";
-import { getAllUserContent } from "@/lib/data/preferences";
-import { InitialLoadComposition } from "@/components/recommendations/initial-load-composition";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/recommendations")({
-  component: Recommendations,
-  errorComponent: RecommendationsError,
-  // Render the same DOM shape as the resolved component (two category
-  // sections: header + stage label) so the loader→component transition
-  // has zero layout shift.
-  pendingComponent: () => (
-    <div className="container mx-auto p-4 mt-8">
-      <div className="space-y-8">
-        {(["Movies", "TV"] as const).map((label) => (
-          <div key={label} className="space-y-3">
-            <h2 className="text-lg md:text-xl font-display font-semibold text-white">
-              {label}
-            </h2>
-            <InitialLoadComposition />
-          </div>
-        ))}
-      </div>
-    </div>
-  ),
-  loader: async () => {
-    // Load user preferences only. Recommendations are streamed per-item via
-    // the /api/recommendations/stream NDJSON route from the client on mount
-    // (Specs 0003, 0006).
-    const userPrefs = await getAllUserContent();
-    return { userPrefs };
-  },
+  component: RecommendationsLayout,
 });
 
-function Recommendations() {
-  const { userPrefs } = Route.useLoaderData();
-
-  // Case 1: User is not authenticated
-  if (!userPrefs) {
-    return <UnauthenticatedPrompt />;
-  }
-
-  // Case 2: User is authenticated but has insufficient preferences (new user)
-  if (!hasSufficientPreferences(userPrefs)) {
-    return <OnboardingWizard />;
-  }
-
-  // Case 3: User has sufficient preferences - show recommendations
+// Layout route: renders the static page header around every child state
+// (pending, error, and the three resolved cases). The child route
+// (recommendations.index) owns the loader and pending/error components;
+// this layout is loader-less so it paints immediately with no pop-in.
+function RecommendationsLayout() {
   return (
     <div className="container mx-auto p-4 mt-8">
-      <RecommendationsList />
+      <header className="mb-8">
+        <h1 className="text-3xl md:text-4xl font-display font-bold bg-gradient-to-r from-primary via-primary to-primary/60 bg-clip-text text-transparent tracking-tight">
+          Your Picks, Reimagined
+        </h1>
+        <p className="mt-2 text-muted-foreground max-w-xl">
+          Built from everything you love.
+        </p>
+      </header>
+      <Outlet />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import {
   Settings,
   User as UserIcon,
   Heart,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -94,12 +95,13 @@ export default function Navbar() {
             <Link
               to="/recommendations"
               className={cn(
-                "transition-colors",
+                "inline-flex items-center gap-1.5 transition-colors",
                 location.pathname === "/recommendations"
                   ? "text-primary font-semibold"
                   : "text-foreground hover:text-primary"
               )}
             >
+              <Sparkles className="w-4 h-4" />
               Recommendations
             </Link>
           </div>
