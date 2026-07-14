@@ -14,6 +14,7 @@ import { Route as RecommendationsRouteImport } from './routes/recommendations'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TvsIndexRouteImport } from './routes/tvs.index'
+import { Route as RecommendationsIndexRouteImport } from './routes/recommendations.index'
 import { Route as PreferencesIndexRouteImport } from './routes/preferences.index'
 import { Route as MoviesIndexRouteImport } from './routes/movies.index'
 import { Route as TvsSearchRouteImport } from './routes/tvs.search'
@@ -51,6 +52,11 @@ const TvsIndexRoute = TvsIndexRouteImport.update({
   id: '/tvs/',
   path: '/tvs/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const RecommendationsIndexRoute = RecommendationsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => RecommendationsRoute,
 } as any)
 const PreferencesIndexRoute = PreferencesIndexRouteImport.update({
   id: '/preferences/',
@@ -117,7 +123,7 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/recommendations': typeof RecommendationsRoute
+  '/recommendations': typeof RecommendationsRouteWithChildren
   '/sign-up': typeof SignUpRoute
   '/movies/search': typeof MoviesSearchRoute
   '/person/search': typeof PersonSearchRoute
@@ -129,6 +135,7 @@ export interface FileRoutesByFullPath {
   '/tvs/search': typeof TvsSearchRoute
   '/movies/': typeof MoviesIndexRoute
   '/preferences/': typeof PreferencesIndexRoute
+  '/recommendations/': typeof RecommendationsIndexRoute
   '/tvs/': typeof TvsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/recommendations/stream': typeof ApiRecommendationsStreamRoute
@@ -136,7 +143,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/recommendations': typeof RecommendationsRoute
   '/sign-up': typeof SignUpRoute
   '/movies/search': typeof MoviesSearchRoute
   '/person/search': typeof PersonSearchRoute
@@ -148,6 +154,7 @@ export interface FileRoutesByTo {
   '/tvs/search': typeof TvsSearchRoute
   '/movies': typeof MoviesIndexRoute
   '/preferences': typeof PreferencesIndexRoute
+  '/recommendations': typeof RecommendationsIndexRoute
   '/tvs': typeof TvsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/recommendations/stream': typeof ApiRecommendationsStreamRoute
@@ -156,7 +163,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/recommendations': typeof RecommendationsRoute
+  '/recommendations': typeof RecommendationsRouteWithChildren
   '/sign-up': typeof SignUpRoute
   '/movies/search': typeof MoviesSearchRoute
   '/person/search': typeof PersonSearchRoute
@@ -168,6 +175,7 @@ export interface FileRoutesById {
   '/tvs/search': typeof TvsSearchRoute
   '/movies/': typeof MoviesIndexRoute
   '/preferences/': typeof PreferencesIndexRoute
+  '/recommendations/': typeof RecommendationsIndexRoute
   '/tvs/': typeof TvsIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/recommendations/stream': typeof ApiRecommendationsStreamRoute
@@ -189,6 +197,7 @@ export interface FileRouteTypes {
     | '/tvs/search'
     | '/movies/'
     | '/preferences/'
+    | '/recommendations/'
     | '/tvs/'
     | '/api/auth/$'
     | '/api/recommendations/stream'
@@ -196,7 +205,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
-    | '/recommendations'
     | '/sign-up'
     | '/movies/search'
     | '/person/search'
@@ -208,6 +216,7 @@ export interface FileRouteTypes {
     | '/tvs/search'
     | '/movies'
     | '/preferences'
+    | '/recommendations'
     | '/tvs'
     | '/api/auth/$'
     | '/api/recommendations/stream'
@@ -227,6 +236,7 @@ export interface FileRouteTypes {
     | '/tvs/search'
     | '/movies/'
     | '/preferences/'
+    | '/recommendations/'
     | '/tvs/'
     | '/api/auth/$'
     | '/api/recommendations/stream'
@@ -235,7 +245,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
-  RecommendationsRoute: typeof RecommendationsRoute
+  RecommendationsRoute: typeof RecommendationsRouteWithChildren
   SignUpRoute: typeof SignUpRoute
   MoviesSearchRoute: typeof MoviesSearchRoute
   PersonSearchRoute: typeof PersonSearchRoute
@@ -288,6 +298,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/tvs/'
       preLoaderRoute: typeof TvsIndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/recommendations/': {
+      id: '/recommendations/'
+      path: '/'
+      fullPath: '/recommendations/'
+      preLoaderRoute: typeof RecommendationsIndexRouteImport
+      parentRoute: typeof RecommendationsRoute
     }
     '/preferences/': {
       id: '/preferences/'
@@ -376,10 +393,22 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface RecommendationsRouteChildren {
+  RecommendationsIndexRoute: typeof RecommendationsIndexRoute
+}
+
+const RecommendationsRouteChildren: RecommendationsRouteChildren = {
+  RecommendationsIndexRoute: RecommendationsIndexRoute,
+}
+
+const RecommendationsRouteWithChildren = RecommendationsRoute._addFileChildren(
+  RecommendationsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
-  RecommendationsRoute: RecommendationsRoute,
+  RecommendationsRoute: RecommendationsRouteWithChildren,
   SignUpRoute: SignUpRoute,
   MoviesSearchRoute: MoviesSearchRoute,
   PersonSearchRoute: PersonSearchRoute,
