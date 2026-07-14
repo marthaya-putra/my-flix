@@ -27,6 +27,8 @@ interface CategorySectionProps {
   items: Recommendation[];
   status: CategoryStatus;
   stage?: StreamStage;
+  /** True when the current stage was reached via a deficit-retry round. */
+  stageRetry?: boolean;
   /** Target card count — skeletons fill up to this while pending. */
   target?: number;
   errorMessage?: string | null;
@@ -46,6 +48,7 @@ export function CategorySection({
   items,
   status,
   stage,
+  stageRetry,
   target,
   errorMessage,
   loadingMore,
@@ -94,7 +97,7 @@ export function CategorySection({
 
       {/* 0-items-pending: centered stage label (not skeletons). */}
       {isPending && !hasItems && !isError && (
-        <InitialLoadComposition stage={stage} />
+        <InitialLoadComposition stage={stage} stageRetry={stageRetry} />
       )}
 
       {/* Carousel */}
@@ -140,6 +143,7 @@ export function CategorySection({
                 <LoadMoreCard
                   loading={loadingMore}
                   stage={stage}
+                  stageRetry={stageRetry}
                   error={errorMessage}
                   onClick={onLoadMore}
                 />

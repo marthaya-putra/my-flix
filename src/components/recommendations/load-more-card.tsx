@@ -1,15 +1,12 @@
 import { Plus, RotateCw } from "lucide-react";
-import {
-  type StreamStage,
-  STAGE_MESSAGES,
-  STAGE_FALLBACK_MESSAGES,
-} from "@/lib/data/stream-events";
+import { type StreamStage, stageMessagesFor } from "@/lib/data/stream-events";
 import { RotatingMessage } from "./rotating-message";
 
 interface LoadMoreCardProps {
   /** Whether load-more is currently in-flight for this category. */
   loading: boolean;
   stage?: StreamStage;
+  stageRetry?: boolean;
   error?: string | null;
   onClick: () => void;
 }
@@ -31,6 +28,7 @@ function TypingDots() {
 export function LoadMoreCard({
   loading,
   stage,
+  stageRetry,
   error,
   onClick,
 }: LoadMoreCardProps) {
@@ -55,7 +53,7 @@ export function LoadMoreCard({
 
   // Loading state — animated shimmer copy, mirrors the stage messaging.
   if (loading) {
-    const messages = stage ? STAGE_MESSAGES[stage] : STAGE_FALLBACK_MESSAGES;
+    const messages = stageMessagesFor(stage, stageRetry);
 
     return (
       <div

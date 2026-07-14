@@ -51,6 +51,27 @@ export const STAGE_MESSAGES: Record<StreamStage, string[]> = {
 };
 
 /**
+ * Copy shown during a deficit-retry round (see CONTEXT.md → Deficit retry
+ * loop). Applied globally regardless of stage — a retry is the same process
+ * continuing, so one message set covers it. Specializing per-stage later is
+ * a matter of turning this into a `Partial<Record<StreamStage, string[]>>`.
+ */
+export const RETRY_MESSAGES = ["Digging deeper for more titles…"];
+
+/**
+ * Pick the message array for a stage, honoring the retry flag. Returns the
+ * fallback set when there's no stage yet (before the first progress event).
+ */
+export function stageMessagesFor(
+  stage: StreamStage | undefined,
+  retry = false,
+): string[] {
+  if (retry) return RETRY_MESSAGES;
+  if (stage == null) return STAGE_FALLBACK_MESSAGES;
+  return STAGE_MESSAGES[stage];
+}
+
+/**
  * Copy shown before the first progress event arrives (no stage yet). Module-
  * level so the identity is stable and safe to use as a React effect dep.
  */
@@ -119,4 +140,6 @@ export type StreamEvent =
       category: StreamCategory;
       stage: StreamStage;
       found: number;
+      /** True when emitted from a deficit-retry round (> 1). See CONTEXT.md. */
+      retry?: boolean;
     };

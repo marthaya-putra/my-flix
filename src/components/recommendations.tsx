@@ -43,11 +43,13 @@ export function Recommendations() {
     Record<Category, string | null>
   >({ movie: null, tv: null });
 
-  // Spec 0010: per-category stage — drives the in-content loading copy
-  // (LoadMoreCard), NOT the header.
+  // Spec 0010: per-category stage descriptor — drives the in-content loading
+  // copy (LoadMoreCard), NOT the header. Bundles the stage with whether it was
+  // reached via a deficit-retry round so message selection is a single lookup
+  // (stageMessagesFor). See CONTEXT.md → Deficit retry loop, Stream run.
   const [categoryStage, setCategoryStage] = useState<
-    Record<Category, StreamStage | undefined>
-  >({ movie: undefined, tv: undefined });
+    Record<Category, { stage?: StreamStage; retry?: boolean }>
+  >({ movie: {}, tv: {} });
   // Per-category target — how many skeletons to render while pending so the
   // carousel layout stays stable through the deficit-retry loop.
   const [categoryTarget, setCategoryTarget] = useState<
@@ -117,12 +119,15 @@ export function Recommendations() {
             setCategoryStatus((prev) => ({ ...prev, [evt.category]: "pending" }));
           }
           setCategoryTarget((prev) => ({ ...prev, [evt.category]: evt.target }));
-          setCategoryStage((prev) => ({ ...prev, [evt.category]: undefined }));
+          setCategoryStage((prev) => ({ ...prev, [evt.category]: {} }));
         } else if (evt.type === "item") {
           local.push(evt.rec as Recommendation);
           setRecommendations((prev) => [...prev, evt.rec as Recommendation]);
         } else if (evt.type === "progress") {
-          setCategoryStage((prev) => ({ ...prev, [evt.category]: evt.stage }));
+          setCategoryStage((prev) => ({
+            ...prev,
+            [evt.category]: { stage: evt.stage, retry: evt.retry ?? false },
+          }));
         } else if (evt.type === "groupEnd") {
           const isError =
             evt.status === "generation_failed" ||
@@ -146,7 +151,7 @@ export function Recommendations() {
             }));
           }
           // Clear stage on completion.
-          setCategoryStage((prev) => ({ ...prev, [evt.category]: undefined }));
+          setCategoryStage((prev) => ({ ...prev, [evt.category]: {} }));
         }
       };
 
@@ -482,7 +487,8 @@ export function Recommendations() {
           label={label}
           items={items}
           status={categoryStatus[category]}
-          stage={categoryStage[category]}
+          stage={categoryStage[category].stage}
+          stageRetry={categoryStage[category].retry}
           target={categoryTarget[category]}
           errorMessage={categoryError[category]}
           loadingMore={loadingMore[category]}

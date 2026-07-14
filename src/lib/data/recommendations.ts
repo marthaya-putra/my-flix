@@ -193,11 +193,16 @@ async function* backfillCategory(
   let allRoundsThrew = true;
 
   // Build a progress event for the current pipeline state (Spec 0007).
-  const progress = (stage: StreamStage): StreamEvent => ({
+  // `retry` is set when round > 1 — i.e. this progress comes from a deficit
+  // retry round rather than the category's first generation pass. The client
+  // uses it to hold the stage message steady instead of visibly regressing.
+  // Before the loop starts (loading_preferences) round is 0 → not a retry.
+  const progress = (stage: StreamStage, round = 0): StreamEvent => ({
     type: "progress",
     category,
     stage,
     found: totalSurvivors,
+    retry: round > 1,
   });
 
   try {
@@ -242,7 +247,7 @@ async function* backfillCategory(
         `[recommendations:${category}] round ${round} deficit=${deficit} ask=${ask} telling LLM to avoid ${localPrevRecs.length} titles: [${localPrevRecs.map((r) => r.title).join(", ")}]`
       );
 
-      yield progress("finding_titles");
+      yield progress("finding_titles", round);
 
       const { raw, threw: roundThrew } = await fetchWithModelFallback(
         {
@@ -270,7 +275,7 @@ async function* backfillCategory(
       totalRawProduced += raw.length;
 
       // Emit progress before the TMDB enrichment fan-out.
-      yield progress("looking_up_posters");
+      yield progress("looking_up_posters", round);
 
       // Per-round reject breakdown (Spec 0005 diagnostic). Survivors +
       // excluded + enrichFail should reconcile to raw.
@@ -320,7 +325,7 @@ async function* backfillCategory(
         });
         yield { type: "item", rec: { ...rec, tmdbData: rec.tmdbData } };
         // Tick progress so the count updates live as items land.
-        yield progress("looking_up_posters");
+        yield progress("looking_up_posters", round);
       }
       console.log(
         `[recommendations:${category}] round ${round} reject breakdown: excluded=${roundExcluded} enrichFail=${roundEnrichFail} capped=${roundCapped} survivors_this_round_ended_at=${totalSurvivors} prevRecsFedToLLM=${localPrevRecs.length}`

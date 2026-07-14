@@ -1,12 +1,9 @@
-import {
-  type StreamStage,
-  STAGE_MESSAGES,
-  STAGE_FALLBACK_MESSAGES,
-} from "@/lib/data/stream-events";
+import { type StreamStage, stageMessagesFor } from "@/lib/data/stream-events";
 import { RotatingMessage } from "./rotating-message";
 
 interface InitialLoadCompositionProps {
   stage?: StreamStage;
+  stageRetry?: boolean;
 }
 
 function TypingDots() {
@@ -24,8 +21,11 @@ function TypingDots() {
 }
 
 /** Centered animated stage label for the 0-items-pending gap. */
-export function InitialLoadComposition({ stage }: InitialLoadCompositionProps) {
-  const messages = stage ? STAGE_MESSAGES[stage] : STAGE_FALLBACK_MESSAGES;
+export function InitialLoadComposition({
+  stage,
+  stageRetry,
+}: InitialLoadCompositionProps) {
+  const messages = stageMessagesFor(stage, stageRetry);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[280px] gap-4 w-full">

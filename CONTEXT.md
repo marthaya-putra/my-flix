@@ -19,5 +19,29 @@ _Avoid_: copy, label, text
 The wire variant `{ type: "progress"; stage; found }`. Carries the current stage (and a survivor count the UI currently ignores). Drives stage-message display.
 _Avoid_: status event, tick
 
+**Category**:
+A recommendation domain: `movie` or `tv`. Recommendations stream in parallel, one stream per category.
+_Avoid_: type, medium, kind
+
+**Survivor**:
+A generated title that passed TMDB enrichment and was not already liked/disliked by the user. Only survivors count toward the per-category target.
+_Avoid_: result, valid item, keep
+
+**Target**:
+The number of survivors a category aims to produce before completing.
+_Avoid_: quota, limit
+
+**Deficit retry loop**:
+When a generation round yields fewer survivors than the remaining target, the LLM is re-asked in a further round (up to a max), feeding already-seen titles back so it avoids them. Internal resilience — the user perceives one continuous process.
+_Avoid_: retry, loop, re-ask
+
+**Round**:
+One pass through the deficit retry loop: ask the LLM, enrich, filter exclusions, count survivors.
+_Avoid_: attempt, pass
+
+**Stream run**:
+One `groupStart` → `groupEnd` lifecycle for a single category; the unit over which stage progress is tracked. A fresh user-triggered load (initial load, load-more) begins a new run.
+_Avoid_: session, connection, stream
+
 **Decorative rotation**:
 The client-side timer that cycles stage messages on a fixed interval. It is **not** a signal of real progress (e.g. an LLM fallback) — messages are generic and timing-based. Distinct from the LLM's own input/output, which are also called "messages" in AI-SDK vocabulary.
