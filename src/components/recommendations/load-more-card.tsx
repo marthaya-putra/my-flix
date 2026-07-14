@@ -1,5 +1,10 @@
 import { Plus, RotateCw } from "lucide-react";
-import { type StreamStage, STAGE_COPY } from "@/lib/data/stream-events";
+import {
+  type StreamStage,
+  STAGE_MESSAGES,
+  STAGE_FALLBACK_MESSAGES,
+} from "@/lib/data/stream-events";
+import { RotatingMessage } from "./rotating-message";
 
 interface LoadMoreCardProps {
   /** Whether load-more is currently in-flight for this category. */
@@ -50,7 +55,7 @@ export function LoadMoreCard({
 
   // Loading state — animated shimmer copy, mirrors the stage messaging.
   if (loading) {
-    const copy = stage ? STAGE_COPY[stage] : "Finding your next favorites";
+    const messages = stage ? STAGE_MESSAGES[stage] : STAGE_FALLBACK_MESSAGES;
 
     return (
       <div
@@ -58,9 +63,10 @@ export function LoadMoreCard({
         style={{ aspectRatio: "2 / 3" }}
       >
         <div className="flex items-center gap-1.5">
-          <span className="text-xs font-medium text-center bg-gradient-to-r from-muted-foreground via-foreground to-muted-foreground bg-[length:200%_100%] bg-clip-text text-transparent animate-[shimmer_2s_linear_infinite]">
-            {copy}
-          </span>
+          <RotatingMessage
+            messages={messages}
+            className="text-xs font-medium text-center"
+          />
           <TypingDots />
         </div>
       </div>

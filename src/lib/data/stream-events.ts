@@ -33,13 +33,28 @@ export const STAGE_LABELS: Record<StreamStage, string> = {
   finalizing: "Finishing up",
 };
 
-/** Friendlier UI copy per stage — communicates *what* is happening. */
-export const STAGE_COPY: Record<StreamStage, string> = {
-  loading_preferences: "Loading your preferences",
-  finding_titles: "Thinking up titles you'll love",
-  looking_up_posters: "Sprucing up your recommendations",
-  finalizing: "Putting on the finishing touches",
+/**
+ * Friendlier UI copy per stage — communicates *what* is happening. An array
+ * per stage so the client can rotate through them while a stage lingers
+ * (notably the slow LLM call in `finding_titles`). Stages with a single entry
+ * render statically, identical to a plain string.
+ */
+export const STAGE_MESSAGES: Record<StreamStage, string[]> = {
+  loading_preferences: ["Loading your preferences"],
+  finding_titles: [
+    "Thinking up titles you'll love",
+    "Still narrowing things down…",
+    "Almost there…",
+  ],
+  looking_up_posters: ["Sprucing up your recommendations"],
+  finalizing: ["Putting on the finishing touches"],
 };
+
+/**
+ * Copy shown before the first progress event arrives (no stage yet). Module-
+ * level so the identity is stable and safe to use as a React effect dep.
+ */
+export const STAGE_FALLBACK_MESSAGES = ["Finding your next favorites"];
 
 /** Bundled progress for a category stream. */
 export interface StreamProgress {
