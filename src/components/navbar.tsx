@@ -23,6 +23,14 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import SearchModal from "./search-modal";
 import { authClient } from "@/lib/auth-client";
+import { motion } from "motion/react";
+
+const NAV_LINKS = [
+  { to: "/" as const, label: "Home" },
+  { to: "/movies" as const, label: "Movies" },
+  { to: "/tvs" as const, label: "TV Shows" },
+  { to: "/recommendations" as const, label: "Recommendations", icon: Sparkles },
+] as const;
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -41,73 +49,69 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  const activeIndex = NAV_LINKS.findIndex(
+    (l) =>
+      l.to === "/"
+        ? location.pathname === "/"
+        : location.pathname.startsWith(l.to)
+  );
+
   return (
     <nav
       className={cn(
-        "w-full transition-[background-color,box-shadow] duration-300 ease-out px-4 md:px-12 py-4",
+        "w-full fixed top-0 z-50 transition-[background-color,backdrop-filter,border-color] duration-300 ease-out px-4 md:px-12 py-4",
         scrolled
-          ? "bg-background/80 backdrop-blur-md shadow-md"
-          : "bg-linear-to-b from-black/80 to-transparent"
+          ? "glass glass-edge"
+          : "bg-transparent"
       )}
     >
       <div className="flex items-center justify-between mx-auto">
         <div className="flex items-center gap-8">
           <Link
             to="/"
-            className="text-3xl font-display font-bold text-primary tracking-tighter hover:opacity-90 active:scale-95 transition-[opacity,transform]"
+            className="text-3xl font-display font-bold text-primary tracking-tighter active:scale-95 transition-transform"
           >
             MyFlix
           </Link>
-          <div className="hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground">
-            <Link
-              to="/"
-              className={cn(
-                "transition-colors",
-                location.pathname === "/"
-                  ? "text-primary font-semibold"
-                  : "text-foreground hover:text-primary"
-              )}
-            >
-              Home
-            </Link>
-            <Link
-              to="/movies"
-              className={cn(
-                "transition-colors",
-                location.pathname === "/movies"
-                  ? "text-primary font-semibold"
-                  : "text-foreground hover:text-primary"
-              )}
-            >
-              Movies
-            </Link>
-            <Link
-              to="/tvs"
-              className={cn(
-                "transition-colors",
-                location.pathname === "/tvs"
-                  ? "text-primary font-semibold"
-                  : "text-foreground hover:text-primary"
-              )}
-            >
-              TV Shows
-            </Link>
-            <Link
-              to="/recommendations"
-              className={cn(
-                "inline-flex items-center gap-1.5 transition-colors",
-                location.pathname === "/recommendations"
-                  ? "text-primary font-semibold"
-                  : "text-foreground hover:text-primary"
-              )}
-            >
-              <Sparkles className="w-4 h-4" />
-              Recommendations
-            </Link>
+          <div className="hidden md:flex items-center gap-1 text-sm font-medium relative">
+            {NAV_LINKS.map((link, i) => {
+              const isActive =
+                link.to === "/"
+                  ? location.pathname === "/"
+                  : location.pathname.startsWith(link.to);
+              return (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  className={cn(
+                    "relative px-3 py-1.5 rounded-lg transition-colors",
+                    isActive
+                      ? "text-primary font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {isActive && (
+                    <motion.span
+                      layoutId="nav-active-pill"
+                      className="absolute inset-0 rounded-lg bg-primary/10"
+                      transition={{
+                        type: "spring" as const,
+                        damping: 1,
+                        stiffness: 200,
+                      }}
+                    />
+                  )}
+                  <span className="relative z-10 inline-flex items-center gap-1.5">
+                    {"icon" in link && link.icon && <link.icon className="w-4 h-4" />}
+                    {link.label}
+                  </span>
+                </Link>
+              );
+            })}
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="icon"
@@ -129,16 +133,16 @@ export default function Navbar() {
           ) : user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Avatar className="w-8 h-8 cursor-pointer hover:scale-105 active:scale-95 transition-transform border-2 border-transparent hover:border-primary">
+                <Avatar className="w-8 h-8 cursor-pointer active:scale-95 transition-transform ring-2 ring-transparent hover:ring-primary/30">
                   <AvatarImage src={user?.image || ""} alt={user?.name || ""} />
-                  <AvatarFallback className="bg-primary text-primary-foreground">
+                  <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                     {user?.name?.slice(0, 2).toUpperCase() || "U"}
                   </AvatarFallback>
                 </Avatar>
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="end"
-                className="w-56 bg-background/95 backdrop-blur border-white/10 text-foreground"
+                className="w-56 glass text-foreground"
               >
                 <DropdownMenuLabel>
                   {user?.name || "My Account"}

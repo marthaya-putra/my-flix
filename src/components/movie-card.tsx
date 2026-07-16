@@ -1,4 +1,4 @@
-import { Play, Plus, ThumbsUp, Star } from "lucide-react";
+import { Play, ThumbsUp, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -9,6 +9,7 @@ import { useState } from "react";
 import { FilmInfo } from "@/lib/types";
 import { PlayLink } from "./play-link";
 import { authClient } from "@/lib/auth-client";
+import { motion } from "motion/react";
 
 interface MovieCardProps extends FilmInfo {
   match?: string;
@@ -55,17 +56,22 @@ export default function MovieCard({
   };
 
   const getRatingColor = (rating: number) => {
-    if (rating >= 8) return "text-emerald-300 border-emerald-300";
-    if (rating >= 6.5) return "text-blue-300 border-blue-300";
-    if (rating >= 5) return "text-orange-300 border-orange-300";
-    return "text-slate-300 border-slate-300";
+    if (rating >= 8) return "text-emerald-400 border-emerald-400/30";
+    if (rating >= 6.5) return "text-blue-400 border-blue-400/30";
+    if (rating >= 5) return "text-orange-400 border-orange-400/30";
+    return "text-slate-400 border-slate-400/30";
   };
 
   return (
-    <div className="group/card hover-lift relative aspect-[3/4] w-full rounded-md overflow-hidden cursor-pointer hover:z-10 active:scale-[0.98] hover:shadow-xl shadow-black/50 bg-card">
-      <div className="absolute top-2 right-2 z-10">
+    <motion.div
+      className="group/card hover-lift relative aspect-[3/4] w-full rounded-lg overflow-hidden cursor-pointer"
+      whileTap={{ scale: 0.97 }}
+      transition={{ type: "spring", damping: 1, stiffness: 300 }}
+    >
+      {/* Rating badge — glass pill, top-right */}
+      <div className="absolute top-2.5 right-2.5 z-10">
         <div
-          className={`flex items-center gap-1 px-2 py-1 rounded-full border backdrop-blur-sm ${getRatingColor(voteAverage)} bg-black/60`}
+          className={`flex items-center gap-1 px-2 py-0.5 rounded-full border backdrop-blur-md bg-black/50 ${getRatingColor(voteAverage)}`}
         >
           <Star className="w-3 h-3 fill-current" />
           <span className="text-xs font-bold">{voteAverage.toFixed(1)}</span>
@@ -75,36 +81,50 @@ export default function MovieCard({
       <img
         src={imgSrc}
         alt={title}
-        className="w-full h-full object-cover transition-[filter] duration-300 ease-out group-hover/card:brightness-75"
+        className="w-full h-full object-cover"
         onError={() => {
           setImgSrc("/poster-placeholder.svg");
           setHasError(true);
         }}
       />
 
-      {/* Title Overlay */}
+      {/* Title Overlay — shown on error or as rest-state baseline */}
       <div
-        className={`absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent ${hasError ? "opacity-100" : "opacity-0"} transition-opacity duration-300 flex flex-col justify-center p-4`}
+        className={`absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent ${hasError ? "opacity-100" : "opacity-0"} transition-opacity duration-300 flex flex-col justify-center p-4`}
       >
         <h3 className="font-display font-bold text-white text-lg text-center">
           {title}
         </h3>
       </div>
 
-      {/* Hover Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
-        <div className="translate-y-4 group-hover/card:translate-y-0 transition-transform duration-300">
+      {/* Hover Overlay — coordinated spring: opacity + translateY grow up (skill §8) */}
+      <motion.div
+        className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover/card:opacity-100 flex flex-col justify-end p-4 pointer-events-none group-hover/card:pointer-events-auto"
+        transition={{
+          type: "spring",
+          damping: 1,
+          stiffness: 150,
+        }}
+      >
+        <motion.div
+          className="translate-y-4 group-hover/card:translate-y-0"
+          transition={{
+            type: "spring",
+            damping: 1,
+            stiffness: 150,
+          }}
+        >
           <h3 className="font-display font-bold text-white text-lg leading-tight mb-2">
             {title}
           </h3>
 
           <div className="flex items-center gap-2 mb-3 flex-wrap">
             {match && (
-              <span className="text-xs font-bold text-green-400">
+              <span className="text-xs font-bold text-emerald-400">
                 {match} Match
               </span>
             )}
-            <span className="text-xs text-gray-300">
+            <span className="text-xs text-muted-foreground">
               {new Date(releaseDate).getFullYear()}
             </span>
           </div>
@@ -116,7 +136,7 @@ export default function MovieCard({
                   <PlayLink title={title} category={category}>
                     <Button
                       size="icon"
-                      className="w-8 h-8 rounded-full bg-white text-black hover:bg-gray-200 hover:text-black"
+                      className="w-8 h-8 rounded-full bg-white text-black hover:bg-white/90"
                     >
                       <Play className="w-4 h-4 fill-current ml-0.5" />
                     </Button>
@@ -131,20 +151,22 @@ export default function MovieCard({
             {!sessionPending && session && onToggleLike && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    onClick={handleToggleLike}
-                    className={`w-8 h-8 rounded-full transition-colors ${
-                      isLiked
-                        ? "bg-white text-black border-white hover:bg-gray-200"
-                        : "border-gray-400 bg-transparent text-white hover:bg-white/20 hover:text-white"
-                    }`}
-                  >
-                    <ThumbsUp
-                      className={`w-4 h-4 ${isLiked ? "fill-current" : ""}`}
-                    />
-                  </Button>
+                  <motion.div whileTap={{ scale: 0.85 }}>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={handleToggleLike}
+                      className={`w-8 h-8 rounded-full backdrop-blur-md border transition-colors ${
+                        isLiked
+                          ? "bg-primary/20 text-primary border-primary/30 hover:bg-primary/30"
+                          : "border-white/20 bg-black/40 text-white hover:bg-white/10"
+                      }`}
+                    >
+                      <ThumbsUp
+                        className={`w-4 h-4 ${isLiked ? "fill-current" : ""}`}
+                      />
+                    </Button>
+                  </motion.div>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>{isLiked ? "Unlike" : "I like this"}</p>
@@ -153,12 +175,12 @@ export default function MovieCard({
             )}
           </div>
 
-          <div className="mt-3 flex items-center gap-1 text-xs text-gray-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-gray-500 inline-block"></span>
+          <div className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">
+            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50 inline-block"></span>
             {category === "movie" ? "Movie" : "TV Series"}
           </div>
-        </div>
-      </div>
-    </div>
+        </motion.div>
+      </motion.div>
+    </motion.div>
   );
 }

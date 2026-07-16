@@ -1,29 +1,65 @@
 import { Button } from "@/components/ui/button";
 import { Home, Search } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
+import { motion } from "motion/react";
+
+const container = {
+  hidden: {},
+  show: {
+    transition: {
+      staggerChildren: 0.08,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const item = {
+  hidden: { opacity: 0, y: 16 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      damping: 1,
+      stiffness: 200,
+    },
+  },
+};
 
 export default function NotFound() {
   const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
-      <div className="text-center max-w-md">
-        {/* 404 Number */}
-        <div className="text-8xl md:text-9xl font-display font-bold text-primary mb-4">
+      <motion.div
+        className="text-center max-w-md"
+        variants={container}
+        initial="hidden"
+        animate="show"
+      >
+        <motion.div
+          variants={item}
+          className="text-8xl md:text-9xl font-display font-bold text-primary mb-4"
+          style={{ letterSpacing: "-0.04em", lineHeight: 1 }}
+        >
           404
-        </div>
+        </motion.div>
 
-        {/* Error Message */}
-        <h1 className="text-2xl md:text-3xl font-display font-semibold text-foreground mb-2">
+        <motion.h1
+          variants={item}
+          className="text-2xl md:text-3xl font-display font-semibold text-foreground mb-2"
+        >
           Page Not Found
-        </h1>
+        </motion.h1>
 
-        <p className="text-muted-foreground mb-8">
+        <motion.p variants={item} className="text-muted-foreground mb-8">
           The content you're looking for doesn't exist or has been moved.
-        </p>
+        </motion.p>
 
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        <motion.div
+          variants={item}
+          className="flex flex-col sm:flex-row gap-4 justify-center"
+        >
           <Button
             onClick={() => navigate({ to: "/" })}
             className="bg-primary hover:bg-primary/90 text-primary-foreground"
@@ -40,13 +76,15 @@ export default function NotFound() {
             <Search className="w-4 h-4 mr-2" />
             Search Content
           </Button>
-        </div>
+        </motion.div>
 
-        {/* Additional Help Text */}
-        <p className="text-sm text-muted-foreground mt-8">
+        <motion.p
+          variants={item}
+          className="text-sm text-muted-foreground mt-8"
+        >
           If you think this is an error, please contact support.
-        </p>
-      </div>
+        </motion.p>
+      </motion.div>
     </div>
   );
 }
