@@ -96,8 +96,8 @@ export default function Navbar() {
                       className="absolute inset-0 rounded-lg bg-primary/10"
                       transition={{
                         type: "spring" as const,
-                        damping: 1,
-                        stiffness: 200,
+                        duration: 0.4,
+                        bounce: 0.5,
                       }}
                     />
                   )}
