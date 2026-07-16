@@ -90,8 +90,8 @@ export function RecommendationCard({
       </div>
 
       {/* Bottom title strip — always visible at rest */}
-      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent pt-10 pb-3 px-3 z-10">
-        <h4 className="font-semibold text-sm md:text-base text-white line-clamp-2">
+      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/95 via-black/70 to-black/0 pt-16 pb-3 px-3 z-10">
+        <h4 className="font-semibold text-sm md:text-base text-white line-clamp-2 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
           {recommendation.title}
         </h4>
       </div>
