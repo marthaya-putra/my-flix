@@ -4,21 +4,29 @@ import { Button } from "@/components/ui/button";
 import { FilmInfo } from "@/lib/types";
 import { getReleasedYear } from "@/lib/utils";
 import { PlayLink } from "./play-link";
+import { motion } from "motion/react";
 
 export default function Hero(filmInfo: FilmInfo) {
   return (
-    <div className="relative w-full h-[50vh] overflow-hidden">
+    <div className="relative w-full h-[50vh] min-h-[400px] overflow-hidden">
+      {/* Backdrop — fade-in only, content just appears with it */}
       <div
-        className="absolute inset-0 w-full h-full bg-cover bg-center transform animate-in fade-in duration-1000"
+        className="absolute inset-0 w-full h-full bg-cover bg-center animate-in fade-in duration-1000"
         style={{ backgroundImage: `url(${filmInfo.backdropPath})` }}
       >
-        <div className="absolute inset-0 bg-linear-to-r from-background via-background/60 to-transparent" />
-        <div className="absolute inset-0 bg-linear-to-t from-background via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/60 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
       </div>
 
       <div className="relative h-full flex px-4 md:px-12 max-w-7xl mx-auto">
-        <div className="max-w-2xl flex flex-col justify-center">
-          <h1 className="text-3xl md:text-5xl font-display font-black text-white leading-none tracking-tight drop-shadow-2xl uppercase">
+        {/* Single gentle entrance — tween, no spring bounce, slight rise */}
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: "easeOut", delay: 0.3 }}
+          className="max-w-2xl flex flex-col justify-center"
+        >
+          <h1 className="text-3xl md:text-5xl font-display font-black text-white leading-none drop-shadow-2xl">
             {filmInfo.title}
           </h1>
 
@@ -32,7 +40,7 @@ export default function Hero(filmInfo: FilmInfo) {
             <div className="flex flex-wrap gap-2">
               <Badge
                 variant="secondary"
-                className="backdrop-blur-md bg-background/20 border-white/20 text-white"
+                className="backdrop-blur-md bg-black/30 border-white/15 text-white"
               >
                 {getReleasedYear(filmInfo.releaseDate)}
               </Badge>
@@ -40,14 +48,15 @@ export default function Hero(filmInfo: FilmInfo) {
                 <Badge
                   key={index}
                   variant="outline"
-                  className="border-white/30 text-white bg-white/10 backdrop-blur-sm"
+                  className="border-white/15 text-white bg-black/20 backdrop-blur-sm"
                 >
                   {genre}
                 </Badge>
               ))}
             </div>
           </div>
-          <p className="text-base text-gray-300 leading-relaxed line-clamp-3 md:line-clamp-none max-w-xl drop-shadow-md pt-4">
+
+          <p className="text-base text-white/80 leading-relaxed line-clamp-3 md:line-clamp-none max-w-xl drop-shadow-md pt-4">
             {filmInfo.overview}
           </p>
 
@@ -55,7 +64,7 @@ export default function Hero(filmInfo: FilmInfo) {
             <PlayLink title={filmInfo.title} category={filmInfo.category}>
               <Button
                 size="lg"
-                className="group bg-primary hover:bg-primary/90 text-white font-bold rounded-full px-10 py-4 text-lg uppercase tracking-wide shadow-lg hover:shadow-xl hover:scale-105 active:scale-[0.98] transition-[transform,box-shadow] duration-200 ease-[var(--ease-out)]"
+                className="group bg-primary hover:bg-primary/90 text-white font-bold rounded-full px-10 py-4 text-lg tracking-wide shadow-lg hover:shadow-xl active:scale-[0.97] transition-[transform,box-shadow] duration-200"
               >
                 <div
                   className="group-hover:animate-sliding mr-3"
@@ -69,7 +78,7 @@ export default function Hero(filmInfo: FilmInfo) {
               </Button>
             </PlayLink>
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

@@ -8,6 +8,7 @@ import {
   type CarouselApi,
 } from "@/components/ui/carousel";
 import { cn } from "@/lib/utils";
+import { CAROUSEL_BUTTON_CLASS } from "../content-row";
 
 interface RecommendationCarouselProps {
   children: React.ReactNode;
@@ -15,9 +16,6 @@ interface RecommendationCarouselProps {
   /** Scroll to the slide at this index (the first new card after load-more). */
   scrollToFirstNew?: number;
 }
-
-const CAROUSEL_BTN =
-  "h-15 w-15 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-black/80 disabled:opacity-0 cursor-pointer group-hover:[&_svg]:animate-sliding group-hover:[&_svg]:delay-300";
 
 export function RecommendationCarousel({
   children,
@@ -57,14 +55,14 @@ export function RecommendationCarousel({
       <CarouselPrevious
         className={cn(
           "left-0 -translate-x-1/2 top-1/2 -translate-y-1/2",
-          CAROUSEL_BTN,
+          CAROUSEL_BUTTON_CLASS,
         )}
         style={{ "--slide-animation-from": "5px" } as React.CSSProperties}
       />
       <CarouselNext
         className={cn(
           "right-0 translate-x-1/2 top-1/2 -translate-y-1/2",
-          CAROUSEL_BTN,
+          CAROUSEL_BUTTON_CLASS,
         )}
         style={{ "--slide-animation-from": "-5px" } as React.CSSProperties}
       />

@@ -1,3 +1,5 @@
+import { motion } from "motion/react";
+
 interface CardProps {
   imageUrl?: string;
   badge?: React.ReactNode;
@@ -5,38 +7,45 @@ interface CardProps {
   subtitle?: string;
 }
 
+const SPRING_TAP = { type: "spring" as const, damping: 1, stiffness: 300 };
+
 export default function Card({ imageUrl, badge, title, subtitle }: CardProps) {
   return (
-    <div className="group cursor-pointer transition-transform duration-200 hover:scale-105">
-      <div className="relative aspect-3/4 overflow-hidden rounded-md bg-gray-800">
+    <motion.div
+      className="group hover-lift cursor-pointer"
+      whileTap={{ scale: 0.97 }}
+      transition={SPRING_TAP}
+    >
+      <div className="relative aspect-3/4 overflow-hidden rounded-lg bg-card">
         {imageUrl ? (
           <img
             src={imageUrl}
             alt={title || ""}
-            className="h-full w-full object-cover transition-opacity duration-300 group-hover:opacity-90"
+            className="h-full w-full object-cover"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-gray-800">
-            <div className="text-center text-gray-400">
+          <div className="flex h-full w-full items-center justify-center bg-card">
+            <div className="text-center text-muted-foreground">
               <div className="mb-2 text-3xl">🎬</div>
               <div className="text-xs">No Image</div>
             </div>
           </div>
         )}
-        {badge && <div className="absolute top-2 right-2">{badge}</div>}
+        {badge && <div className="absolute top-2.5 right-2.5">{badge}</div>}
 
-        {/* Title and subtitle overlay at bottom */}
         {(title || subtitle) && (
-          <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/80 to-transparent p-3">
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-3">
             {title && (
-              <h3 className="truncate text-sm font-medium text-white group-hover:text-blue-400">
+              <h3 className="truncate text-sm font-medium text-white group-hover:text-primary">
                 {title}
               </h3>
             )}
-            {subtitle && <p className="text-xs text-gray-300">{subtitle}</p>}
+            {subtitle && (
+              <p className="text-xs text-muted-foreground">{subtitle}</p>
+            )}
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }

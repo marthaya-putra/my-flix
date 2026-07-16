@@ -11,6 +11,7 @@ import Navbar from "../components/navbar";
 import NotFound from "../components/not-found";
 import appCss from "../styles/app.css?url";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/sonner";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -28,6 +29,16 @@ export const Route = createRootRoute({
     ],
     links: [
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      {
+        rel: "preconnect",
+        href: "https://fonts.gstatic.com",
+        crossOrigin: "anonymous",
+      },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;700;900&display=swap",
+      },
       { rel: "stylesheet", href: appCss },
     ],
   }),
@@ -52,7 +63,9 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
       <body className="grid grid-rows-[auto_1fr_auto]">
         <TooltipProvider>
           <Navbar />
-          <main className="pt-2">{children}</main>
+          {/* Fixed navbar needs top offset on main content */}
+          <main className="pt-[72px]">{children}</main>
+          <Toaster richColors closeButton position="bottom-right" />
         </TooltipProvider>
         <footer className="py-6 px-4 md:px-12 bg-black/40 border-t border-white/5">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-white">
@@ -63,7 +76,7 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
               href="https://github.com/marthaya-putra/my-flix"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 hover:text-gray-300 transition-colors"
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
               aria-label="GitHub Repository"
             >
               <svg
