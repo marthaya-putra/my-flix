@@ -35,7 +35,7 @@
   --font-sans: "Inter", sans-serif;
   --font-display: "Outfit", sans-serif;
 
-  --animate-sliding: custom-slide 700ms ease-in-out;
+  --animate-sliding: custom-slide 400ms var(--ease-out);
 
   @keyframes custom-slide {
     from {
@@ -71,6 +71,10 @@
   --chart-4: 280 65% 60%;
   --chart-5: 340 75% 55%;
   --radius: 0.5rem;
+
+  /* Custom easing curves — punchier than built-in CSS easings */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 }
 
 @layer base {
@@ -114,6 +118,19 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* Respect users who prefer reduced motion: keep color/opacity legibility,
+     but remove movement. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
 
 @layer utilities {
@@ -136,16 +153,6 @@
     );
     background-size: 200% 100%;
     animation: shimmer 1.5s ease-in-out infinite;
-  }
-
-  /* @keyframes slide {
-    from {
-      transform: translateX(var(--slide-animation-from));
-    }
-  } */
-
-  .sliding {
-    animation: slide 300ms ease-in-out;
   }
 
   /* Line clamp utility for text truncation */
@@ -175,6 +182,18 @@
     .container {
       padding-left: 1rem;
       padding-right: 1rem;
+    }
+  }
+
+  /* Hover-lift: base transition ensures press feedback eases on touch too.
+     The hover scale itself is gated to real-hover + fine-pointer devices. */
+  .hover-lift {
+    transition: transform 160ms var(--ease-out, ease-out),
+      box-shadow 160ms var(--ease-out, ease-out);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .hover-lift:hover {
+      transform: scale(1.05);
     }
   }
 }

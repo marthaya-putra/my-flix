@@ -10,7 +10,7 @@ export default function FilterPopovers({ children }: FilterPopoversProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
-    <div className="bg-card rounded-lg border border-border shadow-lg relative z-40 overflow-hidden transition-all duration-300 mb-8">
+    <div className="bg-card rounded-lg border border-border shadow-lg relative z-40 overflow-hidden transition-[max-height,opacity] duration-300 mb-8">
       <div className="flex items-center justify-between p-4 border-b border-border">
         <div className="flex items-center gap-2">
           <Filter className="w-4 h-4 text-primary" />
@@ -31,7 +31,7 @@ export default function FilterPopovers({ children }: FilterPopoversProps) {
       </div>
 
       <div
-        className={`transition-all duration-300 ease-in-out ${
+        className={`transition-[max-height,opacity] duration-300 ease-in-out ${
           isCollapsed ? "max-h-0 opacity-0" : "max-h-96 opacity-100"
         }`}
       >

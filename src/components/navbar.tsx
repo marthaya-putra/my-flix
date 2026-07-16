@@ -44,7 +44,7 @@ export default function Navbar() {
   return (
     <nav
       className={cn(
-        "w-full transition-all duration-500 px-4 md:px-12 py-4",
+        "w-full transition-[background-color,box-shadow] duration-300 ease-out px-4 md:px-12 py-4",
         scrolled
           ? "bg-background/80 backdrop-blur-md shadow-md"
           : "bg-linear-to-b from-black/80 to-transparent"
@@ -54,7 +54,7 @@ export default function Navbar() {
         <div className="flex items-center gap-8">
           <Link
             to="/"
-            className="text-3xl font-display font-bold text-primary tracking-tighter hover:opacity-90 transition-opacity"
+            className="text-3xl font-display font-bold text-primary tracking-tighter hover:opacity-90 active:scale-95 transition-[opacity,transform]"
           >
             MyFlix
           </Link>
@@ -129,7 +129,7 @@ export default function Navbar() {
           ) : user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Avatar className="w-8 h-8 cursor-pointer hover:scale-105 transition-transform border-2 border-transparent hover:border-primary">
+                <Avatar className="w-8 h-8 cursor-pointer hover:scale-105 active:scale-95 transition-transform border-2 border-transparent hover:border-primary">
                   <AvatarImage src={user?.image || ""} alt={user?.name || ""} />
                   <AvatarFallback className="bg-primary text-primary-foreground">
                     {user?.name?.slice(0, 2).toUpperCase() || "U"}

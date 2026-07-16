@@ -40,7 +40,7 @@ export function RecommendationCard({
 
   return (
     <div
-      className="group/card relative rounded-lg overflow-hidden bg-muted cursor-pointer select-none mx-auto w-full max-w-[240px]"
+      className="group/card hover-lift relative rounded-lg overflow-hidden bg-muted cursor-pointer select-none mx-auto w-full max-w-[240px] active:scale-[0.97]"
       style={{ aspectRatio: "2 / 3" }}
       onClick={() => {
         // Touch only — desktop uses hover (spec 0010 non-goal line 188).
@@ -57,7 +57,7 @@ export function RecommendationCard({
         <img
           src={recommendation.tmdbData.posterPath}
           alt={`${recommendation.title} poster`}
-          className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover/card:scale-105"
+          className="absolute inset-0 w-full h-full object-cover"
           onError={() => onImageError(imageErrorKey)}
         />
       ) : (

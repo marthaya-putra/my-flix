@@ -62,7 +62,7 @@ export default function MovieCard({
   };
 
   return (
-    <div className="group/card relative aspect-[3/4] w-full rounded-md overflow-hidden cursor-pointer transition-all duration-300 hover:z-10 hover:scale-105 hover:shadow-xl shadow-black/50 bg-card">
+    <div className="group/card hover-lift relative aspect-[3/4] w-full rounded-md overflow-hidden cursor-pointer hover:z-10 active:scale-[0.98] hover:shadow-xl shadow-black/50 bg-card">
       <div className="absolute top-2 right-2 z-10">
         <div
           className={`flex items-center gap-1 px-2 py-1 rounded-full border backdrop-blur-sm ${getRatingColor(voteAverage)} bg-black/60`}
@@ -75,11 +75,9 @@ export default function MovieCard({
       <img
         src={imgSrc}
         alt={title}
-        className="w-full h-full object-cover transition-transform duration-500 group-hover/card:brightness-75"
+        className="w-full h-full object-cover transition-[filter] duration-300 ease-out group-hover/card:brightness-75"
         onError={() => {
-          setImgSrc(
-            "https://images.unsplash.com/photo-1598899134739-24c46f58b8c0?auto=format&fit=crop&w=800&q=80"
-          );
+          setImgSrc("/poster-placeholder.svg");
           setHasError(true);
         }}
       />
