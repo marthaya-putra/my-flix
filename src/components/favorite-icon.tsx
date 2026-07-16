@@ -51,10 +51,10 @@ export default function FavoriteIcon({
         <Button
           size="icon"
           variant={variant}
-          className={`
-            ${sizeClasses[size]}
+              className={`
+                ${sizeClasses[size]}
             rounded-full
-            transition-all duration-300
+            transition-[background-color,color,transform] duration-300
             ${isFavorited
               ? 'bg-red-500 border-red-400 text-white hover:bg-red-600 scale-110'
               : 'border-gray-400 bg-transparent text-white hover:bg-white/20 hover:text-white hover:scale-105'
@@ -68,15 +68,14 @@ export default function FavoriteIcon({
               className={`
                 ${iconSizes[size]}
                 fill-current
-                transition-all duration-300
-                animate-pulse
+                transition-colors duration-300
               `}
             />
           ) : (
             <Heart
               className={`
                 ${iconSizes[size]}
-                transition-all duration-300
+                transition-colors duration-300
               `}
             />
           )}

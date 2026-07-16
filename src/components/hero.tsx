@@ -55,7 +55,7 @@ export default function Hero(filmInfo: FilmInfo) {
             <PlayLink title={filmInfo.title} category={filmInfo.category}>
               <Button
                 size="lg"
-                className="group bg-primary hover:bg-primary/90 text-white font-bold rounded-full px-10 py-4 text-lg uppercase tracking-wide shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
+                className="group bg-primary hover:bg-primary/90 text-white font-bold rounded-full px-10 py-4 text-lg uppercase tracking-wide shadow-lg hover:shadow-xl hover:scale-105 active:scale-[0.98] transition-[transform,box-shadow] duration-200 ease-[var(--ease-out)]"
               >
                 <div
                   className="group-hover:animate-sliding mr-3"
