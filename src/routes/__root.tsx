@@ -24,12 +24,12 @@ export const Route = createRootRouteWithContext<AppRouterContext>()({
   // and via RPC on client navigations. Login/logout invalidate the cache.
   beforeLoad: async ({ context }) => {
     const session = await context.queryClient.fetchQuery(sessionQuery);
-    const isClient = typeof window !== "undefined";
-    console.log(
-      `[root beforeLoad] ${isClient ? "CLIENT" : "SERVER"} session.user:`,
-      session?.user?.email ?? null,
-    );
-    return { context: { session } };
+    // beforeLoad's return value is spread FLAT into the route context
+    // (router sets __beforeLoadContext = the raw return, then merges
+    // `...parentContext, ...__routeContext, ...__beforeLoadContext`).
+    // Do NOT wrap in `{ context: ... }` — that nests a stray `context`
+    // key and leaves `session` unreachable via useRouteContext().
+    return { session };
   },
   head: () => ({
     meta: [

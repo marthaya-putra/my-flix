@@ -40,11 +40,9 @@ function LoginComponent() {
             // Drop the stale (logged-out) cached session, then navigate
             // without a document reload. router.navigate re-runs the root
             // beforeLoad, which refetches the now-logged-in session.
-            console.log("[login] onSuccess fired, invalidating session");
             await router.options.context.queryClient.invalidateQueries({
               queryKey: SESSION_QUERY_KEY,
             });
-            console.log("[login] invalidated, navigating to /");
             router.navigate({ to: "/" });
           },
         },
