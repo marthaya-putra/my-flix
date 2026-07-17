@@ -1,4 +1,4 @@
-import { Link, useLocation, useRouter } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
 import {
   Search,
   Bell,
@@ -35,7 +35,6 @@ const NAV_LINKS = [
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const location = useLocation();
   const router = useRouter();
 
   const { data, isPending } = authClient.useSession();
@@ -48,13 +47,6 @@ export default function Navbar() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
-  const activeIndex = NAV_LINKS.findIndex(
-    (l) =>
-      l.to === "/"
-        ? location.pathname === "/"
-        : location.pathname.startsWith(l.to)
-  );
 
   return (
     <nav
@@ -74,40 +66,42 @@ export default function Navbar() {
             MyFlix
           </Link>
           <div className="hidden md:flex items-center gap-1 text-sm font-medium relative">
-            {NAV_LINKS.map((link, i) => {
-              const isActive =
-                link.to === "/"
-                  ? location.pathname === "/"
-                  : location.pathname.startsWith(link.to);
-              return (
-                <Link
-                  key={link.to}
-                  to={link.to}
-                  className={cn(
-                    "relative px-3 py-1.5 rounded-lg transition-colors",
-                    isActive
-                      ? "text-primary font-semibold"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {isActive && (
-                    <motion.span
-                      layoutId="nav-active-pill"
-                      className="absolute inset-0 rounded-lg bg-primary/10"
-                      transition={{
-                        type: "spring" as const,
-                        duration: 0.4,
-                        bounce: 0.5,
-                      }}
-                    />
-                  )}
-                  <span className="relative z-10 inline-flex items-center gap-1.5">
-                    {"icon" in link && link.icon && <link.icon className="w-4 h-4" />}
-                    {link.label}
+            {NAV_LINKS.map((link) => (
+              <Link
+                key={link.to}
+                to={link.to}
+                activeOptions={{ exact: link.to === "/" }}
+              >
+                {({ isActive }) => (
+                  <span
+                    className={cn(
+                      "relative px-3 py-1.5 rounded-lg transition-colors",
+                      isActive
+                        ? "text-primary font-semibold"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {isActive && (
+                      <motion.span
+                        layoutId="nav-active-pill"
+                        className="absolute inset-0 rounded-lg bg-primary/10"
+                        transition={{
+                          type: "spring" as const,
+                          duration: 0.4,
+                          bounce: 0.5,
+                        }}
+                      />
+                    )}
+                    <span className="relative z-10 inline-flex items-center gap-1.5">
+                      {"icon" in link && link.icon && (
+                        <link.icon className="w-4 h-4" />
+                      )}
+                      {link.label}
+                    </span>
                   </span>
-                </Link>
-              );
-            })}
+                )}
+              </Link>
+            ))}
           </div>
         </div>
 
@@ -159,12 +153,10 @@ export default function Navbar() {
                 <DropdownMenuItem asChild>
                   <Link
                     to="/preferences"
-                    className={cn(
-                      "flex items-center w-full cursor-pointer focus:bg-white/10 focus:text-white",
-                      location.pathname === "/preferences"
-                        ? "text-primary"
-                        : "text-foreground"
-                    )}
+                    activeOptions={{ exact: false }}
+                    activeProps={{ className: "text-primary" }}
+                    inactiveProps={{ className: "text-foreground" }}
+                    className="flex items-center w-full cursor-pointer focus:bg-white/10 focus:text-white"
                   >
                     <Heart className="mr-2 h-4 w-4" />
                     <span>Preferences</span>
