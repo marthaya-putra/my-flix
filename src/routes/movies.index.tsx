@@ -1,8 +1,6 @@
-import { Suspense } from "react";
-import { Await, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { fetchDiscoverMovies } from "@/lib/data/movies";
-import { type MovieRouteSearchParams } from "@/lib/types";
-import MoviesSkeleton from "@/components/movies-skeleton";
+import { createFileRoute } from "@tanstack/react-router";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { discoverMoviesOptions } from "@/lib/queries/movies";
 import MoviesContent from "@/components/movies-content";
 import FilterPopovers from "@/components/filter-popovers";
 import GenreFilter from "@/components/filters/genre-filter";
@@ -20,30 +18,33 @@ export const Route = createFileRoute("/movies/")({
     year: z.coerce.number().optional(),
   }),
   component: MoviesPage,
-  loaderDeps: ({ search }: { search?: MovieRouteSearchParams }) => ({
-    page: search?.page || 1,
-    genres: search?.genres ? search.genres : "",
-    rating: search?.rating,
-    year: search?.year,
+  loaderDeps: ({ search }) => ({
+    page: search.page,
+    genres: search.genres ?? "",
+    rating: search.rating,
+    year: search.year,
   }),
-  loader: async ({ deps }) => {
-    return {
-      movies: fetchDiscoverMovies({
-        data: {
-          page: deps.page,
-          with_genres: deps.genres,
-          vote_average_gte: deps.rating,
-          year: deps.year,
-        },
+  loader: async ({ context, deps }) => {
+    // Prefetch so SSR hydrates the query cache and the client does not
+    // refetch on first mount. The component reads the same options via
+    // useSuspenseQuery — same key, no second source of truth.
+    await context.queryClient.ensureQueryData(
+      discoverMoviesOptions({
+        page: deps.page,
+        genres: deps.genres,
+        rating: deps.rating,
+        year: deps.year,
       }),
-    };
+    );
   },
 });
 
 function MoviesPage() {
-  const { movies } = Route.useLoaderData();
-  const navigate = useNavigate();
   const { isLiked, toggleLike } = useLikedItems();
+  const { page, genres, rating, year } = Route.useLoaderDeps();
+  const { data: moviesData } = useSuspenseQuery(
+    discoverMoviesOptions({ page, genres, rating, year }),
+  );
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -66,19 +67,12 @@ function MoviesPage() {
         </div>
       </FilterPopovers>
 
-      <Suspense fallback={<MoviesSkeleton />}>
-        <Await
-          promise={movies}
-          children={(moviesData) => (
-            <MoviesContent
-              moviesData={moviesData}
-              route={Route}
-              isLiked={isLiked}
-              onToggleLike={toggleLike}
-            />
-          )}
-        />
-      </Suspense>
+      <MoviesContent
+        moviesData={moviesData}
+        route={Route}
+        isLiked={isLiked}
+        onToggleLike={toggleLike}
+      />
     </div>
   );
 }

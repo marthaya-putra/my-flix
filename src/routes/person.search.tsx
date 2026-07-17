@@ -1,7 +1,6 @@
-import { Suspense } from "react";
-import { Await, createFileRoute } from "@tanstack/react-router";
-import { searchActors } from "@/lib/data/search";
-import PersonSkeleton from "@/components/person-skeleton";
+import { createFileRoute } from "@tanstack/react-router";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { searchPeopleOptions } from "@/lib/queries/search";
 import PersonContent from "@/components/person-content";
 import { z } from "zod";
 
@@ -13,22 +12,20 @@ export const Route = createFileRoute("/person/search")({
   component: PersonSearchPage,
   loaderDeps: ({ search }) => ({
     query: search.query,
-    page: search.page || 1,
+    page: search.page,
   }),
-  loader: async ({ deps }) => {
-    return {
-      people: searchActors({
-        data: {
-          query: deps.query,
-          page: deps.page,
-        },
-      }),
-    };
+  loader: async ({ context, deps }) => {
+    await context.queryClient.ensureQueryData(
+      searchPeopleOptions({ query: deps.query, page: deps.page }),
+    );
   },
 });
 
 function PersonSearchPage() {
-  const { people } = Route.useLoaderData();
+  const { query, page } = Route.useLoaderDeps();
+  const { data: personData } = useSuspenseQuery(
+    searchPeopleOptions({ query, page }),
+  );
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -38,16 +35,7 @@ function PersonSearchPage() {
         </h1>
       </div>
 
-      <Suspense fallback={<PersonSkeleton />}>
-        <Await
-          promise={people}
-          children={(personData) => (
-            <PersonContent
-              personData={personData}
-            />
-          )}
-        />
-      </Suspense>
+      <PersonContent personData={personData} />
     </div>
   );
 }

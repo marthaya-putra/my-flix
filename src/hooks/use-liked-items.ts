@@ -1,69 +1,31 @@
-import { useEffect, useState } from "react";
-import { getUserLikedItems, toggleMoviePreference } from "@/lib/data/preferences";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toggleMoviePreference } from "@/lib/data/preferences";
+import { likedItemsOptions, preferencesKeys } from "@/lib/queries/preferences";
 import type { FilmInfo } from "@/lib/types";
 
-export interface LikedItemsState {
-  likedIds: Set<number>;
-  isPending: boolean;
-}
-
+/**
+ * Read the user's liked items from the QueryClient cache (populated by
+ * the root layout / loaders) and toggle a like via `useMutation`.
+ *
+ * The mutation applies an optimistic update to the liked-items cache,
+ * and on success invalidates both the liked-items and the user-preferences
+ * keys so every read path reflects the new state.
+ */
 export function useLikedItems() {
-  const [state, setState] = useState<LikedItemsState>({
-    likedIds: new Set<number>(),
-    isPending: true,
-  });
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    let mounted = true;
+  const { data, isPending } = useQuery(likedItemsOptions());
+  const likedIds = new Set(data?.likedIds ?? []);
 
-    async function fetchLikedItems() {
-      try {
-        const result = await getUserLikedItems();
-        if (mounted) {
-          setState({
-            likedIds: new Set(result.likedIds),
-            isPending: false,
-          });
-        }
-      } catch {
-        if (mounted) {
-          setState({
-            likedIds: new Set<number>(),
-            isPending: false,
-          });
-        }
-      }
-    }
+  const toggleMutation = useMutation({
+    mutationFn: (filmInfo: FilmInfo) => {
+      const { id, title, releaseDate, category, genres } = filmInfo;
+      const year = releaseDate
+        ? new Date(releaseDate).getFullYear()
+        : new Date().getFullYear();
+      const categoryValue = category === "tv" ? "tv-series" : "movie";
 
-    fetchLikedItems();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  const isLiked = (id: number) => state.likedIds.has(id);
-
-  const toggleLike = async (filmInfo: FilmInfo) => {
-    const { id, title, releaseDate, category, genres } = filmInfo;
-    const year = releaseDate ? new Date(releaseDate).getFullYear() : new Date().getFullYear();
-    const categoryValue = category === "tv" ? "tv-series" : "movie";
-
-    const currentlyLiked = state.likedIds.has(id);
-
-    // Optimistically update UI immediately
-    setState((prev) => {
-      const newLikedIds = new Set(prev.likedIds);
-      if (newLikedIds.has(id)) {
-        newLikedIds.delete(id);
-      } else {
-        newLikedIds.add(id);
-      }
-      return { likedIds: newLikedIds, isPending: false };
-    });
-
-    try {
-      const result = await toggleMoviePreference({
+      return toggleMoviePreference({
         data: {
           preferenceId: id,
           title,
@@ -73,36 +35,61 @@ export function useLikedItems() {
           posterPath: filmInfo.posterPath,
         },
       });
+    },
+    onMutate: async (filmInfo) => {
+      // Cancel in-flight reads so they don't clobber the optimistic update.
+      await queryClient.cancelQueries({ queryKey: preferencesKeys.likedItems() });
 
-      // If server failed, revert optimistic update
-      if (!result.success) {
-        setState((prev) => {
-          const newLikedIds = new Set(prev.likedIds);
-          if (currentlyLiked) {
-            newLikedIds.add(id);
-          } else {
-            newLikedIds.delete(id);
-          }
-          return { likedIds: newLikedIds, isPending: false };
-        });
+      const previous = queryClient.getQueryData<{ likedIds: number[] }>(
+        preferencesKeys.likedItems(),
+      );
+
+      const prevSet = new Set(previous?.likedIds ?? []);
+      const nextSet = new Set(prevSet);
+      if (nextSet.has(filmInfo.id)) {
+        nextSet.delete(filmInfo.id);
+      } else {
+        nextSet.add(filmInfo.id);
       }
-    } catch {
-      // On error, revert the optimistic update
-      setState((prev) => {
-        const newLikedIds = new Set(prev.likedIds);
-        if (currentlyLiked) {
-          newLikedIds.add(id);
-        } else {
-          newLikedIds.delete(id);
-        }
-        return { likedIds: newLikedIds, isPending: false };
+
+      queryClient.setQueryData(preferencesKeys.likedItems(), {
+        likedIds: [...nextSet],
       });
-    }
+
+      return { previous };
+    },
+    onError: (_err, _filmInfo, context) => {
+      // Revert on failure.
+      if (context?.previous) {
+        queryClient.setQueryData(
+          preferencesKeys.likedItems(),
+          context.previous,
+        );
+      }
+    },
+    onSettled: () => {
+      // Refetch the canonical list and refresh any preferences views.
+      void queryClient.invalidateQueries({
+        queryKey: preferencesKeys.likedItems(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: preferencesKeys.userPreferences(),
+      });
+    },
+  });
+
+  const isLiked = (id: number) => likedIds.has(id);
+  const toggleLike = (filmInfo: FilmInfo) => {
+    void toggleMutation.mutate(filmInfo);
   };
 
   return {
     isLiked,
     toggleLike,
-    isPending: state.isPending,
+    // True while the initial liked-items read is loading.
+    isPending,
+    // True while a toggle is in flight. Exposed so callers can show a
+    // per-item "liking…" affordance if they want.
+    isToggling: toggleMutation.isPending,
   };
 }

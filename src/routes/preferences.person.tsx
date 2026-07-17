@@ -1,30 +1,24 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Suspense } from "react";
-import { Await } from "@tanstack/react-router";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { AllPreferencesPage } from "@/components/preferences/all-preferences-page";
 import { guardAuthenticated } from "@/lib/auth-guard";
-import { fetchUserPreferences } from "@/lib/data/preferences";
+import { userPreferencesOptions } from "@/lib/queries/preferences";
 
 export const Route = createFileRoute("/preferences/person")({
   component: AllPeopleComponent,
   beforeLoad: guardAuthenticated,
-  loader: async () => {
-    return {
-      preferencesPromise: fetchUserPreferences(),
-    };
+  loader: async ({ context }) => {
+    await context.queryClient.ensureQueryData(userPreferencesOptions());
   },
 });
 
 function AllPeopleComponent() {
-  const { preferencesPromise } = Route.useLoaderData();
+  const { data: preferences } = useSuspenseQuery(userPreferencesOptions());
 
   return (
     <Suspense fallback={<AllPeopleSkeleton />}>
-      <Await promise={preferencesPromise}>
-        {(preferences) => (
-          <AllPreferencesPage initialPreferences={preferences} category="people" />
-        )}
-      </Await>
+      <AllPreferencesPage initialPreferences={preferences} category="people" />
     </Suspense>
   );
 }
