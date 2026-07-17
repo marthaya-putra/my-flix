@@ -28,4 +28,8 @@ dist-ssr
 # TanStack router cache
 .tanstack
 
-.output.zcode/
+# Build output
+.output
+
+# ZCode local session files
+.zcode/
