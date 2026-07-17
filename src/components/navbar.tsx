@@ -1,5 +1,5 @@
-import { Link, useRouter, useRouteContext } from "@tanstack/react-router";
-import { SESSION_QUERY_KEY } from "@/lib/data/auth";
+import { Link, useRouter } from "@tanstack/react-router";
+import { sessionQuery } from "@/lib/data/auth";
 import {
   Search,
   Bell,
@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,14 +38,12 @@ export default function Navbar() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const router = useRouter();
 
-  // Session is resolved in the root beforeLoad and dehydrated to the
-  // client, so it is available here on first paint — no suspense/skeleton.
-  // `useRouteContext` reads the reactive, per-navigation context (NOT
-  // `router.options.context`, which is the static initial value and would
-  // always be null). Login/logout invalidate the session query and
-  // navigate, which re-runs beforeLoad and updates this value reactively.
-  const ctx = useRouteContext({ from: "__root__" });
-  const user = ctx.session?.user;
+  // Session via better-auth's own hook (same one movie-card and
+  // recommendations use). Single source of truth; isPending drives the
+  // avatar Skeleton during the initial fetch.
+  const { data: session, isPending: isFetchingSession } = authClient.useSession();
+  const user = session?.user;
+  const showSessionSkeleton = isFetchingSession && !user;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -128,7 +127,9 @@ export default function Navbar() {
             <Bell className="w-5 h-5" />
           </Button>
 
-          {user ? (
+          {showSessionSkeleton ? (
+            <Skeleton className="w-8 h-8 rounded-full bg-muted-foreground/30" />
+          ) : user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Avatar className="w-8 h-8 cursor-pointer active:scale-95 transition-transform ring-2 ring-transparent hover:ring-primary/30">
@@ -176,7 +177,7 @@ export default function Navbar() {
                           // Session is cached with staleTime: Infinity; drop it
                           // so the next nav re-resolves as logged-out.
                           router.options.context.queryClient.invalidateQueries({
-                            queryKey: SESSION_QUERY_KEY,
+                            queryKey: sessionQuery.queryKey,
                           });
                           router.navigate({ to: "/" });
                         },
