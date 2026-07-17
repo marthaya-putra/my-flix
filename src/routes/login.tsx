@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { authClient } from "@/lib/auth-client";
+import { SESSION_QUERY_KEY } from "@/lib/data/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,8 +36,14 @@ function LoginComponent() {
         email,
         password,
         fetchOptions: {
-          onSuccess: () => {
-            router.navigate({ to: "/", reloadDocument: true });
+          onSuccess: async () => {
+            // Drop the stale (logged-out) cached session, then navigate
+            // without a document reload. router.navigate re-runs the root
+            // beforeLoad, which refetches the now-logged-in session.
+            await router.options.context.queryClient.invalidateQueries({
+              queryKey: SESSION_QUERY_KEY,
+            });
+            router.navigate({ to: "/" });
           },
         },
       });
