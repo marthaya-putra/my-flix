@@ -6,6 +6,7 @@ import {
   PaginationNext,
 } from "@/components/ui/pagination";
 import { motion } from "motion/react";
+import { tapSpring } from "@/lib/motion";
 
 interface PaginationProps {
   currentPage: number;
@@ -15,8 +16,6 @@ interface PaginationProps {
   onPrevPage: () => void;
   onNextPage: () => void;
 }
-
-const SPRING_TAP = { type: "spring" as const, damping: 1, stiffness: 300 };
 
 export default function CustomPagination({
   currentPage,
@@ -30,7 +29,7 @@ export default function CustomPagination({
     <Pagination>
       <PaginationContent>
         <PaginationItem>
-          <motion.div whileTap={{ scale: 0.95 }} transition={SPRING_TAP}>
+          <motion.div whileTap={{ scale: 0.95 }} transition={tapSpring}>
             <PaginationPrevious
               onClick={onPrevPage}
               className={
@@ -50,7 +49,7 @@ export default function CustomPagination({
         </PaginationItem>
 
         <PaginationItem>
-          <motion.div whileTap={{ scale: 0.95 }} transition={SPRING_TAP}>
+          <motion.div whileTap={{ scale: 0.95 }} transition={tapSpring}>
             <PaginationNext
               onClick={onNextPage}
               className={

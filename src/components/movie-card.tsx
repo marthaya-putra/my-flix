@@ -10,6 +10,7 @@ import { FilmInfo } from "@/lib/types";
 import { PlayLink } from "./play-link";
 import { authClient } from "@/lib/auth-client";
 import { motion } from "motion/react";
+import { tapSpring } from "@/lib/motion";
 
 interface MovieCardProps extends FilmInfo {
   match?: string;
@@ -66,7 +67,7 @@ export default function MovieCard({
     <motion.div
       className="group/card hover-lift relative aspect-[3/4] w-full rounded-lg overflow-hidden cursor-pointer"
       whileTap={{ scale: 0.97 }}
-      transition={{ type: "spring", damping: 1, stiffness: 300 }}
+      transition={tapSpring}
     >
       {/* Rating badge — glass pill, top-right */}
       <div className="absolute top-2.5 right-2.5 z-10">
@@ -97,23 +98,11 @@ export default function MovieCard({
         </h3>
       </div>
 
-      {/* Hover Overlay — coordinated spring: opacity + translateY grow up (skill §8) */}
+      {/* Hover Overlay — opacity/translate driven by group-hover utilities */}
       <motion.div
-        className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover/card:opacity-100 flex flex-col justify-end p-4 pointer-events-none group-hover/card:pointer-events-auto"
-        transition={{
-          type: "spring",
-          damping: 1,
-          stiffness: 150,
-        }}
+        className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover/card:opacity-100 flex flex-col justify-end p-4 pointer-events-none group-hover/card:pointer-events-auto transition-opacity duration-200"
       >
-        <motion.div
-          className="translate-y-4 group-hover/card:translate-y-0"
-          transition={{
-            type: "spring",
-            damping: 1,
-            stiffness: 150,
-          }}
-        >
+        <div className="translate-y-4 group-hover/card:translate-y-0 transition-transform duration-200 ease-out">
           <h3 className="font-display font-bold text-white text-lg leading-tight mb-2">
             {title}
           </h3>
@@ -151,7 +140,7 @@ export default function MovieCard({
             {!sessionPending && session && onToggleLike && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <motion.div whileTap={{ scale: 0.85 }}>
+                  <motion.div whileTap={{ scale: 0.9 }} transition={tapSpring}>
                     <Button
                       size="icon"
                       variant="ghost"
@@ -179,7 +168,7 @@ export default function MovieCard({
             <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50 inline-block"></span>
             {category === "movie" ? "Movie" : "TV Series"}
           </div>
-        </motion.div>
+        </div>
       </motion.div>
     </motion.div>
   );

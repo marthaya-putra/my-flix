@@ -2,29 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Home, Search } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { motion } from "motion/react";
-
-const container = {
-  hidden: {},
-  show: {
-    transition: {
-      staggerChildren: 0.08,
-      delayChildren: 0.1,
-    },
-  },
-};
-
-const item = {
-  hidden: { opacity: 0, y: 16 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      type: "spring" as const,
-      damping: 1,
-      stiffness: 200,
-    },
-  },
-};
+import { fadeUpContainer, fadeUpItem } from "@/lib/motion";
 
 export default function NotFound() {
   const navigate = useNavigate();
@@ -33,12 +11,12 @@ export default function NotFound() {
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <motion.div
         className="text-center max-w-md"
-        variants={container}
+        variants={fadeUpContainer}
         initial="hidden"
         animate="show"
       >
         <motion.div
-          variants={item}
+          variants={fadeUpItem}
           className="text-8xl md:text-9xl font-display font-bold text-primary mb-4"
           style={{ letterSpacing: "-0.04em", lineHeight: 1 }}
         >
@@ -46,18 +24,18 @@ export default function NotFound() {
         </motion.div>
 
         <motion.h1
-          variants={item}
+          variants={fadeUpItem}
           className="text-2xl md:text-3xl font-display font-semibold text-foreground mb-2"
         >
           Page Not Found
         </motion.h1>
 
-        <motion.p variants={item} className="text-muted-foreground mb-8">
+        <motion.p variants={fadeUpItem} className="text-muted-foreground mb-8">
           The content you're looking for doesn't exist or has been moved.
         </motion.p>
 
         <motion.div
-          variants={item}
+          variants={fadeUpItem}
           className="flex flex-col sm:flex-row gap-4 justify-center"
         >
           <Button
@@ -79,7 +57,7 @@ export default function NotFound() {
         </motion.div>
 
         <motion.p
-          variants={item}
+          variants={fadeUpItem}
           className="text-sm text-muted-foreground mt-8"
         >
           If you think this is an error, please contact support.

@@ -3,6 +3,7 @@ import { ThumbsUp, ThumbsDown, Play, X } from "lucide-react";
 import { PlayLink } from "./play-link";
 import { FilmInfo } from "@/lib/types";
 import { motion, AnimatePresence } from "motion/react";
+import { tapSpring, overlayTransition } from "@/lib/motion";
 
 interface Recommendation {
   title: string;
@@ -26,9 +27,6 @@ interface RecommendationCardProps {
   onToggleExpand?: () => void;
 }
 
-const SPRING_DAMPED = { type: "spring" as const, damping: 1, stiffness: 200 };
-const SPRING_TAP = { type: "spring" as const, damping: 1, stiffness: 300 };
-
 export function RecommendationCard({
   recommendation,
   likedItems,
@@ -49,7 +47,7 @@ export function RecommendationCard({
       className="group/card hover-lift relative rounded-lg overflow-hidden bg-card cursor-pointer select-none mx-auto w-full max-w-[240px]"
       style={{ aspectRatio: "2 / 3" }}
       whileTap={{ scale: 0.97 }}
-      transition={SPRING_TAP}
+      transition={tapSpring}
       onClick={() => {
         if (onToggleExpand && "ontouchstart" in window) {
           onToggleExpand();
@@ -134,7 +132,7 @@ export function RecommendationCard({
           </PlayLink>
           {recommendation.tmdbData && (
             <div className="flex gap-1 ml-auto">
-              <motion.div whileTap={{ scale: 0.85 }} transition={SPRING_TAP}>
+              <motion.div whileTap={{ scale: 0.9 }} transition={tapSpring}>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -153,7 +151,7 @@ export function RecommendationCard({
                   />
                 </Button>
               </motion.div>
-              <motion.div whileTap={{ scale: 0.85 }} transition={SPRING_TAP}>
+              <motion.div whileTap={{ scale: 0.9 }} transition={tapSpring}>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -184,7 +182,7 @@ export function RecommendationCard({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ type: "spring", damping: 1, stiffness: 200 }}
+            transition={overlayTransition}
             className="absolute inset-0 z-20 bg-black/90 backdrop-blur-sm flex flex-col justify-between pt-2 px-4 pb-4"
           >
             {expanded && onToggleExpand && (
@@ -235,7 +233,7 @@ export function RecommendationCard({
               </PlayLink>
               {recommendation.tmdbData && (
                 <div className="flex gap-1 ml-auto">
-                  <motion.div whileTap={{ scale: 0.85 }} transition={SPRING_TAP}>
+                  <motion.div whileTap={{ scale: 0.9 }} transition={tapSpring}>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -254,7 +252,7 @@ export function RecommendationCard({
                       />
                     </Button>
                   </motion.div>
-                  <motion.div whileTap={{ scale: 0.85 }} transition={SPRING_TAP}>
+                  <motion.div whileTap={{ scale: 0.9 }} transition={tapSpring}>
                     <Button
                       variant="ghost"
                       size="sm"
