@@ -43,9 +43,10 @@ export default function Navbar() {
   // `router.options.context`, which is the static initial value and would
   // always be null). Login/logout invalidate the session query and
   // navigate, which re-runs beforeLoad and updates this value reactively.
-  const { session } = useRouteContext({ from: "__root__" });
+  const ctx = useRouteContext({ from: "__root__" });
+  const session = ctx.session;
   const user = session?.user;
-  console.log("[navbar] render, user:", user?.email ?? null);
+  console.log("[navbar] render, user:", user?.email ?? null, "| full ctx keys:", Object.keys(ctx), "| session:", session);
 
   useEffect(() => {
     const handleScroll = () => {
