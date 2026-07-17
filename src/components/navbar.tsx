@@ -1,4 +1,5 @@
 import { Link, useRouter } from "@tanstack/react-router";
+import { SESSION_QUERY_KEY } from "@/lib/data/auth";
 import {
   Search,
   Bell,
@@ -168,7 +169,14 @@ export default function Navbar() {
                   onClick={() =>
                     authClient.signOut({
                       fetchOptions: {
-                        onSuccess: () => router.navigate({ to: "/" }),
+                        onSuccess: () => {
+                          // Session is cached with staleTime: Infinity; drop it
+                          // so the next nav re-resolves as logged-out.
+                          router.options.context.queryClient.invalidateQueries({
+                            queryKey: SESSION_QUERY_KEY,
+                          });
+                          router.navigate({ to: "/" });
+                        },
                       },
                     })
                   }

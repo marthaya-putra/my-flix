@@ -15,8 +15,17 @@ import type { AppRouterContext } from "../router";
 import appCss from "../styles/app.css?url";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import { sessionQuery } from "@/lib/data/auth";
 
 export const Route = createRootRouteWithContext<AppRouterContext>()({
+  // Resolve the session per navigation so it flows into router context.
+  // Routed through QueryClient: only the first nav pays the RPC round-trip;
+  // subsequent ones reuse the cached session. Runs on the server during SSR
+  // and via RPC on client navigations. Login/logout invalidate the cache.
+  beforeLoad: async ({ context }) => {
+    const session = await context.queryClient.fetchQuery(sessionQuery);
+    return { context: { session } };
+  },
   head: () => ({
     meta: [
       {
