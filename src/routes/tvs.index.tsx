@@ -1,8 +1,6 @@
-import { Suspense } from "react";
-import { Await, createFileRoute } from "@tanstack/react-router";
-import { fetchDiscoverTvs } from "@/lib/data/tvs";
-import { type MovieRouteSearchParams } from "@/lib/types";
-import MoviesSkeleton from "@/components/movies-skeleton";
+import { createFileRoute } from "@tanstack/react-router";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { discoverTvsOptions } from "@/lib/queries/tvs";
 import MoviesContent from "@/components/movies-content";
 import FilterPopovers from "@/components/filter-popovers";
 import TvGenreFilter from "@/components/filters/tv-genre-filter";
@@ -20,29 +18,30 @@ export const Route = createFileRoute("/tvs/")({
     year: z.coerce.number().optional(),
   }),
   component: TVsPage,
-  loaderDeps: ({ search }: { search?: MovieRouteSearchParams }) => ({
-    page: search?.page || 1,
-    genres: search?.genres,
-    rating: search?.rating,
-    year: search?.year,
+  loaderDeps: ({ search }) => ({
+    page: search.page,
+    genres: search.genres ?? "",
+    rating: search.rating,
+    year: search.year,
   }),
-  loader: async ({ deps }) => {
-    return {
-      movies: fetchDiscoverTvs({
-        data: {
-          page: deps.page,
-          with_genres: deps.genres,
-          vote_average_gte: deps.rating,
-          year: deps.year,
-        },
+  loader: async ({ context, deps }) => {
+    await context.queryClient.ensureQueryData(
+      discoverTvsOptions({
+        page: deps.page,
+        genres: deps.genres,
+        rating: deps.rating,
+        year: deps.year,
       }),
-    };
+    );
   },
 });
 
 function TVsPage() {
-  const { movies } = Route.useLoaderData();
   const { isLiked, toggleLike } = useLikedItems();
+  const { page, genres, rating, year } = Route.useLoaderDeps();
+  const { data: tvsData } = useSuspenseQuery(
+    discoverTvsOptions({ page, genres, rating, year }),
+  );
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -65,18 +64,12 @@ function TVsPage() {
         </div>
       </FilterPopovers>
 
-      <Suspense fallback={<MoviesSkeleton />}>
-        <Await promise={movies}>
-          {(moviesData) => (
-            <MoviesContent
-              moviesData={moviesData}
-              route={Route}
-              isLiked={isLiked}
-              onToggleLike={toggleLike}
-            />
-          )}
-        </Await>
-      </Suspense>
+      <MoviesContent
+        moviesData={tvsData}
+        route={Route}
+        isLiked={isLiked}
+        onToggleLike={toggleLike}
+      />
     </div>
   );
 }

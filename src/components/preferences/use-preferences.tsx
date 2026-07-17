@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { FilmInfo, Person } from "@/lib/types";
 import { UserPreferences } from "@/lib/types/preferences";
 import {
@@ -8,12 +9,14 @@ import {
   removePersonPreference,
   fetchUserPreferences,
 } from "@/lib/data/preferences";
+import { preferencesKeys } from "@/lib/queries/preferences";
 
 // Re-export fetchUserPreferences as loadPreferences for consistency
 export const loadPreferences = fetchUserPreferences;
 
 // Hook for managing preferences
 export function usePreferences(initialPreferences?: UserPreferences) {
+  const queryClient = useQueryClient();
   const [preferences, setPreferences] = useState<UserPreferences>(
     initialPreferences || {
       movies: [],
@@ -31,6 +34,18 @@ export function usePreferences(initialPreferences?: UserPreferences) {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [addingItems, setAddingItems] = useState<Set<number>>(new Set());
+
+  // After any preference mutation, invalidate the cached user-preferences
+  // and liked-items queries so read paths (navbar, listings) refetch the
+  // canonical server state.
+  const invalidatePreferenceQueries = () => {
+    void queryClient.invalidateQueries({
+      queryKey: preferencesKeys.userPreferences(),
+    });
+    void queryClient.invalidateQueries({
+      queryKey: preferencesKeys.likedItems(),
+    });
+  };
 
   // Add a movie/TV show to preferences
   const addPreference = async (content: FilmInfo | Person) => {
@@ -109,6 +124,9 @@ export function usePreferences(initialPreferences?: UserPreferences) {
         newSet.delete(content.id);
         return newSet;
       });
+      // Local state already updated above; keep the query cache in sync
+      // so other surfaces (navbar, liked-items) reflect the change.
+      invalidatePreferenceQueries();
     }
   };
 
@@ -181,6 +199,9 @@ export function usePreferences(initialPreferences?: UserPreferences) {
         setError(result?.error || "Failed to remove preference");
         return;
       }
+
+      // Local state already updated above; keep the query cache in sync.
+      invalidatePreferenceQueries();
     } catch (err) {
       setError("Failed to remove preference");
       console.error("Error removing preference:", err);

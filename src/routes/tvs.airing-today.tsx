@@ -1,8 +1,6 @@
-import { Suspense } from "react";
-import { Await, createFileRoute } from "@tanstack/react-router";
-import { fetchAiringTodayTvs } from "@/lib/data/tvs";
-import { type MovieRouteSearchParams } from "@/lib/types";
-import MoviesSkeleton from "@/components/movies-skeleton";
+import { createFileRoute } from "@tanstack/react-router";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { airingTodayTvsOptions } from "@/lib/queries/tvs";
 import MoviesContent from "@/components/movies-content";
 import { getUserTimezone } from "@/lib/utils/timezone";
 import { useLikedItems } from "@/hooks/use-liked-items";
@@ -14,22 +12,23 @@ export const Route = createFileRoute("/tvs/airing-today")({
     timezone: z.string().optional(),
   }),
   component: TvAiringTodayPage,
-  loaderDeps: ({ search }: { search?: MovieRouteSearchParams & { timezone?: string } }) => ({
-    page: search?.page || 1,
-    timezone: search?.timezone || getUserTimezone(), // Auto-detect fallback
+  loaderDeps: ({ search }) => ({
+    page: search.page,
+    timezone: search.timezone || getUserTimezone(), // Auto-detect fallback
   }),
-  loader: async ({ deps }) => {
-    return {
-      movies: fetchAiringTodayTvs({
-        data: deps,
-      }),
-    };
+  loader: async ({ context, deps }) => {
+    await context.queryClient.ensureQueryData(
+      airingTodayTvsOptions({ page: deps.page, timezone: deps.timezone }),
+    );
   },
 });
 
 function TvAiringTodayPage() {
-  const { movies } = Route.useLoaderData();
   const { isLiked, toggleLike } = useLikedItems();
+  const { page, timezone } = Route.useLoaderDeps();
+  const { data: moviesData } = useSuspenseQuery(
+    airingTodayTvsOptions({ page, timezone }),
+  );
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -42,18 +41,12 @@ function TvAiringTodayPage() {
         </p>
       </div>
 
-      <Suspense fallback={<MoviesSkeleton />}>
-        <Await promise={movies}>
-          {(moviesData) => (
-            <MoviesContent
-              moviesData={moviesData}
-              route={Route}
-              isLiked={isLiked}
-              onToggleLike={toggleLike}
-            />
-          )}
-        </Await>
-      </Suspense>
+      <MoviesContent
+        moviesData={moviesData}
+        route={Route}
+        isLiked={isLiked}
+        onToggleLike={toggleLike}
+      />
     </div>
   );
 }

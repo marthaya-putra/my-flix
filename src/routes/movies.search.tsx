@@ -1,7 +1,6 @@
-import { Suspense } from "react";
-import { Await, createFileRoute } from "@tanstack/react-router";
-import { searchMovies } from "@/lib/data/search";
-import MoviesSkeleton from "@/components/movies-skeleton";
+import { createFileRoute } from "@tanstack/react-router";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { searchMoviesOptions } from "@/lib/queries/search";
 import MoviesContent from "@/components/movies-content";
 import { useLikedItems } from "@/hooks/use-liked-items";
 import { z } from "zod";
@@ -14,23 +13,21 @@ export const Route = createFileRoute("/movies/search")({
   component: MoviesSearchPage,
   loaderDeps: ({ search }) => ({
     query: search.query,
-    page: search.page || 1,
+    page: search.page,
   }),
-  loader: async ({ deps }) => {
-    return {
-      movies: searchMovies({
-        data: {
-          query: deps.query,
-          page: deps.page,
-        },
-      }),
-    };
+  loader: async ({ context, deps }) => {
+    await context.queryClient.ensureQueryData(
+      searchMoviesOptions({ query: deps.query, page: deps.page }),
+    );
   },
 });
 
 function MoviesSearchPage() {
-  const { movies } = Route.useLoaderData();
   const { isLiked, toggleLike } = useLikedItems();
+  const { query, page } = Route.useLoaderDeps();
+  const { data: moviesData } = useSuspenseQuery(
+    searchMoviesOptions({ query, page }),
+  );
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -40,19 +37,12 @@ function MoviesSearchPage() {
         </h1>
       </div>
 
-      <Suspense fallback={<MoviesSkeleton />}>
-        <Await
-          promise={movies}
-          children={(moviesData) => (
-            <MoviesContent
-              moviesData={moviesData}
-              route={Route}
-              isLiked={isLiked}
-              onToggleLike={toggleLike}
-            />
-          )}
-        />
-      </Suspense>
+      <MoviesContent
+        moviesData={moviesData}
+        route={Route}
+        isLiked={isLiked}
+        onToggleLike={toggleLike}
+      />
     </div>
   );
 }

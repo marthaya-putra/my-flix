@@ -1,7 +1,6 @@
-import { Suspense } from "react";
-import { Await, createFileRoute } from "@tanstack/react-router";
-import { searchTVs } from "@/lib/data/search";
-import MoviesSkeleton from "@/components/movies-skeleton";
+import { createFileRoute } from "@tanstack/react-router";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { searchTvsOptions } from "@/lib/queries/search";
 import MoviesContent from "@/components/movies-content";
 import { useLikedItems } from "@/hooks/use-liked-items";
 import { z } from "zod";
@@ -14,23 +13,21 @@ export const Route = createFileRoute("/tvs/search")({
   component: TvsSearchPage,
   loaderDeps: ({ search }) => ({
     query: search.query,
-    page: search.page || 1,
+    page: search.page,
   }),
-  loader: async ({ deps }) => {
-    return {
-      tvs: searchTVs({
-        data: {
-          query: deps.query,
-          page: deps.page,
-        },
-      }),
-    };
+  loader: async ({ context, deps }) => {
+    await context.queryClient.ensureQueryData(
+      searchTvsOptions({ query: deps.query, page: deps.page }),
+    );
   },
 });
 
 function TvsSearchPage() {
-  const { tvs } = Route.useLoaderData();
   const { isLiked, toggleLike } = useLikedItems();
+  const { query, page } = Route.useLoaderDeps();
+  const { data: tvsData } = useSuspenseQuery(
+    searchTvsOptions({ query, page }),
+  );
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -40,19 +37,12 @@ function TvsSearchPage() {
         </h1>
       </div>
 
-      <Suspense fallback={<MoviesSkeleton />}>
-        <Await
-          promise={tvs}
-          children={(tvsData) => (
-            <MoviesContent
-              moviesData={tvsData}
-              route={Route}
-              isLiked={isLiked}
-              onToggleLike={toggleLike}
-            />
-          )}
-        />
-      </Suspense>
+      <MoviesContent
+        moviesData={tvsData}
+        route={Route}
+        isLiked={isLiked}
+        onToggleLike={toggleLike}
+      />
     </div>
   );
 }
