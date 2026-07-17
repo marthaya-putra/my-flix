@@ -12,7 +12,11 @@ import { auth } from "@/lib/auth";
  */
 export const fetchSession = createServerFn({ method: "GET" }).handler(
   async () => {
-    return await auth.api.getSession({ headers: getRequest().headers });
+    const session = await auth.api.getSession({
+      headers: getRequest().headers,
+    });
+    console.log("[fetchSession] server resolved session.user:", session?.user?.email ?? null);
+    return session;
   },
 );
 

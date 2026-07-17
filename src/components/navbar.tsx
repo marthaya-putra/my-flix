@@ -45,6 +45,7 @@ export default function Navbar() {
   // navigate, which re-runs beforeLoad and updates this value reactively.
   const { session } = useRouteContext({ from: "__root__" });
   const user = session?.user;
+  console.log("[navbar] render, user:", user?.email ?? null);
 
   useEffect(() => {
     const handleScroll = () => {

@@ -24,6 +24,7 @@ export const Route = createRootRouteWithContext<AppRouterContext>()({
   // and via RPC on client navigations. Login/logout invalidate the cache.
   beforeLoad: async ({ context }) => {
     const session = await context.queryClient.fetchQuery(sessionQuery);
+    console.log("[root beforeLoad] session.user:", session?.user?.email ?? null);
     return { context: { session } };
   },
   head: () => ({
