@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,8 +37,12 @@ export default function Navbar() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const router = useRouter();
 
-  const { data, isPending } = authClient.useSession();
-  const user = data?.user;
+  // Session is resolved in the root beforeLoad and dehydrated to the
+  // client, so it is already available here on first paint — no
+  // suspense/skeleton. Login/logout invalidate the session query and
+  // navigate, which re-runs beforeLoad and updates this value.
+  const { session } = router.options.context;
+  const user = session?.user;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -123,9 +126,7 @@ export default function Navbar() {
             <Bell className="w-5 h-5" />
           </Button>
 
-          {isPending ? (
-            <Skeleton className="w-8 h-8 rounded-full bg-muted-foreground/30" />
-          ) : user ? (
+          {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Avatar className="w-8 h-8 cursor-pointer active:scale-95 transition-transform ring-2 ring-transparent hover:ring-primary/30">

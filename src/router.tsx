@@ -1,6 +1,12 @@
 // src/router.tsx
 import { createRouter } from "@tanstack/react-router";
-import { QueryClient } from "@tanstack/react-query";
+import {
+  QueryClient,
+  dehydrate,
+  hydrate,
+  type DehydratedState,
+} from "@tanstack/react-query";
+import type { TsrSerializable } from "@tanstack/router-core";
 import { routeTree } from "./routeTree.gen";
 import { DefaultPendingComponent } from "./components/default-pending";
 import { DefaultErrorComponent } from "./components/default-error";
@@ -53,6 +59,28 @@ export function getRouter() {
     defaultPreload: "intent",
     defaultPendingComponent: DefaultPendingComponent,
     defaultErrorComponent: DefaultErrorComponent,
+    // Serialize the server's QueryClient cache into the SSR HTML and
+    // replay it into the client's QueryClient on first paint. Without
+    // this, queries resolved during SSR (e.g. the root beforeLoad's
+    // session lookup) are absent from the client cache after hard reload,
+    // so the first client navigation re-fetches and flashes pending.
+    //
+    // The `TsrSerializable` cast is the documented escape hatch: react-query's
+    // `DehydratedState` types query `data` as `unknown`, which TanStack's
+    // static serializability check can't prove, even though the runtime
+    // serializer (seroval) handles it fine.
+    dehydrate: () =>
+      ({
+        queryClientState: dehydrate(queryClient),
+      }) as unknown as TsrSerializable,
+    hydrate: (dehydrated) => {
+      hydrate(
+        queryClient,
+        (
+          dehydrated as unknown as { queryClientState: DehydratedState }
+        ).queryClientState,
+      );
+    },
   });
 
   return router;
