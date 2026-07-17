@@ -1,4 +1,5 @@
 import { motion } from "motion/react";
+import { tapSpring } from "@/lib/motion";
 
 interface CardProps {
   imageUrl?: string;
@@ -7,14 +8,12 @@ interface CardProps {
   subtitle?: string;
 }
 
-const SPRING_TAP = { type: "spring" as const, damping: 1, stiffness: 300 };
-
 export default function Card({ imageUrl, badge, title, subtitle }: CardProps) {
   return (
     <motion.div
       className="group hover-lift cursor-pointer"
       whileTap={{ scale: 0.97 }}
-      transition={SPRING_TAP}
+      transition={tapSpring}
     >
       <div className="relative aspect-3/4 overflow-hidden rounded-lg bg-card">
         {imageUrl ? (

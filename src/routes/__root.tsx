@@ -9,6 +9,7 @@ import {
   useRouter,
 } from "@tanstack/react-router";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { MotionConfig } from "motion/react";
 import Navbar from "../components/navbar";
 import NotFound from "../components/not-found";
 import type { AppRouterContext } from "../router";
@@ -80,12 +81,14 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
           <HeadContent />
         </head>
         <body className="grid grid-rows-[auto_1fr_auto]">
-          <TooltipProvider>
-            <Navbar />
-            {/* Fixed navbar needs top offset on main content */}
-            <main className="pt-[72px]">{children}</main>
-            <Toaster richColors closeButton position="bottom-right" />
-          </TooltipProvider>
+          <MotionConfig reducedMotion="user">
+            <TooltipProvider>
+              <Navbar />
+              {/* Fixed navbar needs top offset on main content */}
+              <main className="pt-[72px]">{children}</main>
+              <Toaster richColors closeButton position="bottom-right" />
+            </TooltipProvider>
+          </MotionConfig>
           <footer className="py-6 px-4 md:px-12 bg-black/40 border-t border-white/5">
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-white">
               <div>
