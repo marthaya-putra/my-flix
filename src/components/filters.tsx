@@ -95,14 +95,14 @@ export default function Filters({
               <label
                 key={item.value}
                 className={`flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded ${
-                  selectedRating === item.value ? 'bg-blue-50' : ''
+                  selectedRating === String(item.value) ? 'bg-blue-50' : ''
                 }`}
               >
                 <input
                   type="radio"
                   name="rating"
-                  checked={selectedRating === item.value}
-                  onChange={() => onRatingChange(item.value)}
+                  checked={selectedRating === String(item.value)}
+                  onChange={() => onRatingChange(String(item.value))}
                   className="text-blue-600 focus:ring-blue-500"
                 />
                 <span className="text-sm text-gray-700">{item.label}</span>
