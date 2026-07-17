@@ -1,4 +1,4 @@
-import { Link, useRouter } from "@tanstack/react-router";
+import { Link, useRouter, useRouteContext } from "@tanstack/react-router";
 import { SESSION_QUERY_KEY } from "@/lib/data/auth";
 import {
   Search,
@@ -38,10 +38,12 @@ export default function Navbar() {
   const router = useRouter();
 
   // Session is resolved in the root beforeLoad and dehydrated to the
-  // client, so it is already available here on first paint — no
-  // suspense/skeleton. Login/logout invalidate the session query and
-  // navigate, which re-runs beforeLoad and updates this value.
-  const { session } = router.options.context;
+  // client, so it is available here on first paint — no suspense/skeleton.
+  // `useRouteContext` reads the reactive, per-navigation context (NOT
+  // `router.options.context`, which is the static initial value and would
+  // always be null). Login/logout invalidate the session query and
+  // navigate, which re-runs beforeLoad and updates this value reactively.
+  const { session } = useRouteContext({ from: "__root__" });
   const user = session?.user;
 
   useEffect(() => {
