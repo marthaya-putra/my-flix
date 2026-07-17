@@ -2,18 +2,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Suspense } from "react";
 import { Await } from "@tanstack/react-router";
 import { AllPreferencesPage } from "@/components/preferences/all-preferences-page";
-import { onlyLoggedIn } from "@/middleware/auth";
+import { guardAuthenticated } from "@/lib/auth-guard";
 import { fetchUserPreferences } from "@/lib/data/preferences";
 
 export const Route = createFileRoute("/preferences/person")({
   component: AllPeopleComponent,
+  beforeLoad: guardAuthenticated,
   loader: async () => {
     return {
       preferencesPromise: fetchUserPreferences(),
     };
-  },
-  server: {
-    middleware: [onlyLoggedIn],
   },
 });
 

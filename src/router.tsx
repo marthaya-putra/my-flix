@@ -4,16 +4,24 @@ import { QueryClient } from "@tanstack/react-query";
 import { routeTree } from "./routeTree.gen";
 import { DefaultPendingComponent } from "./components/default-pending";
 import { DefaultErrorComponent } from "./components/default-error";
+import { auth } from "./lib/auth";
+
+/**
+ * Session resolved per-navigation in the root `beforeLoad`. Mirrors
+ * better-auth's `getSession` return type (null when unauthenticated).
+ */
+export type Session = Awaited<ReturnType<typeof auth.api.getSession>>;
 
 /**
  * Router context shape threaded through every route via
- * `Route.useRouteContext()`. Subsequent issues add `session` here.
+ * `Route.useRouteContext()`.
  *
  * NOTE: keep this type as the single source of truth for what the
  * root route exposes to descendants.
  */
 export interface AppRouterContext {
   queryClient: QueryClient;
+  session: Session;
 }
 
 /**
@@ -39,7 +47,9 @@ export function getRouter() {
   const router = createRouter({
     routeTree,
     scrollRestoration: true,
-    context: { queryClient },
+    // `session` starts null; the root `beforeLoad` resolves it per
+    // navigation (server-side during SSR, via RPC on client nav).
+    context: { queryClient, session: null },
     defaultPreload: "intent",
     defaultPendingComponent: DefaultPendingComponent,
     defaultErrorComponent: DefaultErrorComponent,

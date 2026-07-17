@@ -15,8 +15,15 @@ import type { AppRouterContext } from "../router";
 import appCss from "../styles/app.css?url";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import { fetchSession } from "@/lib/data/auth";
 
 export const Route = createRootRouteWithContext<AppRouterContext>()({
+  // Resolve the session per navigation so it flows into router context.
+  // Runs on the server during SSR and via RPC on client navigations.
+  beforeLoad: async () => {
+    const session = await fetchSession();
+    return { context: { session } };
+  },
   head: () => ({
     meta: [
       {
