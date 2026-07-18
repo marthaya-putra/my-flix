@@ -45,7 +45,7 @@ export function RotatingMessage({ messages, className }: RotatingMessageProps) {
   useEffect(() => {
     if (messages.length <= 1) return;
     if (idx >= messages.length - 1) return;
-    const id = setTimeout(() => setIdx(idx + 1), 3000);
+    const id = setTimeout(() => setIdx(idx + 1), 5000);
     return () => clearTimeout(id);
   }, [messages, idx]);
 
