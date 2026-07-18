@@ -10,7 +10,7 @@ import { FilmInfo } from "@/lib/types";
 import { PlayLink } from "./play-link";
 import { authClient } from "@/lib/auth-client";
 import { motion } from "motion/react";
-import { tapSpring } from "@/lib/motion";
+import { ctaDramaSpring } from "@/lib/motion";
 
 interface MovieCardProps extends FilmInfo {
   match?: string;
@@ -64,10 +64,8 @@ export default function MovieCard({
   };
 
   return (
-    <motion.div
-      className="group/card hover-lift relative aspect-[3/4] w-full rounded-lg overflow-hidden cursor-pointer"
-      whileTap={{ scale: 0.97 }}
-      transition={tapSpring}
+    <div
+      className="group/card relative aspect-[3/4] w-full rounded-lg overflow-hidden cursor-pointer"
     >
       {/* Rating badge — glass pill, top-right */}
       <div className="absolute top-2.5 right-2.5 z-10">
@@ -140,7 +138,7 @@ export default function MovieCard({
             {!sessionPending && session && onToggleLike && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <motion.div whileTap={{ scale: 0.9 }} transition={tapSpring}>
+                  <motion.div whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
                     <Button
                       size="icon"
                       variant="ghost"
@@ -170,6 +168,6 @@ export default function MovieCard({
           </div>
         </div>
       </motion.div>
-    </motion.div>
+    </div>
   );
 }

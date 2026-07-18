@@ -3,7 +3,7 @@ import { ThumbsUp, ThumbsDown, Play, X } from "lucide-react";
 import { PlayLink } from "./play-link";
 import { FilmInfo } from "@/lib/types";
 import { motion, AnimatePresence } from "motion/react";
-import { tapSpring, overlayTransition } from "@/lib/motion";
+import { ctaDramaSpring, overlayTransition } from "@/lib/motion";
 
 interface Recommendation {
   title: string;
@@ -43,11 +43,9 @@ export function RecommendationCard({
   const showOverlay = expanded;
 
   return (
-    <motion.div
-      className="group/card hover-lift relative rounded-lg overflow-hidden bg-black cursor-pointer select-none mx-auto w-full max-w-[240px]"
+    <div
+      className="group/card relative rounded-lg overflow-hidden bg-black cursor-pointer select-none mx-auto w-full max-w-[240px]"
       style={{ aspectRatio: "2 / 3" }}
-      whileTap={{ scale: 0.97 }}
-      transition={tapSpring}
       onClick={() => {
         if (onToggleExpand && "ontouchstart" in window) {
           onToggleExpand();
@@ -96,7 +94,7 @@ export function RecommendationCard({
 
       {/* Hover overlay — CSS group-hover for desktop */}
       <div
-        className={`absolute inset-0 z-20 bg-black flex flex-col justify-between pt-2 px-4 pb-4 opacity-0 pointer-events-none group-hover/card:opacity-100 group-hover/card:pointer-events-auto ${
+        className={`absolute inset-0 z-20 bg-black/90 backdrop-blur-sm flex flex-col justify-between pt-2 px-4 pb-4 opacity-0 pointer-events-none group-hover/card:opacity-100 group-hover/card:pointer-events-auto ${
           showOverlay ? "!opacity-0 !pointer-events-none" : ""
         }`}
         style={{ transition: "opacity 200ms ease-out" }}
@@ -132,7 +130,7 @@ export function RecommendationCard({
           </PlayLink>
           {recommendation.tmdbData && (
             <div className="flex gap-1 ml-auto">
-              <motion.div whileTap={{ scale: 0.9 }} transition={tapSpring}>
+              <motion.div whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -151,7 +149,7 @@ export function RecommendationCard({
                   />
                 </Button>
               </motion.div>
-              <motion.div whileTap={{ scale: 0.9 }} transition={tapSpring}>
+              <motion.div whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -164,8 +162,8 @@ export function RecommendationCard({
                   <ThumbsUp
                     className={`h-4 w-4 ${
                       likedItems.has(`${recommendation.tmdbData.id}`)
-                        ? "fill-white text-white"
-                        : "text-muted-foreground hover:text-red-500 hover:fill-red-100"
+                        ? "fill-primary text-primary"
+                        : "text-muted-foreground hover:text-primary hover:fill-primary/20"
                     }`}
                   />
                 </Button>
@@ -183,7 +181,7 @@ export function RecommendationCard({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={overlayTransition}
-            className="absolute -inset-px z-20 bg-black flex flex-col justify-between pt-2 px-4 pb-4"
+            className="absolute inset-0 z-20 bg-black/90 backdrop-blur-sm flex flex-col justify-between pt-2 px-4 pb-4"
           >
             {expanded && onToggleExpand && (
               <button
@@ -233,7 +231,7 @@ export function RecommendationCard({
               </PlayLink>
               {recommendation.tmdbData && (
                 <div className="flex gap-1 ml-auto">
-                  <motion.div whileTap={{ scale: 0.9 }} transition={tapSpring}>
+                  <motion.div whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -252,7 +250,7 @@ export function RecommendationCard({
                       />
                     </Button>
                   </motion.div>
-                  <motion.div whileTap={{ scale: 0.9 }} transition={tapSpring}>
+                  <motion.div whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -265,8 +263,8 @@ export function RecommendationCard({
                       <ThumbsUp
                         className={`h-4 w-4 ${
                           likedItems.has(`${recommendation.tmdbData.id}`)
-                            ? "fill-white text-white"
-                            : "text-muted-foreground hover:text-red-500 hover:fill-red-100"
+                            ? "fill-primary text-primary"
+                            : "text-muted-foreground hover:text-primary hover:fill-primary/20"
                         }`}
                       />
                     </Button>
@@ -277,6 +275,6 @@ export function RecommendationCard({
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 }

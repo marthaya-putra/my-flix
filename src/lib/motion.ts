@@ -22,6 +22,26 @@ export const tapSpring: Transition = {
 };
 
 /**
+ * More pronounced press feedback for icon CTAs (like / dislike). Bigger scale
+ * + softer spring so the press-down reads clearly even on a fast tap.
+ */
+export const ctaTapSpring: Transition = {
+  type: "spring",
+  stiffness: 300,
+  damping: 18,
+};
+
+/**
+ * Dramatic press feedback for icon CTAs — big squish (0.7) with a bouncy
+ * release that visibly overshoots before settling. Playful, high-energy.
+ */
+export const ctaDramaSpring: Transition = {
+  type: "spring",
+  stiffness: 400,
+  damping: 12,
+};
+
+/**
  * Bounded tween for overlay / AnimatePresence enter-exit fades. No overshoot,
  * short and quiet.
  */

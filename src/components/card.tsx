@@ -1,6 +1,3 @@
-import { motion } from "motion/react";
-import { tapSpring } from "@/lib/motion";
-
 interface CardProps {
   imageUrl?: string;
   badge?: React.ReactNode;
@@ -10,10 +7,8 @@ interface CardProps {
 
 export default function Card({ imageUrl, badge, title, subtitle }: CardProps) {
   return (
-    <motion.div
-      className="group hover-lift cursor-pointer"
-      whileTap={{ scale: 0.97 }}
-      transition={tapSpring}
+    <div
+      className="group cursor-pointer"
     >
       <div className="relative aspect-3/4 overflow-hidden rounded-lg bg-card">
         {imageUrl ? (
@@ -45,6 +40,6 @@ export default function Card({ imageUrl, badge, title, subtitle }: CardProps) {
           </div>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 }
