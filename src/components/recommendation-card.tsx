@@ -123,14 +123,20 @@ export function RecommendationCard({
             title={recommendation.title}
             category={recommendation.category}
           >
-            <Button variant="default" size="sm" className="gap-1.5 text-xs h-8">
-              <Play className="h-3.5 w-3.5 fill-current" />
-              Watch
-            </Button>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.92 }} transition={ctaDramaSpring}>
+              <Button
+                variant="default"
+                size="sm"
+                className="gap-1.5 text-xs h-8 rounded-full px-4 bg-white text-black hover:bg-white/90 shadow-lg shadow-white/10"
+              >
+                <Play className="h-3.5 w-3.5 fill-current" />
+                Watch
+              </Button>
+            </motion.div>
           </PlayLink>
           {recommendation.tmdbData && (
             <div className="flex gap-1 ml-auto">
-              <motion.div whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
+              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -138,7 +144,11 @@ export function RecommendationCard({
                     e.stopPropagation();
                     onDislike(recommendation);
                   }}
-                  className="p-1.5 h-8 w-8"
+                  className={`p-1.5 h-8 w-8 rounded-full backdrop-blur-md border transition-colors ${
+                    dislikedItems.has(`${recommendation.tmdbData.id}`)
+                      ? "border-red-500/30 bg-red-500/20"
+                      : "border-white/20 bg-black/40 hover:bg-white/10"
+                  }`}
                 >
                   <ThumbsDown
                     className={`h-4 w-4 ${
@@ -149,7 +159,7 @@ export function RecommendationCard({
                   />
                 </Button>
               </motion.div>
-              <motion.div whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
+              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -157,7 +167,11 @@ export function RecommendationCard({
                     e.stopPropagation();
                     onLike(recommendation);
                   }}
-                  className="p-1.5 h-8 w-8"
+                  className={`p-1.5 h-8 w-8 rounded-full backdrop-blur-md border transition-colors ${
+                    likedItems.has(`${recommendation.tmdbData.id}`)
+                      ? "border-primary/30 bg-primary/20"
+                      : "border-white/20 bg-black/40 hover:bg-white/10"
+                  }`}
                 >
                   <ThumbsUp
                     className={`h-4 w-4 ${
@@ -231,7 +245,7 @@ export function RecommendationCard({
               </PlayLink>
               {recommendation.tmdbData && (
                 <div className="flex gap-1 ml-auto">
-                  <motion.div whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
+                  <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -250,7 +264,7 @@ export function RecommendationCard({
                       />
                     </Button>
                   </motion.div>
-                  <motion.div whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
+                  <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
                     <Button
                       variant="ghost"
                       size="sm"

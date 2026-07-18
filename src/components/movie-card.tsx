@@ -121,12 +121,14 @@ export default function MovieCard({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <PlayLink title={title} category={category}>
-                    <Button
-                      size="icon"
-                      className="w-8 h-8 rounded-full bg-white text-black hover:bg-white/90"
-                    >
-                      <Play className="w-4 h-4 fill-current ml-0.5" />
-                    </Button>
+                    <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
+                      <Button
+                        size="icon"
+                        className="w-8 h-8 rounded-full bg-white text-black hover:bg-white/90 shadow-lg shadow-white/10"
+                      >
+                        <Play className="w-4 h-4 fill-current ml-0.5" />
+                      </Button>
+                    </motion.div>
                   </PlayLink>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -138,7 +140,7 @@ export default function MovieCard({
             {!sessionPending && session && onToggleLike && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <motion.div whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
+                  <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
                     <Button
                       size="icon"
                       variant="ghost"
