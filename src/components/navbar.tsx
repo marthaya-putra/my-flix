@@ -83,7 +83,7 @@ export default function Navbar() {
                       "relative px-3 py-1.5 rounded-lg transition-colors",
                       isActive
                         ? "text-primary font-semibold"
-                        : "text-muted-foreground hover:text-foreground"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
                     )}
                   >
                     {isActive && (
@@ -91,9 +91,9 @@ export default function Navbar() {
                         layoutId="nav-active-pill"
                         className="absolute inset-0 rounded-lg bg-primary/10"
                         transition={{
-                          type: "spring" as const,
+                          type: "tween" as const,
+                          ease: "easeOut" as const,
                           duration: 0.4,
-                          bounce: 0.5,
                         }}
                       />
                     )}
