@@ -6,6 +6,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useState } from "react";
+import { HIT_ZONE } from "@/lib/utils";
 
 interface FavoriteIconProps {
   size?: "sm" | "md" | "lg";
@@ -52,6 +53,7 @@ export default function FavoriteIcon({
           size="icon"
           variant={variant}
               className={`
+                ${HIT_ZONE}
                 ${sizeClasses[size]}
             rounded-full
             transition-[background-color,color,transform] duration-300

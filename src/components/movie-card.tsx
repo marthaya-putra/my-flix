@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useState } from "react";
 import { FilmInfo } from "@/lib/types";
+import { HIT_ZONE } from "@/lib/utils";
 import { PlayLink } from "./play-link";
 import { authClient } from "@/lib/auth-client";
 import { motion } from "motion/react";
@@ -124,7 +125,7 @@ export default function MovieCard({
                     <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
                       <Button
                         size="icon"
-                        className="w-8 h-8 rounded-full bg-white text-black hover:bg-white/90 shadow-lg shadow-white/10"
+                        className={`${HIT_ZONE} w-8 h-8 rounded-full bg-white text-black hover:bg-white/90 shadow-lg shadow-white/10`}
                       >
                         <Play className="w-4 h-4 fill-current ml-0.5" />
                       </Button>
@@ -145,7 +146,7 @@ export default function MovieCard({
                       size="icon"
                       variant="ghost"
                       onClick={handleToggleLike}
-                      className={`w-8 h-8 rounded-full backdrop-blur-md border transition-colors ${
+                      className={`${HIT_ZONE} w-8 h-8 rounded-full backdrop-blur-md border transition-colors ${
                         isLiked
                           ? "bg-primary/20 text-primary border-primary/30 hover:bg-primary/30"
                           : "border-white/20 bg-black/40 text-white hover:bg-white/10"

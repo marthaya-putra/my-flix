@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Star, Calendar, Plus, Check } from "lucide-react";
 import { FilmInfo, Person } from "@/lib/types";
+import { HIT_ZONE } from "@/lib/utils";
 
 export interface MovieCardProps {
   movie: FilmInfo;
@@ -81,7 +82,7 @@ export function MovieCard({ movie, onAdd, isAdded, isAdding }: MovieCardProps) {
               variant="outline"
               onClick={() => onAdd?.(movie)}
               disabled={isAdding}
-              className="shrink-0 h-8 w-8 p-0"
+              className={`${HIT_ZONE} shrink-0 h-8 w-8 p-0`}
             >
               {isAdding ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
@@ -173,7 +174,7 @@ export function TVCard({ tvShow, onAdd, isAdded, isAdding }: TVCardProps) {
               variant="outline"
               onClick={() => onAdd?.(tvShow)}
               disabled={isAdding}
-              className="shrink-0 h-8 w-8 p-0"
+              className={`${HIT_ZONE} shrink-0 h-8 w-8 p-0`}
             >
               {isAdding ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
@@ -241,7 +242,7 @@ export function PersonCard({ person, onAdd, isAdded, isAdding }: PersonCardProps
               size="sm"
               variant="outline"
               onClick={() => onAdd?.(person)}
-              className="shrink-0 h-8 w-8 p-0"
+              className={`${HIT_ZONE} shrink-0 h-8 w-8 p-0`}
             >
               <Plus className="h-4 w-4" />
             </Button>

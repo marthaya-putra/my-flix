@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { ThumbsUp, ThumbsDown, Play, X } from "lucide-react";
 import { PlayLink } from "./play-link";
 import { FilmInfo } from "@/lib/types";
+import { HIT_ZONE } from "@/lib/utils";
 import { motion, AnimatePresence } from "motion/react";
 import { ctaDramaSpring, overlayTransition } from "@/lib/motion";
 
@@ -13,12 +14,6 @@ interface Recommendation {
   imdbRating: number;
   tmdbData: FilmInfo | null;
 }
-
-// 44px invisible hit zone around the 32px icon buttons (Apple HIG / Material
-// minimum). Pure ::before extension — zero visual change. Clicks on the
-// pseudo-element fire the host button's onClick, so near-misses count.
-const HIT_ZONE =
-  "relative before:absolute before:inset-[-6px] before:content-['']";
 
 interface RecommendationCardProps {
   recommendation: Recommendation;

@@ -21,6 +21,17 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * 44px invisible hit zone around small icon buttons (Apple HIG / Material
+ * minimum touch size). Pure ::before extension — zero visual change; the
+ * pseudo-element is part of its host element for event handling, so clicks
+ * in the expanded zone fire the button's onClick. Apply to icon-only
+ * Buttons (32px and below) that sit in card overlays or tight corners where
+ * near-misses are likely.
+ */
+export const HIT_ZONE =
+  "relative before:absolute before:inset-[-6px] before:content-['']";
+
 export function convertToDiscoverResult(data: any): DiscoverResult {
   return {
     page: data.page,

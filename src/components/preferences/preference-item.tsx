@@ -16,6 +16,7 @@ import {
   UserIcon,
 } from "lucide-react";
 import { ContentItem } from "@/lib/types";
+import { HIT_ZONE } from "@/lib/utils";
 
 interface PreferenceItemProps {
   item: ContentItem;
@@ -92,7 +93,7 @@ export function PreferenceItem({ item, onRemove }: PreferenceItemProps) {
         size="sm"
         variant="ghost"
         onClick={onRemove}
-        className="absolute top-2 right-2 h-6 w-6 p-0 text-muted-foreground hover:text-red-500 hover:bg-red-50 rounded-md transition-[color,background-color] duration-200 z-10"
+        className={`${HIT_ZONE} absolute top-2 right-2 h-6 w-6 p-0 text-muted-foreground hover:text-red-500 hover:bg-red-50 rounded-md transition-[color,background-color] duration-200 z-10`}
       >
         <Trash2 className="h-3 w-3" />
       </Button>
