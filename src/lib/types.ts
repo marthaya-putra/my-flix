@@ -11,13 +11,6 @@ export type MovieSearchParam = {
   page?: number;
 };
 
-export type MovieRouteSearchParams = {
-  page?: number;
-  genres?: string;
-  rating?: number;
-  year?: number;
-};
-
 export type FilmInfo = {
   id: number;
   posterPath: string;
