@@ -48,7 +48,9 @@ export default function NotFound() {
 
           <Button
             variant="outline"
-            onClick={() => navigate({ to: "/movies/search" } as any)}
+            onClick={() =>
+              navigate({ to: "/movies/search", search: { query: "" } })
+            }
             className="border-border text-foreground hover:bg-accent"
           >
             <Search className="w-4 h-4 mr-2" />
