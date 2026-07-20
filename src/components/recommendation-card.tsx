@@ -14,6 +14,12 @@ interface Recommendation {
   tmdbData: FilmInfo | null;
 }
 
+// 44px invisible hit zone around the 32px icon buttons (Apple HIG / Material
+// minimum). Pure ::before extension — zero visual change. Clicks on the
+// pseudo-element fire the host button's onClick, so near-misses count.
+const HIT_ZONE =
+  "relative before:absolute before:inset-[-6px] before:content-['']";
+
 interface RecommendationCardProps {
   recommendation: Recommendation;
   likedItems: Set<string>;
@@ -144,7 +150,7 @@ export function RecommendationCard({
                     e.stopPropagation();
                     onDislike(recommendation);
                   }}
-                  className={`p-1.5 h-8 w-8 rounded-full backdrop-blur-md border transition-colors ${
+                  className={`${HIT_ZONE} p-1.5 h-8 w-8 rounded-full backdrop-blur-md border transition-colors ${
                     dislikedItems.has(`${recommendation.tmdbData.id}`)
                       ? "border-red-500/30 bg-red-500/20"
                       : "border-white/20 bg-black/40 hover:bg-white/10"
@@ -167,7 +173,7 @@ export function RecommendationCard({
                     e.stopPropagation();
                     onLike(recommendation);
                   }}
-                  className={`p-1.5 h-8 w-8 rounded-full backdrop-blur-md border transition-colors ${
+                  className={`${HIT_ZONE} p-1.5 h-8 w-8 rounded-full backdrop-blur-md border transition-colors ${
                     likedItems.has(`${recommendation.tmdbData.id}`)
                       ? "border-primary/30 bg-primary/20"
                       : "border-white/20 bg-black/40 hover:bg-white/10"
@@ -253,7 +259,7 @@ export function RecommendationCard({
                         e.stopPropagation();
                         onDislike(recommendation);
                       }}
-                      className="p-1.5 h-8 w-8"
+                      className={`${HIT_ZONE} p-1.5 h-8 w-8`}
                     >
                       <ThumbsDown
                         className={`h-4 w-4 ${
@@ -272,7 +278,7 @@ export function RecommendationCard({
                         e.stopPropagation();
                         onLike(recommendation);
                       }}
-                      className="p-1.5 h-8 w-8"
+                      className={`${HIT_ZONE} p-1.5 h-8 w-8`}
                     >
                       <ThumbsUp
                         className={`h-4 w-4 ${
