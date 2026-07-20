@@ -2,7 +2,8 @@ import { Suspense } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   useSuspenseQuery,
-  type UseSuspenseQueryOptions,
+  useQuery,
+  type UseQueryOptions,
 } from "@tanstack/react-query";
 import type { DiscoverResult } from "@/lib/types";
 import ContentRow from "@/components/content-row";
@@ -23,21 +24,23 @@ export const Route = createFileRoute("/")({
     // `ensureQueryData` for popular movies: the Hero is above the fold, so
     // the fetch must populate the cache (and surface errors) before SSR —
     // a miss would force the client to refetch and flash a pending Hero.
-    const timezone = getUserTimezone();
     await context.queryClient.ensureQueryData(popularMoviesOptions());
-    // The rows are below the fold and render inside their own Suspense
+    // Trending rows are below the fold and render inside their own Suspense
     // boundaries, so `prefetchQuery` (best-effort, non-blocking) is the
     // right tool — a miss just shows the row skeleton until it resolves.
     await Promise.all([
       context.queryClient.prefetchQuery(trendingMoviesOptions()),
       context.queryClient.prefetchQuery(trendingTvsOptions()),
-      context.queryClient.prefetchQuery(
-        airingTodayTvsOptions({ page: 1, timezone }),
-      ),
-      context.queryClient.prefetchQuery(
-        onTheAirTvsOptions({ page: 1, timezone }),
-      ),
     ]);
+    // The "New Episode Today/This Week" rows are intentionally NOT
+    // prefetched: their query keys embed the user's timezone
+    // (`getUserTimezone()`), which differs between server and browser.
+    // Prefetching on the server would populate a cache the client can't
+    // hit, and SSR-rendered titles would mismatch the client render
+    // (React hydration error #418). Those rows use `useQuery` (below),
+    // which — without a prefetched cache — renders the skeleton on both
+    // server and first client render, then fetches with the browser
+    // timezone after mount.
   },
 });
 
@@ -72,30 +75,32 @@ function Home() {
           handlers={handlers}
         />
       </Suspense>
-      <Suspense fallback={<ContentRowSkeleton />}>
-        <ContentRowSection
-          title="New Episode Today"
-          exploreAllUrl="/tvs/airing-today"
-          options={airingTodayTvsOptions({ page: 1, timezone })}
-          handlers={handlers}
-        />
-      </Suspense>
-      <Suspense fallback={<ContentRowSkeleton />}>
-        <ContentRowSection
-          title="New Episode This Week"
-          exploreAllUrl="/tvs/airing-this-week"
-          options={onTheAirTvsOptions({ page: 1, timezone })}
-          handlers={handlers}
-        />
-      </Suspense>
+      <ContentRowSection
+        title="New Episode Today"
+        exploreAllUrl="/tvs/airing-today"
+        options={airingTodayTvsOptions({ page: 1, timezone })}
+        handlers={handlers}
+      />
+      <ContentRowSection
+        title="New Episode This Week"
+        exploreAllUrl="/tvs/airing-this-week"
+        options={onTheAirTvsOptions({ page: 1, timezone })}
+        handlers={handlers}
+      />
     </div>
   );
 }
 
 /**
- * Renders one home section: resolves its own query (already prefetched by
- * the loader) inside its parent Suspense boundary, so slow rows reveal
- * independently without blocking the Hero.
+ * Renders one home section.
+ *
+ * - Prefetched rows (trending) arrive via `useSuspenseQuery` inside a
+ *   `<Suspense>` boundary — cache hits resolve synchronously, slow loads
+ *   reveal the skeleton.
+ * - Non-prefetched rows (timezone-dependent "New Episode …") use
+ *   `useQuery`: the server and the first client render both find an empty
+ *   cache, so both render the skeleton (no hydration mismatch); the client
+ *   then fetches with the browser timezone and swaps content in.
  */
 function ContentRowSection({
   title,
@@ -104,11 +109,12 @@ function ContentRowSection({
   handlers,
 }: {
   title: string;
-  options: UseSuspenseQueryOptions<DiscoverResult>;
+  options: UseQueryOptions<DiscoverResult>;
   exploreAllUrl?: string;
   handlers: RowHandlers;
 }) {
-  const { data } = useSuspenseQuery(options);
+  const { data, isPending } = useQuery(options);
+  if (isPending || !data) return <ContentRowSkeleton />;
   return (
     <ContentRow
       title={title}
