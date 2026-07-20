@@ -605,6 +605,37 @@ export const getUserLikedItems = createServerFn({
   }
 });
 
+// Get user's disliked items (preferenceIds). Parallel to getUserLikedItems —
+// used to seed the disliked-items Set on /recommendations/ so the client and
+// server agree before the first dislike toggle.
+export const getUserDislikedItems = createServerFn({
+  method: "GET",
+}).handler(async (): Promise<{ dislikedIds: number[] }> => {
+  try {
+    const session = await auth.api.getSession({
+      headers: getRequest().headers,
+    });
+
+    if (!session?.user?.id) {
+      return { dislikedIds: [] };
+    }
+
+    const db = getDb();
+    const result = await getUserDislikes(db, {
+      userId: session.user.id,
+    });
+
+    if (result.success) {
+      const dislikedIds = result.dislikes.map((d) => d.preferenceId);
+      return { dislikedIds };
+    }
+
+    return { dislikedIds: [] };
+  } catch {
+    return { dislikedIds: [] };
+  }
+});
+
 // Toggle movie/TV show preference (add if not liked, remove if liked)
 export const toggleMoviePreference = createServerFn({
   method: "POST",

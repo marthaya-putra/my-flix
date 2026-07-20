@@ -1,10 +1,16 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   addMoviePreference,
   removeUserPreferenceByPreferenceId,
   addUserDislikeFn,
   removeUserDislikeByPreferenceIdFn,
 } from "@/lib/data/preferences";
+import {
+  likedItemsOptions,
+  dislikedItemsOptions,
+  preferencesKeys,
+} from "@/lib/queries/preferences";
 import { authClient } from "@/lib/auth-client";
 import { type StreamEvent, type StreamStage } from "@/lib/data/stream-events";
 import {
@@ -24,7 +30,38 @@ const STATUS_MESSAGES: Record<string, string> = {
   enrichment_empty: "Recommendations failed to resolve. Try again.",
 };
 
+// --- Cache mutation helpers for liked/disliked ID lists ---------------------
+// Cards derive their liked state from these query caches via useMemo. Toggles
+// write optimistically with these helpers, then invalidate on success (or
+// restore the snapshot on error) — same shape as useLikedItems on the home
+// page. Centralizing the cache writes keeps the like↔dislike coupling
+// consistent across both handlers.
+type LikedList = { likedIds: number[] };
+type DislikedList = { dislikedIds: number[] };
+type QueryClientLike = {
+  setQueryData: <T>(key: unknown, data: T) => void;
+};
+
+const addLiked = (cached: LikedList | undefined, id: number): number[] =>
+  Array.from(new Set([...(cached?.likedIds ?? []), id]));
+const removeLiked = (cached: LikedList | undefined, id: number): number[] =>
+  (cached?.likedIds ?? []).filter((x) => x !== id);
+const addDisliked = (cached: DislikedList | undefined, id: number): number[] =>
+  Array.from(new Set([...(cached?.dislikedIds ?? []), id]));
+const removeDisliked = (
+  cached: DislikedList | undefined,
+  id: number,
+): number[] => (cached?.dislikedIds ?? []).filter((x) => x !== id);
+
+function writeLiked(qc: QueryClientLike, likedIds: number[]) {
+  qc.setQueryData<LikedList>(preferencesKeys.likedItems(), { likedIds });
+}
+function writeDisliked(qc: QueryClientLike, dislikedIds: number[]) {
+  qc.setQueryData<DislikedList>(preferencesKeys.dislikedItems(), { dislikedIds });
+}
+
 export function Recommendations() {
+  const queryClient = useQueryClient();
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [loadingMore, setLoadingMore] = useState<Record<Category, boolean>>({
     movie: false,
@@ -32,8 +69,23 @@ export function Recommendations() {
   });
   const [error, setError] = useState<string | null>(null);
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
-  const [likedItems, setLikedItems] = useState<Set<string>>(new Set());
-  const [dislikedItems, setDislikedItems] = useState<Set<string>>(new Set());
+
+  // Canonical liked/disliked ID lists, populated by the route loader's
+  // `ensureQueryData` and dehydrated into the client cache. The cards' liked
+  // state is derived straight from this cache via useMemo — no local state,
+  // no seeding effect. Toggles write optimistically to the cache and
+  // invalidate on settle (see handleLike/handleDislike), mirroring the
+  // home-page useLikedItems hook.
+  const { data: likedData } = useQuery(likedItemsOptions());
+  const { data: dislikedData } = useQuery(dislikedItemsOptions());
+  const likedItems = useMemo(
+    () => new Set((likedData?.likedIds ?? []).map(String)),
+    [likedData],
+  );
+  const dislikedItems = useMemo(
+    () => new Set((dislikedData?.dislikedIds ?? []).map(String)),
+    [dislikedData],
+  );
 
   // Per-category lifecycle state driven by StreamEvent protocol.
   const [categoryStatus, setCategoryStatus] = useState<
@@ -301,39 +353,38 @@ export function Recommendations() {
       return;
     }
 
-    const itemKey = `${recommendation.tmdbData.id}`;
+    const id = recommendation.tmdbData.id;
+    const itemKey = `${id}`;
     const currentlyLiked = likedItems.has(itemKey);
     const currentlyDisliked = dislikedItems.has(itemKey);
 
-    setLikedItems((prev) => {
-      const newSet = new Set(prev);
-      if (currentlyLiked) {
-        newSet.delete(itemKey);
-      } else {
-        newSet.add(itemKey);
-      }
-      return newSet;
-    });
+    // Snapshot for rollback.
+    const prevLiked = queryClient.getQueryData<{ likedIds: number[] }>(
+      preferencesKeys.likedItems(),
+    );
+    const prevDisliked = queryClient.getQueryData<{ dislikedIds: number[] }>(
+      preferencesKeys.dislikedItems(),
+    );
 
+    // Optimistic cache update: toggle in liked, drop from disliked if present.
+    if (currentlyLiked) {
+      writeLiked(queryClient, removeLiked(prevLiked, id));
+    } else {
+      writeLiked(queryClient, addLiked(prevLiked, id));
+    }
     if (!currentlyLiked && currentlyDisliked) {
-      setDislikedItems((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(itemKey);
-        return newSet;
-      });
+      writeDisliked(queryClient, removeDisliked(prevDisliked, id));
     }
 
     try {
       if (currentlyLiked) {
         await removeUserPreferenceByPreferenceId({
-          data: {
-            preferenceId: recommendation.tmdbData.id,
-          },
+          data: { preferenceId: id },
         });
       } else {
         await addMoviePreference({
           data: {
-            preferenceId: recommendation.tmdbData.id,
+            preferenceId: id,
             title: recommendation.title,
             year: recommendation.releasedYear,
             category:
@@ -346,24 +397,20 @@ export function Recommendations() {
           },
         });
       }
-    } catch (error) {
-      console.error("Error modifying preferences:", error);
-      setLikedItems((prev) => {
-        const newSet = new Set(prev);
-        if (currentlyLiked) {
-          newSet.add(itemKey);
-        } else {
-          newSet.delete(itemKey);
-        }
-        return newSet;
+      // Refetch the canonical list; the dislike list is unaffected by a like
+      // unless we cleared it above, in which case it also needs refreshing.
+      void queryClient.invalidateQueries({
+        queryKey: preferencesKeys.likedItems(),
       });
       if (!currentlyLiked && currentlyDisliked) {
-        setDislikedItems((prev) => {
-          const newSet = new Set(prev);
-          newSet.add(itemKey);
-          return newSet;
+        void queryClient.invalidateQueries({
+          queryKey: preferencesKeys.dislikedItems(),
         });
       }
+    } catch (error) {
+      console.error("Error modifying preferences:", error);
+      if (prevLiked) writeLiked(queryClient, prevLiked.likedIds);
+      if (prevDisliked) writeDisliked(queryClient, prevDisliked.dislikedIds);
       alert(`Failed to ${currentlyLiked ? "remove" : "add"} to preferences`);
     }
   };
@@ -376,39 +423,36 @@ export function Recommendations() {
       return;
     }
 
-    const itemKey = `${recommendation.tmdbData.id}`;
+    const id = recommendation.tmdbData.id;
+    const itemKey = `${id}`;
     const currentlyDisliked = dislikedItems.has(itemKey);
     const currentlyLiked = likedItems.has(itemKey);
 
-    setDislikedItems((prev) => {
-      const newSet = new Set(prev);
-      if (currentlyDisliked) {
-        newSet.delete(itemKey);
-      } else {
-        newSet.add(itemKey);
-      }
-      return newSet;
-    });
+    const prevLiked = queryClient.getQueryData<{ likedIds: number[] }>(
+      preferencesKeys.likedItems(),
+    );
+    const prevDisliked = queryClient.getQueryData<{ dislikedIds: number[] }>(
+      preferencesKeys.dislikedItems(),
+    );
 
+    if (currentlyDisliked) {
+      writeDisliked(queryClient, removeDisliked(prevDisliked, id));
+    } else {
+      writeDisliked(queryClient, addDisliked(prevDisliked, id));
+    }
     if (!currentlyDisliked && currentlyLiked) {
-      setLikedItems((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(itemKey);
-        return newSet;
-      });
+      writeLiked(queryClient, removeLiked(prevLiked, id));
     }
 
     try {
       if (currentlyDisliked) {
         await removeUserDislikeByPreferenceIdFn({
-          data: {
-            preferenceId: recommendation.tmdbData.id,
-          },
+          data: { preferenceId: id },
         });
       } else {
         await addUserDislikeFn({
           data: {
-            preferenceId: recommendation.tmdbData.id,
+            preferenceId: id,
             title: recommendation.title,
             year: recommendation.releasedYear,
             category:
@@ -416,24 +460,18 @@ export function Recommendations() {
           },
         });
       }
-    } catch (error) {
-      console.error("Error modifying dislikes:", error);
-      setDislikedItems((prev) => {
-        const newSet = new Set(prev);
-        if (currentlyDisliked) {
-          newSet.add(itemKey);
-        } else {
-          newSet.delete(itemKey);
-        }
-        return newSet;
+      void queryClient.invalidateQueries({
+        queryKey: preferencesKeys.dislikedItems(),
       });
       if (!currentlyDisliked && currentlyLiked) {
-        setLikedItems((prev) => {
-          const newSet = new Set(prev);
-          newSet.add(itemKey);
-          return newSet;
+        void queryClient.invalidateQueries({
+          queryKey: preferencesKeys.likedItems(),
         });
       }
+    } catch (error) {
+      console.error("Error modifying dislikes:", error);
+      if (prevDisliked) writeDisliked(queryClient, prevDisliked.dislikedIds);
+      if (prevLiked) writeLiked(queryClient, prevLiked.likedIds);
       alert(`Failed to ${currentlyDisliked ? "remove" : "add"} to dislikes`);
     }
   };

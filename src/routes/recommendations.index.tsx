@@ -5,6 +5,10 @@ import { OnboardingWizard } from "@/components/recommendations/onboarding-wizard
 import { hasSufficientPreferences } from "@/lib/utils/preferences-check";
 import { RecommendationsError } from "@/components/recommendations-error";
 import { getAllUserContent } from "@/lib/data/preferences";
+import {
+  likedItemsOptions,
+  dislikedItemsOptions,
+} from "@/lib/queries/preferences";
 import { InitialLoadComposition } from "@/components/recommendations/initial-load-composition";
 
 export const Route = createFileRoute("/recommendations/")({
@@ -25,11 +29,19 @@ export const Route = createFileRoute("/recommendations/")({
       ))}
     </div>
   ),
-  loader: async () => {
-    // Load user preferences only. Recommendations are streamed per-item via
-    // the /api/recommendations/stream NDJSON route from the client on mount
-    // (Specs 0003, 0006).
-    const userPrefs = await getAllUserContent();
+  loader: async ({ context }) => {
+    // Load user preferences + the canonical liked/disliked ID lists.
+    // The latter two populate the QueryClient cache so the client's first
+    // render sees the same liked/disliked state the server does — without
+    // it, the first like on an already-liked card calls addMoviePreference
+    // (a server no-op) and appears to do nothing. Recommendations
+    // themselves are streamed per-item via /api/recommendations/stream
+    // from the client on mount (Specs 0003, 0006).
+    const [userPrefs] = await Promise.all([
+      getAllUserContent(),
+      context.queryClient.ensureQueryData(likedItemsOptions()),
+      context.queryClient.ensureQueryData(dislikedItemsOptions()),
+    ]);
     return { userPrefs };
   },
 });
