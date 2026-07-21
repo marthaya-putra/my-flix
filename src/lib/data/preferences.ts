@@ -25,9 +25,11 @@ import {
 import {
   addUserWatchlist,
   getUserWatchlist,
+  countUserWatchlist,
   removeUserWatchlistByWatchListId,
 } from "../repositories/user-watchlist";
 import type { UserPreferences } from "@/lib/types/preferences";
+import { WATCHLIST_PAGE_SIZE } from "@/lib/utils";
 
 // Input validation schemas from repositories
 const AddMoviePreferenceInput = preferenceSchemas.addPreference.omit({
@@ -787,30 +789,48 @@ export const getUserWatchlistItems = createServerFn({
   }
 });
 
-// Fetch the full watchlist rows (used by the /watchlist grid).
+// Fetch one page of the full watchlist rows (used by the /watchlist grid).
+// Returns the slice plus the totals the <Pagination> component needs,
+// mirroring the shape TMDB returns for /movies and /tvs.
 export const fetchUserWatchlist = createServerFn({
   method: "GET",
-}).handler(async () => {
-  try {
-    const session = await auth.api.getSession({
-      headers: getRequest().headers,
-    });
+})
+  .inputValidator((page: number = 1) => Math.max(1, page))
+  .handler(async ({ data }) => {
+    const page = data;
+    try {
+      const session = await auth.api.getSession({
+        headers: getRequest().headers,
+      });
 
-    if (!session?.user?.id) {
-      return { watchlist: [] };
+      if (!session?.user?.id) {
+        return { watchlist: [], page, totalPages: 0, totalItems: 0 };
+      }
+
+      const db = getDb();
+      const [result, totalItems] = await Promise.all([
+        getUserWatchlist(db, {
+          userId: session.user.id,
+          limit: WATCHLIST_PAGE_SIZE,
+          offset: (page - 1) * WATCHLIST_PAGE_SIZE,
+        }),
+        countUserWatchlist(db, { userId: session.user.id }),
+      ]);
+
+      const totalPages =
+        totalItems === 0 ? 0 : Math.ceil(totalItems / WATCHLIST_PAGE_SIZE);
+
+      return {
+        watchlist: result.success ? result.watchlist : [],
+        page,
+        totalPages,
+        totalItems,
+      };
+    } catch (error) {
+      console.error("Error fetching user watchlist:", error);
+      return { watchlist: [], page, totalPages: 0, totalItems: 0 };
     }
-
-    const db = getDb();
-    const result = await getUserWatchlist(db, {
-      userId: session.user.id,
-    });
-
-    return { watchlist: result.success ? result.watchlist : [] };
-  } catch (error) {
-    console.error("Error fetching user watchlist:", error);
-    return { watchlist: [] };
-  }
-});
+  });
 
 // Toggle a watchlist entry (add if absent, remove if present). Parallel to
 // toggleMoviePreference but for the watchlist table.

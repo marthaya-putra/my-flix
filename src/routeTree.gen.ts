@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WatchlistRouteImport } from './routes/watchlist'
 import { Route as SignUpRouteImport } from './routes/sign-up'
 import { Route as RecommendationsRouteImport } from './routes/recommendations'
 import { Route as LoginRouteImport } from './routes/login'
@@ -28,6 +29,11 @@ import { Route as MoviesSearchRouteImport } from './routes/movies.search'
 import { Route as ApiRecommendationsStreamRouteImport } from './routes/api/recommendations/stream'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
+const WatchlistRoute = WatchlistRouteImport.update({
+  id: '/watchlist',
+  path: '/watchlist',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignUpRoute = SignUpRouteImport.update({
   id: '/sign-up',
   path: '/sign-up',
@@ -125,6 +131,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/recommendations': typeof RecommendationsRouteWithChildren
   '/sign-up': typeof SignUpRoute
+  '/watchlist': typeof WatchlistRoute
   '/movies/search': typeof MoviesSearchRoute
   '/person/search': typeof PersonSearchRoute
   '/preferences/movie': typeof PreferencesMovieRoute
@@ -144,6 +151,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/sign-up': typeof SignUpRoute
+  '/watchlist': typeof WatchlistRoute
   '/movies/search': typeof MoviesSearchRoute
   '/person/search': typeof PersonSearchRoute
   '/preferences/movie': typeof PreferencesMovieRoute
@@ -165,6 +173,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/recommendations': typeof RecommendationsRouteWithChildren
   '/sign-up': typeof SignUpRoute
+  '/watchlist': typeof WatchlistRoute
   '/movies/search': typeof MoviesSearchRoute
   '/person/search': typeof PersonSearchRoute
   '/preferences/movie': typeof PreferencesMovieRoute
@@ -187,6 +196,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/recommendations'
     | '/sign-up'
+    | '/watchlist'
     | '/movies/search'
     | '/person/search'
     | '/preferences/movie'
@@ -206,6 +216,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/sign-up'
+    | '/watchlist'
     | '/movies/search'
     | '/person/search'
     | '/preferences/movie'
@@ -226,6 +237,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/recommendations'
     | '/sign-up'
+    | '/watchlist'
     | '/movies/search'
     | '/person/search'
     | '/preferences/movie'
@@ -247,6 +259,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   RecommendationsRoute: typeof RecommendationsRouteWithChildren
   SignUpRoute: typeof SignUpRoute
+  WatchlistRoute: typeof WatchlistRoute
   MoviesSearchRoute: typeof MoviesSearchRoute
   PersonSearchRoute: typeof PersonSearchRoute
   PreferencesMovieRoute: typeof PreferencesMovieRoute
@@ -264,6 +277,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/watchlist': {
+      id: '/watchlist'
+      path: '/watchlist'
+      fullPath: '/watchlist'
+      preLoaderRoute: typeof WatchlistRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sign-up': {
       id: '/sign-up'
       path: '/sign-up'
@@ -410,6 +430,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   RecommendationsRoute: RecommendationsRouteWithChildren,
   SignUpRoute: SignUpRoute,
+  WatchlistRoute: WatchlistRoute,
   MoviesSearchRoute: MoviesSearchRoute,
   PersonSearchRoute: PersonSearchRoute,
   PreferencesMovieRoute: PreferencesMovieRoute,

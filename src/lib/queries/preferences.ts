@@ -23,6 +23,10 @@ export const preferencesKeys = {
   likedItems: () => [...preferencesKeys.all, "liked-items"] as const,
   dislikedItems: () => [...preferencesKeys.all, "disliked-items"] as const,
   watchlistItems: () => [...preferencesKeys.all, "watchlist-items"] as const,
+  // Bare prefix for the full-rows list read by /watchlist. Each page appends
+  // its page number to this prefix in `userWatchlistOptions`, so the cache
+  // holds one entry per page and `invalidateQueries(userWatchlist())`
+  // refetches them all after a toggle.
   userWatchlist: () => [...preferencesKeys.all, "user-watchlist"] as const,
 };
 
@@ -50,9 +54,14 @@ export const watchlistItemsOptions = () =>
     queryFn: () => getUserWatchlistItems(),
   });
 
-export const userWatchlistOptions = () =>
-  queryOptions<{ watchlist: UserWatchlist[] }>({
-    queryKey: preferencesKeys.userWatchlist(),
-    queryFn: () => fetchUserWatchlist(),
+export const userWatchlistOptions = (page: number = 1) =>
+  queryOptions<{
+    watchlist: UserWatchlist[];
+    page: number;
+    totalPages: number;
+    totalItems: number;
+  }>({
+    queryKey: [...preferencesKeys.userWatchlist(), page],
+    queryFn: () => fetchUserWatchlist({ data: page }),
   });
 

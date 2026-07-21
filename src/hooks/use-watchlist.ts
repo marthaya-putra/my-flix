@@ -14,9 +14,11 @@ import type { FilmInfo } from "@/lib/types";
  * watchlist is orthogonal to likes (see CONTEXT.md → Watchlist), so toggling
  * it must not invalidate or mutate taste state.
  *
- * The mutation applies an optimistic update to the watchlist-items cache,
- * rolls back on error, and on settle invalidates both the ids list and the
- * full-rows list so every read path reflects the new state.
+ * The mutation applies an optimistic update to the watchlist-items cache
+ * (the id Set every Bookmark CTA reads for its fill state) and rolls back
+ * on error. The page-keyed rows cache read by /watchlist is NOT optimistically
+ * updated here — /watchlist is the only reader and the only place a remove
+ * is visible, so it owns that optimisation locally.
  */
 export function useWatchlist() {
   const queryClient = useQueryClient();
@@ -68,7 +70,6 @@ export function useWatchlist() {
       return { previous };
     },
     onError: (_err, _filmInfo, context) => {
-      // Revert on failure.
       if (context?.previous) {
         queryClient.setQueryData(
           preferencesKeys.watchlistItems(),
@@ -77,7 +78,6 @@ export function useWatchlist() {
       }
     },
     onSettled: () => {
-      // Refetch the canonical id list and the full-rows list.
       void queryClient.invalidateQueries({
         queryKey: preferencesKeys.watchlistItems(),
       });

@@ -4,7 +4,7 @@ import {
   NewUserWatchlist,
   DB,
 } from "@/lib/db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, count } from "drizzle-orm";
 
 // Input validation schemas
 const addWatchlistSchema = z.object({
@@ -185,6 +185,24 @@ export async function removeUserWatchlistByWatchListId(
         watchListId: data.watchListId,
       },
     };
+  }
+}
+
+// Total count of a user's watchlist — used to compute totalPages for the
+// /watchlist grid (parallel to TMDB's total_results).
+export async function countUserWatchlist(
+  db: DB,
+  data: { userId: string },
+): Promise<number> {
+  try {
+    const rows = await db
+      .select({ value: count() })
+      .from(userWatchlist)
+      .where(eq(userWatchlist.userId, data.userId));
+    return rows[0]?.value ?? 0;
+  } catch (error) {
+    console.error("Failed to count user watchlist:", error);
+    return 0;
   }
 }
 
