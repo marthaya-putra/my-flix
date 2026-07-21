@@ -45,3 +45,17 @@ _Avoid_: session, connection, stream
 
 **Decorative rotation**:
 The client-side timer that cycles stage messages on a fixed interval. It is **not** a signal of real progress (e.g. an LLM fallback) — messages are generic and timing-based. Distinct from the LLM's own input/output, which are also called "messages" in AI-SDK vocabulary.
+
+# Watchlist
+
+A user's list of movies and TV series saved to watch later.
+
+## Language
+
+**Watchlist**:
+A user's list of movies and TV series saved to watch later. Orthogonal to Likes: a title can be liked, watchlisted, both, or neither, and toggling one never touches the other. Not consumed by the recommendation loop.
+_Avoid_: watch list, watch later, saved, my list, favorites, bookmark (as a feature name — the icon is a bookmark, the feature is Watchlist)
+
+**Likes**:
+The existing taste signal that feeds the recommendation loop (movies/TV the user enjoyed). Distinct from Watchlist, which is intent ("want to watch") not taste ("enjoyed"). A title can be both liked and watchlisted.
+_Avoid_: favorites, preferences (preferences is the table name, not the user-facing concept)
