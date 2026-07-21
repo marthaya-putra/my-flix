@@ -5,6 +5,32 @@ import {
   preferencesKeys,
 } from "@/lib/queries/preferences";
 import type { FilmInfo } from "@/lib/types";
+import type { UserWatchlist } from "@/lib/db";
+
+/**
+ * Build a watchlist row from a `FilmInfo` so the optimistic update can write
+ * to the full-rows cache (`preferencesKeys.userWatchlist()`) that the
+ * `/watchlist` grid reads — not just the ids cache. Mirrors the field
+ * mapping the server fn persists (see `toggleWatchlistItem`).
+ */
+function filmInfoToRow(filmInfo: FilmInfo): UserWatchlist {
+  const categoryValue = filmInfo.category === "tv" ? "tv-series" : "movie";
+  const year = filmInfo.releaseDate
+    ? new Date(filmInfo.releaseDate).getFullYear()
+    : new Date().getFullYear();
+  return {
+    id: 0,
+    userId: "",
+    watchListId: filmInfo.id,
+    title: filmInfo.title,
+    year,
+    category: categoryValue,
+    genres: filmInfo.genres?.length ? filmInfo.genres.join(", ") : null,
+    posterPath: filmInfo.posterPath || null,
+    createdAt: null,
+    updatedAt: null,
+  };
+}
 
 /**
  * Read the user's watchlist ids from the QueryClient cache (populated by the
@@ -48,31 +74,58 @@ export function useWatchlist() {
       await queryClient.cancelQueries({
         queryKey: preferencesKeys.watchlistItems(),
       });
+      await queryClient.cancelQueries({
+        queryKey: preferencesKeys.userWatchlist(),
+      });
 
-      const previous = queryClient.getQueryData<{ watchlistIds: number[] }>(
+      const previousIds = queryClient.getQueryData<{ watchlistIds: number[] }>(
         preferencesKeys.watchlistItems(),
       );
+      const previousRows = queryClient.getQueryData<{ watchlist: UserWatchlist[] }>(
+        preferencesKeys.userWatchlist(),
+      );
 
-      const prevSet = new Set(previous?.watchlistIds ?? []);
+      // --- ids cache ---
+      const prevSet = new Set(previousIds?.watchlistIds ?? []);
       const nextSet = new Set(prevSet);
-      if (nextSet.has(filmInfo.id)) {
-        nextSet.delete(filmInfo.id);
-      } else {
+      const isAdding = !nextSet.has(filmInfo.id);
+      if (isAdding) {
         nextSet.add(filmInfo.id);
+      } else {
+        nextSet.delete(filmInfo.id);
       }
-
       queryClient.setQueryData(preferencesKeys.watchlistItems(), {
         watchlistIds: [...nextSet],
       });
 
-      return { previous };
+      // --- rows cache (read by the /watchlist grid) ---
+      // So the grid updates optimistically without waiting on the server
+      // round-trip, mirror the add/remove on the full-rows list too.
+      if (previousRows?.watchlist) {
+        const nextRows = isAdding
+          ? [...previousRows.watchlist, filmInfoToRow(filmInfo)]
+          : previousRows.watchlist.filter(
+              (row) => row.watchListId !== filmInfo.id,
+            );
+        queryClient.setQueryData(preferencesKeys.userWatchlist(), {
+          watchlist: nextRows,
+        });
+      }
+
+      return { previousIds, previousRows };
     },
     onError: (_err, _filmInfo, context) => {
       // Revert on failure.
-      if (context?.previous) {
+      if (context?.previousIds) {
         queryClient.setQueryData(
           preferencesKeys.watchlistItems(),
-          context.previous,
+          context.previousIds,
+        );
+      }
+      if (context?.previousRows) {
+        queryClient.setQueryData(
+          preferencesKeys.userWatchlist(),
+          context.previousRows,
         );
       }
     },

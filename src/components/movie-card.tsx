@@ -78,15 +78,18 @@ export default function MovieCard({
     <div
       className="group/card relative aspect-[3/4] w-full rounded-lg overflow-hidden cursor-pointer"
     >
-      {/* Rating badge — glass pill, top-right */}
-      <div className="absolute top-2.5 right-2.5 z-10">
-        <div
-          className={`flex items-center gap-1 px-2 py-0.5 rounded-full border backdrop-blur-md bg-black/50 ${getRatingColor(voteAverage)}`}
-        >
-          <Star className="w-3 h-3 fill-current" />
-          <span className="text-xs font-bold">{voteAverage.toFixed(1)}</span>
+      {/* Rating badge — glass pill, top-right. Hidden when the card has no
+          rating (e.g. watchlist rows, which don't store voteAverage). */}
+      {voteAverage > 0 && (
+        <div className="absolute top-2.5 right-2.5 z-10">
+          <div
+            className={`flex items-center gap-1 px-2 py-0.5 rounded-full border backdrop-blur-md bg-black/50 ${getRatingColor(voteAverage)}`}
+          >
+            <Star className="w-3 h-3 fill-current" />
+            <span className="text-xs font-bold">{voteAverage.toFixed(1)}</span>
+          </div>
         </div>
-      </div>
+      )}
 
       <img
         src={imgSrc}
