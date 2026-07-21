@@ -17,6 +17,7 @@ import {
 } from "@/lib/queries/tvs";
 import { getUserTimezone } from "@/lib/utils/timezone";
 import { useLikedItems } from "@/hooks/use-liked-items";
+import { useWatchlist } from "@/hooks/use-watchlist";
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -49,8 +50,14 @@ type RowHandlers = Pick<
   "isLiked" | "toggleLike"
 >;
 
+type WatchlistRowHandlers = Pick<
+  ReturnType<typeof useWatchlist>,
+  "isWatchlisted" | "toggleWatchlist"
+>;
+
 function Home() {
   const handlers = useLikedItems();
+  const watchlistHandlers = useWatchlist();
   const timezone = getUserTimezone();
 
   // Popular drives the Hero — resolve synchronously with the SSR render.
@@ -66,6 +73,7 @@ function Home() {
           title="Trending Movies"
           options={trendingMoviesOptions()}
           handlers={handlers}
+          watchlistHandlers={watchlistHandlers}
         />
       </Suspense>
       <Suspense fallback={<ContentRowSkeleton />}>
@@ -73,6 +81,7 @@ function Home() {
           title="Trending TV Shows"
           options={trendingTvsOptions()}
           handlers={handlers}
+          watchlistHandlers={watchlistHandlers}
         />
       </Suspense>
       <ContentRowSection
@@ -80,12 +89,14 @@ function Home() {
         exploreAllUrl="/tvs/airing-today"
         options={airingTodayTvsOptions({ page: 1, timezone })}
         handlers={handlers}
+        watchlistHandlers={watchlistHandlers}
       />
       <ContentRowSection
         title="New Episode This Week"
         exploreAllUrl="/tvs/airing-this-week"
         options={onTheAirTvsOptions({ page: 1, timezone })}
         handlers={handlers}
+        watchlistHandlers={watchlistHandlers}
       />
     </div>
   );
@@ -107,11 +118,13 @@ function ContentRowSection({
   options,
   exploreAllUrl,
   handlers,
+  watchlistHandlers,
 }: {
   title: string;
   options: UseQueryOptions<DiscoverResult>;
   exploreAllUrl?: string;
   handlers: RowHandlers;
+  watchlistHandlers: WatchlistRowHandlers;
 }) {
   const { data, isPending } = useQuery(options);
   if (isPending || !data) return <ContentRowSkeleton />;
@@ -122,6 +135,8 @@ function ContentRowSection({
       exploreAllUrl={exploreAllUrl}
       isLiked={handlers.isLiked}
       onToggleLike={handlers.toggleLike}
+      isWatchlisted={watchlistHandlers.isWatchlisted}
+      onToggleWatchlist={watchlistHandlers.toggleWatchlist}
     />
   );
 }
