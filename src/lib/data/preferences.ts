@@ -22,6 +22,11 @@ import {
   addUserDislike,
   removeUserDislikeByPreferenceId,
 } from "../repositories/user-dislikes";
+import {
+  addUserWatchlist,
+  getUserWatchlist,
+  removeUserWatchlistByWatchListId,
+} from "../repositories/user-watchlist";
 import type { UserPreferences } from "@/lib/types/preferences";
 
 // Input validation schemas from repositories
@@ -747,3 +752,140 @@ export const getAllUserContent = createServerFn().handler(async () => {
   const { loadUserContent } = await import("./preferences-server");
   return loadUserContent(session.user.id);
 });
+
+// ─── Watchlist ───────────────────────────────────────────────────────────────
+// Orthogonal to likes/dislikes (see CONTEXT.md → Watchlist). These fns only
+// ever touch user_watchlist; toggling a bookmark must not change taste state.
+
+// Get the current user's watchlist ids — primes the optimistic fill on the
+// client (parallel to getUserLikedItems).
+export const getUserWatchlistItems = createServerFn({
+  method: "GET",
+}).handler(async (): Promise<{ watchlistIds: number[] }> => {
+  try {
+    const session = await auth.api.getSession({
+      headers: getRequest().headers,
+    });
+
+    if (!session?.user?.id) {
+      return { watchlistIds: [] };
+    }
+
+    const db = getDb();
+    const result = await getUserWatchlist(db, {
+      userId: session.user.id,
+    });
+
+    if (result.success) {
+      const watchlistIds = result.watchlist.map((w) => w.watchListId);
+      return { watchlistIds };
+    }
+
+    return { watchlistIds: [] };
+  } catch {
+    return { watchlistIds: [] };
+  }
+});
+
+// Fetch the full watchlist rows (used by the /watchlist grid).
+export const fetchUserWatchlist = createServerFn({
+  method: "GET",
+}).handler(async () => {
+  try {
+    const session = await auth.api.getSession({
+      headers: getRequest().headers,
+    });
+
+    if (!session?.user?.id) {
+      return { watchlist: [] };
+    }
+
+    const db = getDb();
+    const result = await getUserWatchlist(db, {
+      userId: session.user.id,
+    });
+
+    return { watchlist: result.success ? result.watchlist : [] };
+  } catch (error) {
+    console.error("Error fetching user watchlist:", error);
+    return { watchlist: [] };
+  }
+});
+
+// Toggle a watchlist entry (add if absent, remove if present). Parallel to
+// toggleMoviePreference but for the watchlist table.
+export const toggleWatchlistItem = createServerFn({
+  method: "POST",
+})
+  .inputValidator(
+    z.object({
+      watchListId: z.number(),
+      title: z.string(),
+      year: z.number(),
+      category: z.enum(["movie", "tv-series"]),
+      genres: z.array(z.string()).optional(),
+      posterPath: z.string().optional(),
+    }),
+  )
+  .handler(async ({ data }) => {
+    try {
+      const session = await auth.api.getSession({
+        headers: getRequest().headers,
+      });
+
+      if (!session?.user?.id) {
+        return { success: false, error: "User not authenticated" };
+      }
+
+      const db = getDb();
+      const { watchListId, title, year, category, genres, posterPath } = data;
+
+      // Check if already watchlisted
+      const existingResult = await getUserWatchlist(db, {
+        userId: session.user.id,
+      });
+
+      if (!existingResult.success) {
+        return { success: false, error: "Failed to check watchlist" };
+      }
+
+      const existing = existingResult.watchlist.find(
+        (w) => w.watchListId === watchListId,
+      );
+
+      if (existing) {
+        const result = await removeUserWatchlistByWatchListId(db, {
+          userId: session.user.id,
+          watchListId,
+        });
+        return {
+          success: result.success,
+          action: "removed" as const,
+        };
+      }
+
+      const genresString = genres?.join(", ");
+      const result = await addUserWatchlist(db, {
+        userId: session.user.id,
+        watchListId,
+        title,
+        year,
+        category,
+        genres: genresString,
+        posterPath,
+      });
+      return {
+        success: result.success,
+        action: "added" as const,
+      };
+    } catch (error) {
+      console.error("Error toggling watchlist item:", error);
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to toggle watchlist item",
+      };
+    }
+  });

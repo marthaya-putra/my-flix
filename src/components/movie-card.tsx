@@ -1,4 +1,4 @@
-import { Play, ThumbsUp, Star } from "lucide-react";
+import { Play, ThumbsUp, Star, Bookmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -17,6 +17,8 @@ interface MovieCardProps extends FilmInfo {
   match?: string;
   isLiked?: boolean;
   onToggleLike?: (filmInfo: FilmInfo) => void;
+  isWatchlisted?: boolean;
+  onToggleWatchlist?: (filmInfo: FilmInfo) => void;
 }
 
 export default function MovieCard({
@@ -33,6 +35,8 @@ export default function MovieCard({
   genreIds,
   isLiked = false,
   onToggleLike,
+  isWatchlisted = false,
+  onToggleWatchlist,
 }: MovieCardProps) {
   const { data: session, isPending: sessionPending } = authClient.useSession();
   const [imgSrc, setImgSrc] = useState(posterPath);
@@ -54,6 +58,12 @@ export default function MovieCard({
   const handleToggleLike = () => {
     if (onToggleLike) {
       onToggleLike(filmInfo);
+    }
+  };
+
+  const handleToggleWatchlist = () => {
+    if (onToggleWatchlist) {
+      onToggleWatchlist(filmInfo);
     }
   };
 
@@ -138,31 +148,59 @@ export default function MovieCard({
               </Tooltip>
             </div>
 
-            {!sessionPending && session && onToggleLike && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={handleToggleLike}
-                      className={`${HIT_ZONE} w-8 h-8 rounded-full backdrop-blur-md border transition-colors ${
-                        isLiked
-                          ? "bg-primary/20 text-primary border-primary/30 hover:bg-primary/30"
-                          : "border-white/20 bg-black/40 text-white hover:bg-white/10"
-                      }`}
-                    >
-                      <ThumbsUp
-                        className={`w-4 h-4 ${isLiked ? "fill-current" : ""}`}
-                      />
-                    </Button>
-                  </motion.div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{isLiked ? "Unlike" : "I like this"}</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
+            <div className="flex gap-2">
+              {!sessionPending && session && onToggleWatchlist && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={handleToggleWatchlist}
+                        className={`${HIT_ZONE} w-8 h-8 rounded-full backdrop-blur-md border transition-colors ${
+                          isWatchlisted
+                            ? "bg-violet-500/20 text-violet-500 border-violet-500/30 hover:bg-violet-500/30"
+                            : "border-white/20 bg-black/40 text-white hover:bg-white/10"
+                        }`}
+                      >
+                        <Bookmark
+                          className={`w-4 h-4 ${isWatchlisted ? "fill-current" : ""}`}
+                        />
+                      </Button>
+                    </motion.div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{isWatchlisted ? "Remove from Watchlist" : "Add to Watchlist"}</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+
+              {!sessionPending && session && onToggleLike && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={handleToggleLike}
+                        className={`${HIT_ZONE} w-8 h-8 rounded-full backdrop-blur-md border transition-colors ${
+                          isLiked
+                            ? "bg-primary/20 text-primary border-primary/30 hover:bg-primary/30"
+                            : "border-white/20 bg-black/40 text-white hover:bg-white/10"
+                        }`}
+                      >
+                        <ThumbsUp
+                          className={`w-4 h-4 ${isLiked ? "fill-current" : ""}`}
+                        />
+                      </Button>
+                    </motion.div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{isLiked ? "Unlike" : "I like this"}</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
           </div>
 
           <div className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">

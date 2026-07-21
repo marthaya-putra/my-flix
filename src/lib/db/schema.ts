@@ -69,6 +69,35 @@ export const userDislikes = pgTable(
   ]
 );
 
+// User watchlist — titles saved to watch later. Orthogonal to likes/dislikes
+// (see CONTEXT.md → Watchlist): toggling watchlist never touches the
+// user_preferences or user_dislikes tables. Mirrors user_preferences columns
+// (rich rows for the /watchlist grid) plus the same index set.
+export const userWatchlist = pgTable(
+  "user_watchlist",
+  {
+    id: serial("id").primaryKey(),
+    userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+    watchListId: integer("watch_list_id").notNull(), // TMDB ID
+    title: text("title").notNull(),
+    year: integer("year").notNull(), // Release year
+    category: categoryEnum("category").notNull(), // 'movie' | 'tv-series'
+    genres: text("genres"), // comma-separated genre names
+    posterPath: text("poster_path"), // TMDB poster path
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("user_watchlist_user_id_idx").on(table.userId),
+    index("user_watchlist_watch_list_id_idx").on(table.watchListId),
+    index("user_watchlist_category_idx").on(table.category),
+    uniqueIndex("user_watchlist_user_id_watch_list_id_unique").on(
+      table.userId,
+      table.watchListId
+    ),
+  ]
+);
+
 // User preferences for actors and directors
 export const userPeople = pgTable(
   "user_people",
@@ -97,6 +126,8 @@ export type UserPreference = typeof userPreferences.$inferSelect;
 export type NewUserPreference = typeof userPreferences.$inferInsert;
 export type UserDislike = typeof userDislikes.$inferSelect;
 export type NewUserDislike = typeof userDislikes.$inferInsert;
+export type UserWatchlist = typeof userWatchlist.$inferSelect;
+export type NewUserWatchlist = typeof userWatchlist.$inferInsert;
 export type UserPerson = typeof userPeople.$inferSelect;
 export type NewUserPerson = typeof userPeople.$inferInsert;
 
@@ -179,6 +210,7 @@ export const userRelations = relations(user, ({ many }) => ({
   accounts: many(account),
   preferences: many(userPreferences),
   dislikes: many(userDislikes),
+  watchlist: many(userWatchlist),
   people: many(userPeople),
 }));
 
@@ -206,6 +238,13 @@ export const userPreferencesRelations = relations(userPreferences, ({ one }) => 
 export const userDislikesRelations = relations(userDislikes, ({ one }) => ({
   user: one(user, {
     fields: [userDislikes.userId],
+    references: [user.id],
+  }),
+}));
+
+export const userWatchlistRelations = relations(userWatchlist, ({ one }) => ({
+  user: one(user, {
+    fields: [userWatchlist.userId],
     references: [user.id],
   }),
 }));
