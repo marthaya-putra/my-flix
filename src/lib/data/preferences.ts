@@ -29,6 +29,7 @@ import {
   removeUserWatchlistByWatchListId,
 } from "../repositories/user-watchlist";
 import type { UserPreferences } from "@/lib/types/preferences";
+import { WATCHLIST_PAGE_SIZE } from "@/lib/utils";
 
 // Input validation schemas from repositories
 const AddMoviePreferenceInput = preferenceSchemas.addPreference.omit({
@@ -787,10 +788,6 @@ export const getUserWatchlistItems = createServerFn({
     return { watchlistIds: [] };
   }
 });
-
-// Page size for the /watchlist grid — matches /movies and /tvs (TMDB's
-// default of 20).
-const WATCHLIST_PAGE_SIZE = 20;
 
 // Fetch one page of the full watchlist rows (used by the /watchlist grid).
 // Returns the slice plus the totals the <Pagination> component needs,

@@ -32,6 +32,14 @@ export function cn(...inputs: ClassValue[]) {
 export const HIT_ZONE =
   "relative before:absolute before:inset-[-6px] before:content-['']";
 
+/**
+ * Page size for the /watchlist grid — matches /movies and /tvs (TMDB's
+ * default of 20). Lives here so both the server fn (to compute totalPages)
+ * and the optimistic update in `useWatchlist` (to fix up the count when a
+ * row is added or removed from a cached page) read one source of truth.
+ */
+export const WATCHLIST_PAGE_SIZE = 20;
+
 export function convertToDiscoverResult(data: any): DiscoverResult {
   return {
     page: data.page,
