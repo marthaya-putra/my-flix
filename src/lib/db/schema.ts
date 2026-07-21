@@ -78,7 +78,7 @@ export const userWatchlist = pgTable(
   {
     id: serial("id").primaryKey(),
     userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
-    preferenceId: integer("preference_id").notNull(), // TMDB ID
+    watchListId: integer("watch_list_id").notNull(), // TMDB ID
     title: text("title").notNull(),
     year: integer("year").notNull(), // Release year
     category: categoryEnum("category").notNull(), // 'movie' | 'tv-series'
@@ -89,11 +89,11 @@ export const userWatchlist = pgTable(
   },
   (table) => [
     index("user_watchlist_user_id_idx").on(table.userId),
-    index("user_watchlist_preference_id_idx").on(table.preferenceId),
+    index("user_watchlist_watch_list_id_idx").on(table.watchListId),
     index("user_watchlist_category_idx").on(table.category),
-    uniqueIndex("user_watchlist_user_id_preference_id_unique").on(
+    uniqueIndex("user_watchlist_user_id_watch_list_id_unique").on(
       table.userId,
-      table.preferenceId
+      table.watchListId
     ),
   ]
 );

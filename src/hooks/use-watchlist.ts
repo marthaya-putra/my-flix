@@ -34,7 +34,7 @@ export function useWatchlist() {
 
       return toggleWatchlistItem({
         data: {
-          preferenceId: id,
+          watchListId: id,
           title,
           year,
           category: categoryValue,

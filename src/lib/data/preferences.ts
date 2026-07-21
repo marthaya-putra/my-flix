@@ -25,7 +25,7 @@ import {
 import {
   addUserWatchlist,
   getUserWatchlist,
-  removeUserWatchlistByPreferenceId,
+  removeUserWatchlistByWatchListId,
 } from "../repositories/user-watchlist";
 import type { UserPreferences } from "@/lib/types/preferences";
 
@@ -777,7 +777,7 @@ export const getUserWatchlistItems = createServerFn({
     });
 
     if (result.success) {
-      const watchlistIds = result.watchlist.map((w) => w.preferenceId);
+      const watchlistIds = result.watchlist.map((w) => w.watchListId);
       return { watchlistIds };
     }
 
@@ -819,7 +819,7 @@ export const toggleWatchlistItem = createServerFn({
 })
   .inputValidator(
     z.object({
-      preferenceId: z.number(),
+      watchListId: z.number(),
       title: z.string(),
       year: z.number(),
       category: z.enum(["movie", "tv-series"]),
@@ -838,7 +838,7 @@ export const toggleWatchlistItem = createServerFn({
       }
 
       const db = getDb();
-      const { preferenceId, title, year, category, genres, posterPath } = data;
+      const { watchListId, title, year, category, genres, posterPath } = data;
 
       // Check if already watchlisted
       const existingResult = await getUserWatchlist(db, {
@@ -850,13 +850,13 @@ export const toggleWatchlistItem = createServerFn({
       }
 
       const existing = existingResult.watchlist.find(
-        (w) => w.preferenceId === preferenceId,
+        (w) => w.watchListId === watchListId,
       );
 
       if (existing) {
-        const result = await removeUserWatchlistByPreferenceId(db, {
+        const result = await removeUserWatchlistByWatchListId(db, {
           userId: session.user.id,
-          preferenceId,
+          watchListId,
         });
         return {
           success: result.success,
@@ -867,7 +867,7 @@ export const toggleWatchlistItem = createServerFn({
       const genresString = genres?.join(", ");
       const result = await addUserWatchlist(db, {
         userId: session.user.id,
-        preferenceId,
+        watchListId,
         title,
         year,
         category,

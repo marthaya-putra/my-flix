@@ -9,7 +9,7 @@ import { eq, and, desc } from "drizzle-orm";
 // Input validation schemas
 const addWatchlistSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
-  preferenceId: z.number().positive("TMDB ID is required"),
+  watchListId: z.number().positive("TMDB ID is required"),
   title: z.string().min(1, "Title is required"),
   year: z.number().positive("Year is required"),
   category: z.enum(["movie", "tv-series"], {
@@ -19,9 +19,9 @@ const addWatchlistSchema = z.object({
   posterPath: z.string().optional(),
 });
 
-const removeWatchlistByPreferenceIdSchema = z.object({
+const removeWatchlistByWatchListIdSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
-  preferenceId: z.number().positive("TMDB ID is required"),
+  watchListId: z.number().positive("TMDB ID is required"),
 });
 
 const getUserWatchlistSchema = z.object({
@@ -47,7 +47,7 @@ export async function addUserWatchlist(
       .where(
         and(
           eq(userWatchlist.userId, data.userId),
-          eq(userWatchlist.preferenceId, data.preferenceId),
+          eq(userWatchlist.watchListId, data.watchListId),
         ),
       )
       .limit(1);
@@ -61,7 +61,7 @@ export async function addUserWatchlist(
 
     const newWatchlist: NewUserWatchlist = {
       userId: data.userId,
-      preferenceId: data.preferenceId,
+      watchListId: data.watchListId,
       title: data.title,
       year: data.year,
       category: data.category,
@@ -85,7 +85,7 @@ export async function addUserWatchlist(
       success: true,
       watchlist: {
         userId: data.userId,
-        preferenceId: data.preferenceId,
+        watchListId: data.watchListId,
         title: data.title,
         year: data.year,
         category: data.category,
@@ -130,9 +130,9 @@ export async function getUserWatchlist(
   }
 }
 
-export async function removeUserWatchlistByPreferenceId(
+export async function removeUserWatchlistByWatchListId(
   db: DB,
-  data: z.infer<typeof removeWatchlistByPreferenceIdSchema>,
+  data: z.infer<typeof removeWatchlistByWatchListIdSchema>,
 ) {
   try {
     // First, retrieve the row to delete (for a meaningful return value even
@@ -143,7 +143,7 @@ export async function removeUserWatchlistByPreferenceId(
       .where(
         and(
           eq(userWatchlist.userId, data.userId),
-          eq(userWatchlist.preferenceId, data.preferenceId),
+          eq(userWatchlist.watchListId, data.watchListId),
         ),
       )
       .limit(1);
@@ -154,7 +154,7 @@ export async function removeUserWatchlistByPreferenceId(
         success: true,
         deletedWatchlist: {
           userId: data.userId,
-          preferenceId: data.preferenceId,
+          watchListId: data.watchListId,
         },
       };
     }
@@ -164,7 +164,7 @@ export async function removeUserWatchlistByPreferenceId(
       .where(
         and(
           eq(userWatchlist.userId, data.userId),
-          eq(userWatchlist.preferenceId, data.preferenceId),
+          eq(userWatchlist.watchListId, data.watchListId),
         ),
       )
       .returning();
@@ -182,7 +182,7 @@ export async function removeUserWatchlistByPreferenceId(
       success: true,
       deletedWatchlist: {
         userId: data.userId,
-        preferenceId: data.preferenceId,
+        watchListId: data.watchListId,
       },
     };
   }
@@ -191,6 +191,6 @@ export async function removeUserWatchlistByPreferenceId(
 // Export schemas for reuse
 export const schemas = {
   addWatchlist: addWatchlistSchema,
-  removeWatchlistByPreferenceId: removeWatchlistByPreferenceIdSchema,
+  removeWatchlistByWatchListId: removeWatchlistByWatchListIdSchema,
   getUserWatchlist: getUserWatchlistSchema,
 };

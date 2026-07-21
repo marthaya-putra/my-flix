@@ -1,5 +1,5 @@
 {
-  "id": "f7d3fa63-522b-40f4-8067-225127305fcb",
+  "id": "2d81d232-8e7c-4f11-b2ec-0189bfa512e4",
   "prevId": "8d55d3dd-25df-4ecc-985c-431fa1ff689e",
   "version": "7",
   "dialect": "postgresql",
@@ -748,8 +748,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "preference_id": {
-          "name": "preference_id",
+        "watch_list_id": {
+          "name": "watch_list_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
@@ -816,11 +816,11 @@
           "method": "btree",
           "with": {}
         },
-        "user_watchlist_preference_id_idx": {
-          "name": "user_watchlist_preference_id_idx",
+        "user_watchlist_watch_list_id_idx": {
+          "name": "user_watchlist_watch_list_id_idx",
           "columns": [
             {
-              "expression": "preference_id",
+              "expression": "watch_list_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -846,8 +846,8 @@
           "method": "btree",
           "with": {}
         },
-        "user_watchlist_user_id_preference_id_unique": {
-          "name": "user_watchlist_user_id_preference_id_unique",
+        "user_watchlist_user_id_watch_list_id_unique": {
+          "name": "user_watchlist_user_id_watch_list_id_unique",
           "columns": [
             {
               "expression": "user_id",
@@ -856,7 +856,7 @@
               "nulls": "last"
             },
             {
-              "expression": "preference_id",
+              "expression": "watch_list_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
