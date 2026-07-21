@@ -1,4 +1,3 @@
-import { useEffect, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Bookmark, Compass } from "lucide-react";
 import { Link } from "@tanstack/react-router";
@@ -49,21 +48,8 @@ export function WatchlistPage({
   totalItems,
   items,
 }: WatchlistPageProps) {
-  const { isWatchlisted, toggleWatchlist, isToggling } = useWatchlist();
+  const { isWatchlisted, toggleWatchlist } = useWatchlist();
   const navigate = useNavigate({ from: route.id });
-
-  // Edge-case latch: when a toggle settles (toggling→idle) and the current
-  // page is now empty, step back one page so the user lands on the previous
-  // page instead of staring at an empty grid. `wasToggling` is a one-tick
-  // memory that fires only on that settle edge, not on every render where
-  // the page happens to be empty.
-  const wasToggling = useRef(false);
-  useEffect(() => {
-    if (wasToggling.current && !isToggling && items.length === 0 && page > 1) {
-      void navigate({ search: { page: page - 1 } });
-    }
-    wasToggling.current = isToggling;
-  }, [isToggling, items.length, page, navigate]);
 
   const description =
     totalItems === 0
@@ -72,6 +58,19 @@ export function WatchlistPage({
 
   const goToPage = (next: number) => {
     void navigate({ search: { page: next } });
+  };
+
+  // On /watchlist every card is already saved, so a toggle is always a
+  // remove. If that remove empties the current page, step back one page so
+  // the user lands on the previous page instead of an empty grid. Done in
+  // the click handler (not an effect) because we know at click time whether
+  // this was the last row on the page.
+  const handleToggle = (filmInfo: FilmInfo) => {
+    const isLastOnPage = items.length === 1;
+    toggleWatchlist(filmInfo);
+    if (isLastOnPage && page > 1) {
+      void navigate({ search: { page: page - 1 } });
+    }
   };
 
   return (
@@ -113,7 +112,7 @@ export function WatchlistPage({
                   key={row.id}
                   {...filmInfo}
                   isWatchlisted={isWatchlisted(row.watchListId)}
-                  onToggleWatchlist={toggleWatchlist}
+                  onToggleWatchlist={handleToggle}
                 />
               );
             })}
