@@ -1,13 +1,24 @@
 import { useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { Bookmark, Compass } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import MovieCard from "@/components/movie-card";
 import CustomPagination from "@/components/pagination";
 import { useWatchlist } from "@/hooks/use-watchlist";
+import { preferencesKeys } from "@/lib/queries/preferences";
+import { WATCHLIST_PAGE_SIZE } from "@/lib/utils";
 import type { FilmInfo, FilmType } from "@/lib/types";
 import type { UserWatchlist } from "@/lib/db";
 import type { Route as WatchlistRoute } from "@/routes/watchlist";
+
+/** Shape of each cached /watchlist page (matches fetchUserWatchlist). */
+type WatchlistPageData = {
+  watchlist: UserWatchlist[];
+  page: number;
+  totalPages: number;
+  totalItems: number;
+};
 
 interface WatchlistPageProps {
   route: typeof WatchlistRoute;
@@ -50,6 +61,7 @@ export function WatchlistPage({
 }: WatchlistPageProps) {
   const { isWatchlisted, toggleWatchlist } = useWatchlist();
   const navigate = useNavigate({ from: route.id });
+  const queryClient = useQueryClient();
 
   const description =
     totalItems === 0
@@ -61,12 +73,33 @@ export function WatchlistPage({
   };
 
   // On /watchlist every card is already saved, so a toggle is always a
-  // remove. If that remove empties the current page, step back one page so
-  // the user lands on the previous page instead of an empty grid. Done in
-  // the click handler (not an effect) because we know at click time whether
-  // this was the last row on the page.
+  // remove. We optimistically drop the row from the CURRENT page's cache so
+  // the card vanishes instantly (the hook only optimistically flips the ids
+  // cache — it doesn't touch the page-keyed rows cache). If the remove
+  // empties this page, step back one page so the user lands on the previous
+  // page instead of an empty grid. No explicit rollback: on error the hook's
+  // onSettled invalidates the rows prefix and the server's authoritative
+  // page replaces ours.
   const handleToggle = (filmInfo: FilmInfo) => {
     const isLastOnPage = items.length === 1;
+    const cacheKey = [...preferencesKeys.userWatchlist(), page];
+    const current = queryClient.getQueryData<WatchlistPageData>(cacheKey);
+    if (current) {
+      const watchlist = current.watchlist.filter(
+        (row) => row.watchListId !== filmInfo.id,
+      );
+      const nextTotalItems = Math.max(current.totalItems - 1, 0);
+      const nextTotalPages =
+        nextTotalItems === 0
+          ? 0
+          : Math.ceil(nextTotalItems / WATCHLIST_PAGE_SIZE);
+      queryClient.setQueryData<WatchlistPageData>(cacheKey, {
+        ...current,
+        watchlist,
+        totalItems: nextTotalItems,
+        totalPages: nextTotalPages,
+      });
+    }
     toggleWatchlist(filmInfo);
     if (isLastOnPage && page > 1) {
       void navigate({ search: { page: page - 1 } });
