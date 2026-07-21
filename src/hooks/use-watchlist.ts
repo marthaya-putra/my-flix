@@ -5,32 +5,6 @@ import {
   preferencesKeys,
 } from "@/lib/queries/preferences";
 import type { FilmInfo } from "@/lib/types";
-import type { UserWatchlist } from "@/lib/db";
-
-/**
- * Build a watchlist row from a `FilmInfo` so the optimistic update can write
- * to the full-rows cache (`preferencesKeys.userWatchlist()`) that the
- * `/watchlist` grid reads — not just the ids cache. Mirrors the field
- * mapping the server fn persists (see `toggleWatchlistItem`).
- */
-function filmInfoToRow(filmInfo: FilmInfo): UserWatchlist {
-  const categoryValue = filmInfo.category === "tv" ? "tv-series" : "movie";
-  const year = filmInfo.releaseDate
-    ? new Date(filmInfo.releaseDate).getFullYear()
-    : new Date().getFullYear();
-  return {
-    id: 0,
-    userId: "",
-    watchListId: filmInfo.id,
-    title: filmInfo.title,
-    year,
-    category: categoryValue,
-    genres: filmInfo.genres?.length ? filmInfo.genres.join(", ") : null,
-    posterPath: filmInfo.posterPath || null,
-    createdAt: null,
-    updatedAt: null,
-  };
-}
 
 /**
  * Read the user's watchlist ids from the QueryClient cache (populated by the
@@ -40,9 +14,11 @@ function filmInfoToRow(filmInfo: FilmInfo): UserWatchlist {
  * watchlist is orthogonal to likes (see CONTEXT.md → Watchlist), so toggling
  * it must not invalidate or mutate taste state.
  *
- * The mutation applies an optimistic update to the watchlist-items cache,
- * rolls back on error, and on settle invalidates both the ids list and the
- * full-rows list so every read path reflects the new state.
+ * The mutation applies an optimistic update to the watchlist-items cache
+ * (the id Set every Bookmark CTA reads for its fill state) and rolls back
+ * on error. The full-rows cache (`preferencesKeys.userWatchlist()`) is
+ * page-keyed, so it isn't optimistically written — `onSettled` invalidates
+ * the prefix so every page refetches from the server.
  */
 export function useWatchlist() {
   const queryClient = useQueryClient();
@@ -74,63 +50,37 @@ export function useWatchlist() {
       await queryClient.cancelQueries({
         queryKey: preferencesKeys.watchlistItems(),
       });
-      await queryClient.cancelQueries({
-        queryKey: preferencesKeys.userWatchlist(),
-      });
 
-      const previousIds = queryClient.getQueryData<{ watchlistIds: number[] }>(
+      const previous = queryClient.getQueryData<{ watchlistIds: number[] }>(
         preferencesKeys.watchlistItems(),
       );
-      const previousRows = queryClient.getQueryData<{ watchlist: UserWatchlist[] }>(
-        preferencesKeys.userWatchlist(),
-      );
 
-      // --- ids cache ---
-      const prevSet = new Set(previousIds?.watchlistIds ?? []);
+      const prevSet = new Set(previous?.watchlistIds ?? []);
       const nextSet = new Set(prevSet);
-      const isAdding = !nextSet.has(filmInfo.id);
-      if (isAdding) {
-        nextSet.add(filmInfo.id);
-      } else {
+      if (nextSet.has(filmInfo.id)) {
         nextSet.delete(filmInfo.id);
+      } else {
+        nextSet.add(filmInfo.id);
       }
+
       queryClient.setQueryData(preferencesKeys.watchlistItems(), {
         watchlistIds: [...nextSet],
       });
 
-      // --- rows cache (read by the /watchlist grid) ---
-      // So the grid updates optimistically without waiting on the server
-      // round-trip, mirror the add/remove on the full-rows list too.
-      if (previousRows?.watchlist) {
-        const nextRows = isAdding
-          ? [...previousRows.watchlist, filmInfoToRow(filmInfo)]
-          : previousRows.watchlist.filter(
-              (row) => row.watchListId !== filmInfo.id,
-            );
-        queryClient.setQueryData(preferencesKeys.userWatchlist(), {
-          watchlist: nextRows,
-        });
-      }
-
-      return { previousIds, previousRows };
+      return { previous };
     },
     onError: (_err, _filmInfo, context) => {
       // Revert on failure.
-      if (context?.previousIds) {
+      if (context?.previous) {
         queryClient.setQueryData(
           preferencesKeys.watchlistItems(),
-          context.previousIds,
-        );
-      }
-      if (context?.previousRows) {
-        queryClient.setQueryData(
-          preferencesKeys.userWatchlist(),
-          context.previousRows,
+          context.previous,
         );
       }
     },
     onSettled: () => {
-      // Refetch the canonical id list and the full-rows list.
+      // Refetch the canonical id list. The page-keyed full-rows list (read
+      // by /watchlist) is matched by the prefix and refetched too.
       void queryClient.invalidateQueries({
         queryKey: preferencesKeys.watchlistItems(),
       });

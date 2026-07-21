@@ -1,12 +1,20 @@
+import { useEffect, useRef } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { Bookmark, Compass } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import MovieCard from "@/components/movie-card";
+import CustomPagination from "@/components/pagination";
 import { useWatchlist } from "@/hooks/use-watchlist";
 import type { FilmInfo, FilmType } from "@/lib/types";
 import type { UserWatchlist } from "@/lib/db";
+import type { Route as WatchlistRoute } from "@/routes/watchlist";
 
 interface WatchlistPageProps {
+  route: typeof WatchlistRoute;
+  page: number;
+  totalPages: number;
+  totalItems: number;
   items: UserWatchlist[];
 }
 
@@ -34,13 +42,37 @@ function rowToFilmInfo(row: UserWatchlist): FilmInfo {
   };
 }
 
-export function WatchlistPage({ items }: WatchlistPageProps) {
-  const { isWatchlisted, toggleWatchlist } = useWatchlist();
+export function WatchlistPage({
+  route,
+  page,
+  totalPages,
+  totalItems,
+  items,
+}: WatchlistPageProps) {
+  const { isWatchlisted, toggleWatchlist, isToggling } = useWatchlist();
+  const navigate = useNavigate({ from: route.id });
+
+  // Edge-case latch: when a toggle settles (toggling→idle) and the current
+  // page is now empty, step back one page so the user lands on the previous
+  // page instead of staring at an empty grid. `wasToggling` is a one-tick
+  // memory that fires only on that settle edge, not on every render where
+  // the page happens to be empty.
+  const wasToggling = useRef(false);
+  useEffect(() => {
+    if (wasToggling.current && !isToggling && items.length === 0 && page > 1) {
+      void navigate({ search: { page: page - 1 } });
+    }
+    wasToggling.current = isToggling;
+  }, [isToggling, items.length, page, navigate]);
 
   const description =
-    items.length === 0
+    totalItems === 0
       ? "Movies and shows you've added to your Watchlist."
-      : `${items.length} ${items.length === 1 ? "title" : "titles"} in your Watchlist.`;
+      : `${totalItems} ${totalItems === 1 ? "title" : "titles"} in your Watchlist.`;
+
+  const goToPage = (next: number) => {
+    void navigate({ search: { page: next } });
+  };
 
   return (
     <div className="container mx-auto p-4 max-w-6xl">
@@ -49,7 +81,7 @@ export function WatchlistPage({ items }: WatchlistPageProps) {
         <p className="text-muted-foreground">{description}</p>
       </div>
 
-      {items.length === 0 ? (
+      {totalItems === 0 ? (
         <div className="text-center py-12 border-2 border-dashed border-muted rounded-lg flex flex-col items-center justify-center">
           <Bookmark className="h-10 w-10 text-muted-foreground/50 mb-4" />
           <p className="text-muted-foreground mb-4">
@@ -63,19 +95,39 @@ export function WatchlistPage({ items }: WatchlistPageProps) {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-          {items.map((row) => {
-            const filmInfo = rowToFilmInfo(row);
-            return (
-              <MovieCard
-                key={row.id}
-                {...filmInfo}
-                isWatchlisted={isWatchlisted(row.watchListId)}
-                onToggleWatchlist={toggleWatchlist}
-              />
-            );
-          })}
-        </div>
+        <>
+          <CustomPagination
+            currentPage={page}
+            totalPages={totalPages}
+            hasNextPage={page < totalPages}
+            hasPreviousPage={page > 1}
+            onPrevPage={() => goToPage(page - 1)}
+            onNextPage={() => goToPage(page + 1)}
+          />
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 my-8">
+            {items.map((row) => {
+              const filmInfo = rowToFilmInfo(row);
+              return (
+                <MovieCard
+                  key={row.id}
+                  {...filmInfo}
+                  isWatchlisted={isWatchlisted(row.watchListId)}
+                  onToggleWatchlist={toggleWatchlist}
+                />
+              );
+            })}
+          </div>
+
+          <CustomPagination
+            currentPage={page}
+            totalPages={totalPages}
+            hasNextPage={page < totalPages}
+            hasPreviousPage={page > 1}
+            onPrevPage={() => goToPage(page - 1)}
+            onNextPage={() => goToPage(page + 1)}
+          />
+        </>
       )}
     </div>
   );
