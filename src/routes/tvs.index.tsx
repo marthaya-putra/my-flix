@@ -56,17 +56,17 @@ function TVsPage() {
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-4 flex-wrap">
             <TvGenreFilter />
-            <RatingFilter route={Route} />
-            <YearFilter route={Route} />
+            <RatingFilter from="/tvs/" />
+            <YearFilter from="/tvs/" />
           </div>
 
-          <ClearFilters route={Route} />
+          <ClearFilters from="/tvs/" />
         </div>
       </FilterPopovers>
 
       <MoviesContent
         moviesData={tvsData}
-        route={Route}
+        from="/tvs/"
         isLiked={isLiked}
         onToggleLike={toggleLike}
       />

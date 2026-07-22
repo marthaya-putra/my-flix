@@ -3,22 +3,14 @@ import { RatingItems } from "@/lib/types";
 import BaseFilter from "./base-filter";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Route as MoviesRoute } from "@/routes/movies.index";
-import { Route as TvsRoute } from "@/routes/tvs.index";
-import { Route as TvsAiringTodayRoute } from "@/routes/tvs.airing-today";
-import { Route as MoviesSearchRoute } from "@/routes/movies.search";
 
 interface RatingFilterProps {
-  route:
-    | typeof MoviesRoute
-    | typeof TvsRoute
-    | typeof TvsAiringTodayRoute
-    | typeof MoviesSearchRoute;
+  from: "/movies/" | "/tvs/" | "/tvs/airing-today" | "/movies/search";
 }
 
-export default function RatingFilter({ route }: RatingFilterProps) {
-  const search = useSearch({ from: route.id });
-  const navigate = useNavigate({ from: route.id });
+export default function RatingFilter({ from }: RatingFilterProps) {
+  const search = useSearch({ from });
+  const navigate = useNavigate({ from });
 
   const selectedRating = "rating" in search ? search.rating : undefined;
 

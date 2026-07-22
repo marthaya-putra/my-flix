@@ -39,7 +39,7 @@ function TvsSearchPage() {
 
       <MoviesContent
         moviesData={tvsData}
-        route={Route}
+        from="/tvs/search"
         isLiked={isLiked}
         onToggleLike={toggleLike}
       />

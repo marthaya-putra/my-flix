@@ -59,17 +59,17 @@ function MoviesPage() {
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-4 flex-wrap">
             <GenreFilter route={Route} />
-            <RatingFilter route={Route} />
-            <YearFilter route={Route} />
+            <RatingFilter from="/movies/" />
+            <YearFilter from="/movies/" />
           </div>
 
-          <ClearFilters route={Route} />
+          <ClearFilters from="/movies/" />
         </div>
       </FilterPopovers>
 
       <MoviesContent
         moviesData={moviesData}
-        route={Route}
+        from="/movies/"
         isLiked={isLiked}
         onToggleLike={toggleLike}
       />
