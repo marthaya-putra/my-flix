@@ -8,6 +8,7 @@ import RatingFilter from "@/components/filters/rating-filter";
 import YearFilter from "@/components/filters/year-filter";
 import ClearFilters from "@/components/filters/clear-filters";
 import { useLikedItems } from "@/hooks/use-liked-items";
+import { useWatchlist } from "@/hooks/use-watchlist";
 import { z } from "zod";
 
 export const Route = createFileRoute("/tvs/")({
@@ -38,6 +39,7 @@ export const Route = createFileRoute("/tvs/")({
 
 function TVsPage() {
   const { isLiked, toggleLike } = useLikedItems();
+  const { isWatchlisted, toggleWatchlist } = useWatchlist();
   const { page, genres, rating, year } = Route.useLoaderDeps();
   const { data: tvsData } = useSuspenseQuery(
     discoverTvsOptions({ page, genres, rating, year }),
@@ -56,19 +58,21 @@ function TVsPage() {
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-4 flex-wrap">
             <TvGenreFilter />
-            <RatingFilter route={Route} />
-            <YearFilter route={Route} />
+            <RatingFilter from="/tvs/" />
+            <YearFilter from="/tvs/" />
           </div>
 
-          <ClearFilters route={Route} />
+          <ClearFilters from="/tvs/" />
         </div>
       </FilterPopovers>
 
       <MoviesContent
         moviesData={tvsData}
-        route={Route}
+        from="/tvs/"
         isLiked={isLiked}
         onToggleLike={toggleLike}
+        isWatchlisted={isWatchlisted}
+        onToggleWatchlist={toggleWatchlist}
       />
     </div>
   );

@@ -2,35 +2,33 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import MovieCard from "@/components/movie-card";
 import Pagination from "@/components/pagination";
 import { DiscoverResult, FilmInfo } from "@/lib/types";
-import { Route as MoviesRoute } from "@/routes/movies.index";
-import { Route as TvsRoute } from "@/routes/tvs.index";
-import { Route as TvsAiringTodayRoute } from "@/routes/tvs.airing-today";
-import { Route as TvsAiringThisWeekRoute } from "@/routes/tvs.airing-this-week";
-import { Route as MoviesSearchRoute } from "@/routes/movies.search";
-import { Route as TvsSearchRoute } from "@/routes/tvs.search";
 
 interface MoviesContentProps {
   moviesData: DiscoverResult;
-  route:
-    | typeof MoviesRoute
-    | typeof TvsRoute
-    | typeof TvsAiringTodayRoute
-    | typeof TvsAiringThisWeekRoute
-    | typeof MoviesSearchRoute
-    | typeof TvsSearchRoute;
+  from:
+    | "/movies/"
+    | "/tvs/"
+    | "/tvs/airing-today"
+    | "/tvs/airing-this-week"
+    | "/movies/search"
+    | "/tvs/search";
   isLiked?: (id: number) => boolean;
   onToggleLike?: (filmInfo: FilmInfo) => void;
+  isWatchlisted?: (id: number) => boolean;
+  onToggleWatchlist?: (filmInfo: FilmInfo) => void;
 }
 
 export default function MoviesContent({
   moviesData,
-  route,
+  from,
   isLiked,
   onToggleLike,
+  isWatchlisted,
+  onToggleWatchlist,
 }: MoviesContentProps) {
-  const navigate = useNavigate({ from: route.id });
+  const navigate = useNavigate({ from });
   const search = useSearch({
-    from: route.id,
+    from,
   });
 
   const genres = "genres" in search ? search.genres : undefined;
@@ -79,6 +77,8 @@ export default function MoviesContent({
             {...movie}
             isLiked={isLiked?.(movie.id)}
             onToggleLike={onToggleLike}
+            isWatchlisted={isWatchlisted?.(movie.id)}
+            onToggleWatchlist={onToggleWatchlist}
           />
         ))}
       </div>

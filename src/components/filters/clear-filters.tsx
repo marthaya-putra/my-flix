@@ -1,20 +1,12 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { Route as MoviesRoute } from "@/routes/movies.index";
-import { Route as TvsRoute } from "@/routes/tvs.index";
-import { Route as TvsAiringTodayRoute } from "@/routes/tvs.airing-today";
-import { Route as MoviesSearchRoute } from "@/routes/movies.search";
 
 interface ClearFiltersProps {
-  route:
-    | typeof MoviesRoute
-    | typeof TvsRoute
-    | typeof TvsAiringTodayRoute
-    | typeof MoviesSearchRoute;
+  from: "/movies/" | "/tvs/" | "/tvs/airing-today" | "/movies/search";
 }
 
-export default function ClearFilters({ route }: ClearFiltersProps) {
-  const navigate = useNavigate({ from: route.id });
-  const search = useSearch({ from: route.id });
+export default function ClearFilters({ from }: ClearFiltersProps) {
+  const navigate = useNavigate({ from });
+  const search = useSearch({ from });
 
   const genres = "genres" in search ? search.genres : undefined;
   const rating = "rating" in search ? search.rating : undefined;
