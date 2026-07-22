@@ -43,7 +43,7 @@ function TvAiringTodayPage() {
 
       <MoviesContent
         moviesData={moviesData}
-        route={Route}
+        from="/tvs/airing-today"
         isLiked={isLiked}
         onToggleLike={toggleLike}
       />

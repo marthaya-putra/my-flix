@@ -2,22 +2,14 @@ import { useSearch, useNavigate } from "@tanstack/react-router";
 import BaseFilter from "./base-filter";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Route as MoviesRoute } from "@/routes/movies.index";
-import { Route as TvsRoute } from "@/routes/tvs.index";
-import { Route as TvsAiringTodayRoute } from "@/routes/tvs.airing-today";
-import { Route as MoviesSearchRoute } from "@/routes/movies.search";
 
 interface YearFilterProps {
-  route:
-    | typeof MoviesRoute
-    | typeof TvsRoute
-    | typeof TvsAiringTodayRoute
-    | typeof MoviesSearchRoute;
+  from: "/movies/" | "/tvs/" | "/tvs/airing-today" | "/movies/search";
 }
 
-export default function YearFilter({ route }: YearFilterProps) {
-  const search = useSearch({ from: route.id });
-  const navigate = useNavigate({ from: route.id });
+export default function YearFilter({ from }: YearFilterProps) {
+  const search = useSearch({ from });
+  const navigate = useNavigate({ from });
 
   const selectedYear = "year" in search ? search.year : undefined;
 
