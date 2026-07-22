@@ -1,28 +1,18 @@
-import { useNavigate, getRouteApi } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { getRouteApi } from "@tanstack/react-router";
 import { Bookmark, Compass } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import MovieCard from "@/components/movie-card";
 import CustomPagination from "@/components/pagination";
 import { useWatchlist } from "@/hooks/use-watchlist";
-import { preferencesKeys } from "@/lib/queries/preferences";
-import { WATCHLIST_PAGE_SIZE } from "@/lib/utils";
 import type { FilmInfo, FilmType } from "@/lib/types";
 import type { UserWatchlist } from "@/lib/db";
 
-// Scoped, typed hooks for the /watchlist route. Avoids importing the route
+// Scoped, typed hook for the /watchlist route. Avoids importing the route
 // value (which would create a circular import back to the route file that
 // renders this component) and avoids passing the route as a prop.
 const watchlistRoute = getRouteApi("/watchlist");
-
-/** Shape of each cached /watchlist page (matches fetchUserWatchlist). */
-type WatchlistPageData = {
-  watchlist: UserWatchlist[];
-  page: number;
-  totalPages: number;
-  totalItems: number;
-};
 
 interface WatchlistPageProps {
   page: number;
@@ -61,9 +51,16 @@ export function WatchlistPage({
   totalItems,
   items,
 }: WatchlistPageProps) {
-  const { isWatchlisted, toggleWatchlist } = useWatchlist();
   const navigate = watchlistRoute.useNavigate();
-  const queryClient = useQueryClient();
+  // `MovieCard` now owns the toggle, so /watchlist can't intercept each
+  // remove via a prop. We still need /watchlist-specific behaviour: a card
+  // should vanish instantly on un-bookmark (before the server refetch) and
+  // the page should step back when it empties. The ids cache the hook reads
+  // flips optimistically on toggle, so we derive the visible rows from it
+  // rather than the page-keyed rows cache (which only updates after the
+  // server round-trip).
+  const { isWatchlisted } = useWatchlist();
+  const visibleItems = items.filter((row) => isWatchlisted(row.watchListId));
 
   const description =
     totalItems === 0
@@ -74,39 +71,15 @@ export function WatchlistPage({
     void navigate({ search: { page: next } });
   };
 
-  // On /watchlist every card is already saved, so a toggle is always a
-  // remove. We optimistically drop the row from the CURRENT page's cache so
-  // the card vanishes instantly (the hook only optimistically flips the ids
-  // cache — it doesn't touch the page-keyed rows cache). If the remove
-  // empties this page, step back one page so the user lands on the previous
-  // page instead of an empty grid. No explicit rollback: on error the hook's
-  // onSettled invalidates the rows prefix and the server's authoritative
-  // page replaces ours.
-  const handleToggle = (filmInfo: FilmInfo) => {
-    const isLastOnPage = items.length === 1;
-    const cacheKey = [...preferencesKeys.userWatchlist(), page];
-    const current = queryClient.getQueryData<WatchlistPageData>(cacheKey);
-    if (current) {
-      const watchlist = current.watchlist.filter(
-        (row) => row.watchListId !== filmInfo.id,
-      );
-      const nextTotalItems = Math.max(current.totalItems - 1, 0);
-      const nextTotalPages =
-        nextTotalItems === 0
-          ? 0
-          : Math.ceil(nextTotalItems / WATCHLIST_PAGE_SIZE);
-      queryClient.setQueryData<WatchlistPageData>(cacheKey, {
-        ...current,
-        watchlist,
-        totalItems: nextTotalItems,
-        totalPages: nextTotalPages,
-      });
-    }
-    toggleWatchlist(filmInfo);
-    if (isLastOnPage && page > 1) {
+  // Step back one page when the user removes the last item on it, so they
+  // land on the previous page instead of an empty grid. Fires only on the
+  // empty-after-toggle transition — a naturally empty page is already
+  // handled by the loader/route.
+  useEffect(() => {
+    if (totalItems > 0 && visibleItems.length === 0 && page > 1) {
       void navigate({ search: { page: page - 1 } });
     }
-  };
+  }, [visibleItems.length, totalItems, page, navigate]);
 
   return (
     <div className="container mx-auto p-4 max-w-6xl">
@@ -140,16 +113,9 @@ export function WatchlistPage({
           />
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 my-8">
-            {items.map((row) => {
+            {visibleItems.map((row) => {
               const filmInfo = rowToFilmInfo(row);
-              return (
-                <MovieCard
-                  key={row.id}
-                  {...filmInfo}
-                  isWatchlisted={isWatchlisted(row.watchListId)}
-                  onToggleWatchlist={handleToggle}
-                />
-              );
+              return <MovieCard key={row.id} {...filmInfo} />;
             })}
           </div>
 

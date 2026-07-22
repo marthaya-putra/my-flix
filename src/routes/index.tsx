@@ -16,8 +16,6 @@ import {
   trendingTvsOptions,
 } from "@/lib/queries/tvs";
 import { getUserTimezone } from "@/lib/utils/timezone";
-import { useLikedItems } from "@/hooks/use-liked-items";
-import { useWatchlist } from "@/hooks/use-watchlist";
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -45,19 +43,7 @@ export const Route = createFileRoute("/")({
   },
 });
 
-type RowHandlers = Pick<
-  ReturnType<typeof useLikedItems>,
-  "isLiked" | "toggleLike"
->;
-
-type WatchlistRowHandlers = Pick<
-  ReturnType<typeof useWatchlist>,
-  "isWatchlisted" | "toggleWatchlist"
->;
-
 function Home() {
-  const handlers = useLikedItems();
-  const watchlistHandlers = useWatchlist();
   const timezone = getUserTimezone();
 
   // Popular drives the Hero — resolve synchronously with the SSR render.
@@ -72,31 +58,23 @@ function Home() {
         <ContentRowSection
           title="Trending Movies"
           options={trendingMoviesOptions()}
-          handlers={handlers}
-          watchlistHandlers={watchlistHandlers}
         />
       </Suspense>
       <Suspense fallback={<ContentRowSkeleton />}>
         <ContentRowSection
           title="Trending TV Shows"
           options={trendingTvsOptions()}
-          handlers={handlers}
-          watchlistHandlers={watchlistHandlers}
         />
       </Suspense>
       <ContentRowSection
         title="New Episode Today"
         exploreAllUrl="/tvs/airing-today"
         options={airingTodayTvsOptions({ page: 1, timezone })}
-        handlers={handlers}
-        watchlistHandlers={watchlistHandlers}
       />
       <ContentRowSection
         title="New Episode This Week"
         exploreAllUrl="/tvs/airing-this-week"
         options={onTheAirTvsOptions({ page: 1, timezone })}
-        handlers={handlers}
-        watchlistHandlers={watchlistHandlers}
       />
     </div>
   );
@@ -117,14 +95,10 @@ function ContentRowSection({
   title,
   options,
   exploreAllUrl,
-  handlers,
-  watchlistHandlers,
 }: {
   title: string;
   options: UseQueryOptions<DiscoverResult>;
   exploreAllUrl?: string;
-  handlers: RowHandlers;
-  watchlistHandlers: WatchlistRowHandlers;
 }) {
   const { data, isPending } = useQuery(options);
   if (isPending || !data) return <ContentRowSkeleton />;
@@ -133,10 +107,6 @@ function ContentRowSection({
       title={title}
       items={data.results}
       exploreAllUrl={exploreAllUrl}
-      isLiked={handlers.isLiked}
-      onToggleLike={handlers.toggleLike}
-      isWatchlisted={watchlistHandlers.isWatchlisted}
-      onToggleWatchlist={watchlistHandlers.toggleWatchlist}
     />
   );
 }

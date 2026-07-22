@@ -24,10 +24,6 @@ interface ContentRowProps {
   >;
   exploreAllUrl?: string;
   className?: string;
-  isLiked?: (id: number) => boolean;
-  onToggleLike?: (filmInfo: FilmInfo) => void;
-  isWatchlisted?: (id: number) => boolean;
-  onToggleWatchlist?: (filmInfo: FilmInfo) => void;
 }
 
 export default function ContentRow({
@@ -35,10 +31,6 @@ export default function ContentRow({
   items,
   exploreAllUrl,
   className,
-  isLiked,
-  onToggleLike,
-  isWatchlisted,
-  onToggleWatchlist,
 }: ContentRowProps) {
   return (
     <div className={cn("px-4 md:px-8 group max-w-7xl mx-auto", className)}>
@@ -74,13 +66,7 @@ export default function ContentRow({
                 key={item.id || index}
                 className="pl-4 basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5 xl:basis-1/6"
               >
-                <MovieCard
-                  {...item}
-                  isLiked={isLiked?.(item.id)}
-                  onToggleLike={onToggleLike}
-                  isWatchlisted={isWatchlisted?.(item.id)}
-                  onToggleWatchlist={onToggleWatchlist}
-                />
+                <MovieCard {...item} />
               </CarouselItem>
             ))}
           </CarouselContent>

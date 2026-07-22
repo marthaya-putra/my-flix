@@ -12,13 +12,11 @@ import { PlayLink } from "./play-link";
 import { authClient } from "@/lib/auth-client";
 import { motion } from "motion/react";
 import { ctaDramaSpring } from "@/lib/motion";
+import { useLikedItems } from "@/hooks/use-liked-items";
+import { useWatchlist } from "@/hooks/use-watchlist";
 
 interface MovieCardProps extends FilmInfo {
   match?: string;
-  isLiked?: boolean;
-  onToggleLike?: (filmInfo: FilmInfo) => void;
-  isWatchlisted?: boolean;
-  onToggleWatchlist?: (filmInfo: FilmInfo) => void;
 }
 
 export default function MovieCard({
@@ -33,12 +31,17 @@ export default function MovieCard({
   backdropPath,
   overview,
   genreIds,
-  isLiked = false,
-  onToggleLike,
-  isWatchlisted = false,
-  onToggleWatchlist,
 }: MovieCardProps) {
   const { data: session, isPending: sessionPending } = authClient.useSession();
+  // Like + watchlist state is read straight from the QueryClient cache
+  // (primed by the route loaders) and toggled via the same hooks every
+  // other reader uses. React Query dedupes identical query keys, so N cards
+  // share one request. This removes the route → MoviesContent/ContentRow →
+  // MovieCard prop chain (~20 lines of pure forwarding).
+  const { isLiked, toggleLike } = useLikedItems();
+  const { isWatchlisted, toggleWatchlist } = useWatchlist();
+  const liked = isLiked(id);
+  const watchlisted = isWatchlisted(id);
   const [imgSrc, setImgSrc] = useState(posterPath);
   const [hasError, setHasError] = useState(!posterPath);
 
@@ -53,18 +56,6 @@ export default function MovieCard({
     category,
     genreIds,
     genres,
-  };
-
-  const handleToggleLike = () => {
-    if (onToggleLike) {
-      onToggleLike(filmInfo);
-    }
-  };
-
-  const handleToggleWatchlist = () => {
-    if (onToggleWatchlist) {
-      onToggleWatchlist(filmInfo);
-    }
   };
 
   const getRatingColor = (rating: number) => {
@@ -152,54 +143,54 @@ export default function MovieCard({
             </div>
 
             <div className="flex gap-2">
-              {!sessionPending && session && onToggleWatchlist && (
+              {!sessionPending && session && (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
                       <Button
                         size="icon"
                         variant="ghost"
-                        onClick={handleToggleWatchlist}
+                        onClick={() => toggleWatchlist(filmInfo)}
                         className={`${HIT_ZONE} w-8 h-8 rounded-full backdrop-blur-md border transition-colors ${
-                          isWatchlisted
+                          watchlisted
                             ? "bg-violet-500/20 text-violet-500 border-violet-500/30 hover:bg-violet-500/30"
                             : "border-white/20 bg-black/40 text-white hover:bg-white/10"
                         }`}
                       >
                         <Bookmark
-                          className={`w-4 h-4 ${isWatchlisted ? "fill-current" : ""}`}
+                          className={`w-4 h-4 ${watchlisted ? "fill-current" : ""}`}
                         />
                       </Button>
                     </motion.div>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>{isWatchlisted ? "Remove from Watchlist" : "Add to Watchlist"}</p>
+                    <p>{watchlisted ? "Remove from Watchlist" : "Add to Watchlist"}</p>
                   </TooltipContent>
                 </Tooltip>
               )}
 
-              {!sessionPending && session && onToggleLike && (
+              {!sessionPending && session && (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
                       <Button
                         size="icon"
                         variant="ghost"
-                        onClick={handleToggleLike}
+                        onClick={() => toggleLike(filmInfo)}
                         className={`${HIT_ZONE} w-8 h-8 rounded-full backdrop-blur-md border transition-colors ${
-                          isLiked
+                          liked
                             ? "bg-primary/20 text-primary border-primary/30 hover:bg-primary/30"
                             : "border-white/20 bg-black/40 text-white hover:bg-white/10"
                         }`}
                       >
                         <ThumbsUp
-                          className={`w-4 h-4 ${isLiked ? "fill-current" : ""}`}
+                          className={`w-4 h-4 ${liked ? "fill-current" : ""}`}
                         />
                       </Button>
                     </motion.div>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>{isLiked ? "Unlike" : "I like this"}</p>
+                    <p>{liked ? "Unlike" : "I like this"}</p>
                   </TooltipContent>
                 </Tooltip>
               )}
