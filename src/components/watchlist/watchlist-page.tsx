@@ -1,4 +1,4 @@
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, getRouteApi } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { Bookmark, Compass } from "lucide-react";
 import { Link } from "@tanstack/react-router";
@@ -10,7 +10,11 @@ import { preferencesKeys } from "@/lib/queries/preferences";
 import { WATCHLIST_PAGE_SIZE } from "@/lib/utils";
 import type { FilmInfo, FilmType } from "@/lib/types";
 import type { UserWatchlist } from "@/lib/db";
-import type { Route as WatchlistRoute } from "@/routes/watchlist";
+
+// Scoped, typed hooks for the /watchlist route. Avoids importing the route
+// value (which would create a circular import back to the route file that
+// renders this component) and avoids passing the route as a prop.
+const watchlistRoute = getRouteApi("/watchlist");
 
 /** Shape of each cached /watchlist page (matches fetchUserWatchlist). */
 type WatchlistPageData = {
@@ -21,7 +25,6 @@ type WatchlistPageData = {
 };
 
 interface WatchlistPageProps {
-  route: typeof WatchlistRoute;
   page: number;
   totalPages: number;
   totalItems: number;
@@ -53,14 +56,13 @@ function rowToFilmInfo(row: UserWatchlist): FilmInfo {
 }
 
 export function WatchlistPage({
-  route,
   page,
   totalPages,
   totalItems,
   items,
 }: WatchlistPageProps) {
   const { isWatchlisted, toggleWatchlist } = useWatchlist();
-  const navigate = useNavigate({ from: route.id });
+  const navigate = watchlistRoute.useNavigate();
   const queryClient = useQueryClient();
 
   const description =

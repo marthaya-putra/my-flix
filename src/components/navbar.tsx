@@ -8,6 +8,7 @@ import {
   User as UserIcon,
   Heart,
   Sparkles,
+  Bookmark,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -165,6 +166,18 @@ export default function Navbar() {
                   >
                     <Heart className="mr-2 h-4 w-4" />
                     <span>Preferences</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link
+                    to="/watchlist"
+                    activeOptions={{ exact: false }}
+                    activeProps={{ className: "text-primary" }}
+                    inactiveProps={{ className: "text-foreground" }}
+                    className="flex items-center w-full cursor-pointer focus:bg-white/10 focus:text-white"
+                  >
+                    <Bookmark className="mr-2 h-4 w-4" />
+                    <span>Watchlist</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-white/10" />
