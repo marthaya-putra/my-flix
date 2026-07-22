@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Suspense } from "react";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { WatchlistPage } from "@/components/watchlist/watchlist-page";
 import WatchlistSkeleton from "@/components/skeletons/watchlist-skeleton";
@@ -16,29 +15,28 @@ export const Route = createFileRoute("/watchlist")({
   component: WatchlistComponent,
   beforeLoad: guardAuthenticated,
   loaderDeps: ({ search }) => ({ page: search.page }),
-  loader: async ({ context, deps }) => {
-    // Prefetch so SSR hydrates the cache and the client doesn't refetch
-    // on first mount. The component reads the same options via
-    // useSuspenseQuery — same key, no second source of truth.
-    await context.queryClient.ensureQueryData(
-      userWatchlistOptions(deps.page),
-    );
-  },
+  // No route `loader`: the rows cache is intentionally NOT awaited here.
+  // Awaiting it (ensureQueryData) blocks the loader past defaultPendingMs
+  // on the first client navigation, surfacing the global spinner. Instead
+  // the component streams the data via useQuery + WatchlistSkeleton — same
+  // pattern as the home route's timezone-dependent rows (no hydration
+  // mismatch because both server and client render the skeleton until the
+  // client fetch resolves).
 });
 
 function WatchlistComponent() {
   const { page } = Route.useLoaderDeps();
-  const { data } = useSuspenseQuery(userWatchlistOptions(page));
+  const { data, isPending } = useQuery(userWatchlistOptions(page));
+
+  if (isPending || !data) return <WatchlistSkeleton />;
 
   return (
-    <Suspense fallback={<WatchlistSkeleton />}>
-      <WatchlistPage
-        route={Route}
-        page={data.page}
-        totalPages={data.totalPages}
-        totalItems={data.totalItems}
-        items={data.watchlist}
-      />
-    </Suspense>
+    <WatchlistPage
+      route={Route}
+      page={data.page}
+      totalPages={data.totalPages}
+      totalItems={data.totalItems}
+      items={data.watchlist}
+    />
   );
 }
