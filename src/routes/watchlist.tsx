@@ -32,7 +32,6 @@ function WatchlistComponent() {
 
   return (
     <WatchlistPage
-      route={Route}
       page={data.page}
       totalPages={data.totalPages}
       totalItems={data.totalItems}
