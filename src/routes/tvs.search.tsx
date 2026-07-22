@@ -3,6 +3,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { searchTvsOptions } from "@/lib/queries/search";
 import MoviesContent from "@/components/movies-content";
 import { useLikedItems } from "@/hooks/use-liked-items";
+import { useWatchlist } from "@/hooks/use-watchlist";
 import { z } from "zod";
 
 export const Route = createFileRoute("/tvs/search")({
@@ -24,6 +25,7 @@ export const Route = createFileRoute("/tvs/search")({
 
 function TvsSearchPage() {
   const { isLiked, toggleLike } = useLikedItems();
+  const { isWatchlisted, toggleWatchlist } = useWatchlist();
   const { query, page } = Route.useLoaderDeps();
   const { data: tvsData } = useSuspenseQuery(
     searchTvsOptions({ query, page }),
@@ -42,6 +44,8 @@ function TvsSearchPage() {
         from="/tvs/search"
         isLiked={isLiked}
         onToggleLike={toggleLike}
+        isWatchlisted={isWatchlisted}
+        onToggleWatchlist={toggleWatchlist}
       />
     </div>
   );

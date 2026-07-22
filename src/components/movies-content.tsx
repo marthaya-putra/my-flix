@@ -14,6 +14,8 @@ interface MoviesContentProps {
     | "/tvs/search";
   isLiked?: (id: number) => boolean;
   onToggleLike?: (filmInfo: FilmInfo) => void;
+  isWatchlisted?: (id: number) => boolean;
+  onToggleWatchlist?: (filmInfo: FilmInfo) => void;
 }
 
 export default function MoviesContent({
@@ -21,6 +23,8 @@ export default function MoviesContent({
   from,
   isLiked,
   onToggleLike,
+  isWatchlisted,
+  onToggleWatchlist,
 }: MoviesContentProps) {
   const navigate = useNavigate({ from });
   const search = useSearch({
@@ -73,6 +77,8 @@ export default function MoviesContent({
             {...movie}
             isLiked={isLiked?.(movie.id)}
             onToggleLike={onToggleLike}
+            isWatchlisted={isWatchlisted?.(movie.id)}
+            onToggleWatchlist={onToggleWatchlist}
           />
         ))}
       </div>
