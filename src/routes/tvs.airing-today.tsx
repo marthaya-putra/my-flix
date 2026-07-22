@@ -3,8 +3,6 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { airingTodayTvsOptions } from "@/lib/queries/tvs";
 import MoviesContent from "@/components/movies-content";
 import { getUserTimezone } from "@/lib/utils/timezone";
-import { useLikedItems } from "@/hooks/use-liked-items";
-import { useWatchlist } from "@/hooks/use-watchlist";
 import { z } from "zod";
 
 export const Route = createFileRoute("/tvs/airing-today")({
@@ -25,8 +23,6 @@ export const Route = createFileRoute("/tvs/airing-today")({
 });
 
 function TvAiringTodayPage() {
-  const { isLiked, toggleLike } = useLikedItems();
-  const { isWatchlisted, toggleWatchlist } = useWatchlist();
   const { page, timezone } = Route.useLoaderDeps();
   const { data: moviesData } = useSuspenseQuery(
     airingTodayTvsOptions({ page, timezone }),
@@ -43,14 +39,7 @@ function TvAiringTodayPage() {
         </p>
       </div>
 
-      <MoviesContent
-        moviesData={moviesData}
-        from="/tvs/airing-today"
-        isLiked={isLiked}
-        onToggleLike={toggleLike}
-        isWatchlisted={isWatchlisted}
-        onToggleWatchlist={toggleWatchlist}
-      />
+      <MoviesContent moviesData={moviesData} from="/tvs/airing-today" />
     </div>
   );
 }

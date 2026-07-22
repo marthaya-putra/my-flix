@@ -1,7 +1,7 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import MovieCard from "@/components/movie-card";
 import Pagination from "@/components/pagination";
-import { DiscoverResult, FilmInfo } from "@/lib/types";
+import { DiscoverResult } from "@/lib/types";
 
 interface MoviesContentProps {
   moviesData: DiscoverResult;
@@ -12,19 +12,11 @@ interface MoviesContentProps {
     | "/tvs/airing-this-week"
     | "/movies/search"
     | "/tvs/search";
-  isLiked?: (id: number) => boolean;
-  onToggleLike?: (filmInfo: FilmInfo) => void;
-  isWatchlisted?: (id: number) => boolean;
-  onToggleWatchlist?: (filmInfo: FilmInfo) => void;
 }
 
 export default function MoviesContent({
   moviesData,
   from,
-  isLiked,
-  onToggleLike,
-  isWatchlisted,
-  onToggleWatchlist,
 }: MoviesContentProps) {
   const navigate = useNavigate({ from });
   const search = useSearch({
@@ -72,14 +64,7 @@ export default function MoviesContent({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 my-8">
         {moviesData.results.map((movie) => (
-          <MovieCard
-            key={movie.id}
-            {...movie}
-            isLiked={isLiked?.(movie.id)}
-            onToggleLike={onToggleLike}
-            isWatchlisted={isWatchlisted?.(movie.id)}
-            onToggleWatchlist={onToggleWatchlist}
-          />
+          <MovieCard key={movie.id} {...movie} />
         ))}
       </div>
 
