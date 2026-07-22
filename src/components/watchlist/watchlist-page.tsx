@@ -65,11 +65,20 @@ export function WatchlistPage({
   // toggle" from "ids cache still pending on mount". Trade-off accepted:
   // removing the last item on a page leaves an empty grid until the user
   // pages back. (See issue #38 tradeoff note.)
-  const { isWatchlisted } = useWatchlist();
+  const { isWatchlisted, isPending: isIdsPending } = useWatchlist();
   const visibleItems = items.filter((row) => isWatchlisted(row.watchListId));
 
+  // The empty state must appear the moment the last item is un-bookmarked.
+  // Derive it from the optimistic ids cache (visibleItems), not the rows
+  // cache (totalItems), which only updates after the server refetch. The
+  // isIdsPending guard prevents a false "empty" flash before the ids cache
+  // resolves on first mount — watchlistItemsOptions is not loader-primed,
+  // so during the pending window isWatchlisted(*) returns false and the
+  // filter would otherwise yield [].
+  const isEmpty = !isIdsPending && visibleItems.length === 0;
+
   const description =
-    totalItems === 0
+    isEmpty || totalItems === 0
       ? "Movies and shows you've added to your Watchlist."
       : `${totalItems} ${totalItems === 1 ? "title" : "titles"} in your Watchlist.`;
 
@@ -84,7 +93,7 @@ export function WatchlistPage({
         <p className="text-muted-foreground">{description}</p>
       </div>
 
-      {totalItems === 0 ? (
+      {isEmpty || totalItems === 0 ? (
         <div className="text-center py-12 border-2 border-dashed border-muted rounded-lg flex flex-col items-center justify-center">
           <Bookmark className="h-10 w-10 text-muted-foreground/50 mb-4" />
           <p className="text-muted-foreground mb-4">
