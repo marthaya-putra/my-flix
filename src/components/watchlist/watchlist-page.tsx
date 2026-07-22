@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { getRouteApi } from "@tanstack/react-router";
 import { Bookmark, Compass } from "lucide-react";
 import { Link } from "@tanstack/react-router";
@@ -53,12 +52,19 @@ export function WatchlistPage({
 }: WatchlistPageProps) {
   const navigate = watchlistRoute.useNavigate();
   // `MovieCard` now owns the toggle, so /watchlist can't intercept each
-  // remove via a prop. We still need /watchlist-specific behaviour: a card
-  // should vanish instantly on un-bookmark (before the server refetch) and
-  // the page should step back when it empties. The ids cache the hook reads
-  // flips optimistically on toggle, so we derive the visible rows from it
-  // rather than the page-keyed rows cache (which only updates after the
-  // server round-trip).
+  // remove via a prop. But we still want a card to vanish instantly on
+  // un-bookmark, before the server refetch repopulates the rows cache. The
+  // ids cache the hook reads flips optimistically on toggle, so we derive
+  // the visible rows from it rather than the page-keyed rows cache (which
+  // only updates after the server round-trip).
+  //
+  // We deliberately do NOT auto-step-back to the previous page when this
+  // filter empties the grid. That would need a useEffect, which is the
+  // wrong tool — the trigger is a user click (an event), not the page
+  // being displayed, and an Effect can't distinguish "emptied by a
+  // toggle" from "ids cache still pending on mount". Trade-off accepted:
+  // removing the last item on a page leaves an empty grid until the user
+  // pages back. (See issue #38 tradeoff note.)
   const { isWatchlisted } = useWatchlist();
   const visibleItems = items.filter((row) => isWatchlisted(row.watchListId));
 
@@ -70,16 +76,6 @@ export function WatchlistPage({
   const goToPage = (next: number) => {
     void navigate({ search: { page: next } });
   };
-
-  // Step back one page when the user removes the last item on it, so they
-  // land on the previous page instead of an empty grid. Fires only on the
-  // empty-after-toggle transition — a naturally empty page is already
-  // handled by the loader/route.
-  useEffect(() => {
-    if (totalItems > 0 && visibleItems.length === 0 && page > 1) {
-      void navigate({ search: { page: page - 1 } });
-    }
-  }, [visibleItems.length, totalItems, page, navigate]);
 
   return (
     <div className="container mx-auto p-4 max-w-6xl">
