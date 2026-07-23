@@ -8,6 +8,7 @@ import { getAllUserContent } from "@/lib/data/preferences";
 import {
   likedItemsOptions,
   dislikedItemsOptions,
+  watchlistItemsOptions,
 } from "@/lib/queries/preferences";
 import { InitialLoadComposition } from "@/components/recommendations/initial-load-composition";
 
@@ -41,6 +42,7 @@ export const Route = createFileRoute("/recommendations/")({
       getAllUserContent(),
       context.queryClient.ensureQueryData(likedItemsOptions()),
       context.queryClient.ensureQueryData(dislikedItemsOptions()),
+      context.queryClient.ensureQueryData(watchlistItemsOptions()),
     ]);
     return { userPrefs };
   },
