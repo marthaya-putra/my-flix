@@ -1,10 +1,5 @@
 import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { ThumbsUp, ThumbsDown, Play, X, Bookmark } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Play, X } from "lucide-react";
 import { PlayLink } from "./play-link";
 import { FilmInfo } from "@/lib/types";
 import { HIT_ZONE } from "@/lib/utils";
@@ -12,7 +7,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { ctaDramaSpring, overlayTransition } from "@/lib/motion";
 import { useLikedItems } from "@/hooks/use-liked-items";
 import { useDislikedItems } from "@/hooks/use-disliked-items";
-import { useWatchlist } from "@/hooks/use-watchlist";
+import { WatchlistButton } from "./buttons";
 
 interface Recommendation {
   title: string;
@@ -45,13 +40,11 @@ export function RecommendationCard({
   // one request — no Recommendations → CategorySection → card prop chain.
   const { isLiked, toggleLike } = useLikedItems();
   const { isDisliked, toggleDislike } = useDislikedItems();
-  const { isWatchlisted, toggleWatchlist } = useWatchlist();
 
   const filmInfo = recommendation.tmdbData;
   const id = filmInfo?.id;
   const liked = id !== undefined && isLiked(id);
   const disliked = id !== undefined && isDisliked(id);
-  const watchlisted = id !== undefined && isWatchlisted(id);
 
   // Like↔dislike mutual exclusion. The hooks are intentionally decoupled
   // (single-responsibility), so the card orchestrates: adding one removes an
@@ -167,79 +160,38 @@ export function RecommendationCard({
               </Button>
             </motion.div>
           </PlayLink>
-          {recommendation.tmdbData && (
+          {recommendation.tmdbData && filmInfo && (
             <div className="flex gap-1 ml-auto">
-              <Tooltip>
-                <TooltipTrigger asChild>
+              <WatchlistButton filmInfo={filmInfo} />
                   <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (filmInfo) toggleWatchlist(filmInfo);
+                        handleDislike();
                       }}
-                      className={`${HIT_ZONE} p-1.5 h-8 w-8 rounded-full backdrop-blur-md border transition-colors ${
-                        watchlisted
-                          ? "border-violet-500/30 bg-violet-500/20"
-                          : "border-white/20 bg-black/40 hover:bg-white/10"
-                      }`}
+                      className={`${HIT_ZONE} p-1.5 h-8 w-8`}
                     >
-                      <Bookmark
+                      <ThumbsDown
                         className={`h-4 w-4 ${
-                          watchlisted
-                            ? "fill-violet-500 text-violet-500"
-                            : "text-muted-foreground hover:text-violet-500 hover:fill-violet-500/20"
+                          disliked
+                            ? "fill-red-500 text-red-500"
+                            : "text-muted-foreground hover:text-red-500 hover:fill-red-100"
                         }`}
                       />
                     </Button>
                   </motion.div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>
-                    {watchlisted
-                      ? "Remove from Watchlist"
-                      : "Add to Watchlist"}
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDislike();
-                  }}
-                  className={`${HIT_ZONE} p-1.5 h-8 w-8 rounded-full backdrop-blur-md border transition-colors ${
-                    disliked
-                      ? "border-red-500/30 bg-red-500/20"
-                      : "border-white/20 bg-black/40 hover:bg-white/10"
-                  }`}
-                >
-                  <ThumbsDown
-                    className={`h-4 w-4 ${
-                      disliked
-                        ? "fill-red-500 text-red-500"
-                        : "text-muted-foreground hover:text-red-500 hover:fill-red-100"
-                    }`}
-                  />
-                </Button>
-              </motion.div>
-              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleLike();
-                  }}
-                  className={`${HIT_ZONE} p-1.5 h-8 w-8 rounded-full backdrop-blur-md border transition-colors ${
-                    liked
-                      ? "border-primary/30 bg-primary/20"
-                      : "border-white/20 bg-black/40 hover:bg-white/10"
-                  }`}
-                >
+                  <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleLike();
+                      }}
+                      className={`${HIT_ZONE} p-1.5 h-8 w-8`}
+                    >
                   <ThumbsUp
                     className={`h-4 w-4 ${
                       liked
@@ -310,31 +262,9 @@ export function RecommendationCard({
                   Watch
                 </Button>
               </PlayLink>
-              {recommendation.tmdbData && (
+              {recommendation.tmdbData && filmInfo && (
                 <div className="flex gap-1 ml-auto">
-                  <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (filmInfo) toggleWatchlist(filmInfo);
-                      }}
-                      className={`${HIT_ZONE} p-1.5 h-8 w-8 rounded-full backdrop-blur-md border transition-colors ${
-                        watchlisted
-                          ? "border-violet-500/30 bg-violet-500/20"
-                          : "border-white/20 bg-black/40 hover:bg-white/10"
-                      }`}
-                    >
-                      <Bookmark
-                        className={`h-4 w-4 ${
-                          watchlisted
-                            ? "fill-violet-500 text-violet-500"
-                            : "text-muted-foreground hover:text-violet-500 hover:fill-violet-500/20"
-                        }`}
-                      />
-                    </Button>
-                  </motion.div>
+                  <WatchlistButton filmInfo={filmInfo} />
                   <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
                     <Button
                       variant="ghost"
@@ -343,7 +273,11 @@ export function RecommendationCard({
                         e.stopPropagation();
                         handleDislike();
                       }}
-                      className={`${HIT_ZONE} p-1.5 h-8 w-8`}
+                      className={`${HIT_ZONE} p-1.5 h-8 w-8 rounded-full backdrop-blur-md border transition-colors ${
+                        disliked
+                          ? "border-red-500/30 bg-red-500/20"
+                          : "border-white/20 bg-black/40 hover:bg-white/10"
+                      }`}
                     >
                       <ThumbsDown
                         className={`h-4 w-4 ${

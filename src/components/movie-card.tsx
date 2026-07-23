@@ -1,4 +1,4 @@
-import { Play, ThumbsUp, Star, Bookmark } from "lucide-react";
+import { Play, ThumbsUp, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -9,11 +9,11 @@ import { useState } from "react";
 import { FilmInfo } from "@/lib/types";
 import { HIT_ZONE } from "@/lib/utils";
 import { PlayLink } from "./play-link";
+import { WatchlistButton } from "./buttons";
 import { authClient } from "@/lib/auth-client";
 import { motion } from "motion/react";
 import { ctaDramaSpring } from "@/lib/motion";
 import { useLikedItems } from "@/hooks/use-liked-items";
-import { useWatchlist } from "@/hooks/use-watchlist";
 
 interface MovieCardProps extends FilmInfo {
   match?: string;
@@ -39,9 +39,7 @@ export default function MovieCard({
   // share one request. This removes the route → MoviesContent/ContentRow →
   // MovieCard prop chain (~20 lines of pure forwarding).
   const { isLiked, toggleLike } = useLikedItems();
-  const { isWatchlisted, toggleWatchlist } = useWatchlist();
   const liked = isLiked(id);
-  const watchlisted = isWatchlisted(id);
   const [imgSrc, setImgSrc] = useState(posterPath);
   const [hasError, setHasError] = useState(!posterPath);
 
@@ -144,29 +142,7 @@ export default function MovieCard({
 
             <div className="flex gap-2">
               {!sessionPending && session && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => toggleWatchlist(filmInfo)}
-                        className={`${HIT_ZONE} w-8 h-8 rounded-full backdrop-blur-md border transition-colors ${
-                          watchlisted
-                            ? "bg-violet-500/20 text-violet-500 border-violet-500/30 hover:bg-violet-500/30"
-                            : "border-white/20 bg-black/40 text-white hover:bg-white/10"
-                        }`}
-                      >
-                        <Bookmark
-                          className={`w-4 h-4 ${watchlisted ? "fill-current" : ""}`}
-                        />
-                      </Button>
-                    </motion.div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{watchlisted ? "Remove from Watchlist" : "Add to Watchlist"}</p>
-                  </TooltipContent>
-                </Tooltip>
+                <WatchlistButton filmInfo={filmInfo} />
               )}
 
               {!sessionPending && session && (
