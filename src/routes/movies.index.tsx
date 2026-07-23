@@ -1,6 +1,8 @@
+import { Suspense } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { discoverMoviesOptions } from "@/lib/queries/movies";
+import DiscoverMoviesSkeleton from "@/components/skeletons/discover-movies-skeleton";
 import MoviesContent from "@/components/movies-content";
 import FilterPopovers from "@/components/filter-popovers";
 import GenreFilter from "@/components/filters/genre-filter";
@@ -17,6 +19,7 @@ export const Route = createFileRoute("/movies/")({
     year: z.coerce.number().optional(),
   }),
   component: MoviesPage,
+  pendingComponent: () => <DiscoverMoviesSkeleton />,
   loaderDeps: ({ search }) => ({
     page: search.page,
     genres: search.genres ?? "",
@@ -45,27 +48,29 @@ function MoviesPage() {
   );
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-foreground mb-2">Movies</h1>
-        <p className="text-muted-foreground">
-          Discover and explore movies from around the world
-        </p>
-      </div>
-
-      <FilterPopovers>
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-4 flex-wrap">
-            <GenreFilter />
-            <RatingFilter from="/movies/" />
-            <YearFilter from="/movies/" />
-          </div>
-
-          <ClearFilters from="/movies/" />
+    <Suspense fallback={<DiscoverMoviesSkeleton />}>
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-foreground mb-2">Movies</h1>
+          <p className="text-muted-foreground">
+            Discover and explore movies from around the world
+          </p>
         </div>
-      </FilterPopovers>
 
-      <MoviesContent moviesData={moviesData} from="/movies/" />
-    </div>
+        <FilterPopovers>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
+              <GenreFilter />
+              <RatingFilter from="/movies/" />
+              <YearFilter from="/movies/" />
+            </div>
+
+            <ClearFilters from="/movies/" />
+          </div>
+        </FilterPopovers>
+
+        <MoviesContent moviesData={moviesData} from="/movies/" />
+      </div>
+    </Suspense>
   );
 }
