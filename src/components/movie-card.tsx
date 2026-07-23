@@ -1,4 +1,4 @@
-import { Play, ThumbsUp, Star } from "lucide-react";
+import { Play, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -9,11 +9,10 @@ import { useState } from "react";
 import { FilmInfo } from "@/lib/types";
 import { HIT_ZONE } from "@/lib/utils";
 import { PlayLink } from "./play-link";
-import { WatchlistButton } from "./buttons";
+import { WatchlistButton, LikeButton } from "./buttons";
 import { authClient } from "@/lib/auth-client";
 import { motion } from "motion/react";
 import { ctaDramaSpring } from "@/lib/motion";
-import { useLikedItems } from "@/hooks/use-liked-items";
 
 interface MovieCardProps extends FilmInfo {
   match?: string;
@@ -33,13 +32,12 @@ export default function MovieCard({
   genreIds,
 }: MovieCardProps) {
   const { data: session, isPending: sessionPending } = authClient.useSession();
-  // Like + watchlist state is read straight from the QueryClient cache
-  // (primed by the route loaders) and toggled via the same hooks every
-  // other reader uses. React Query dedupes identical query keys, so N cards
-  // share one request. This removes the route → MoviesContent/ContentRow →
+  // Like + watchlist state is owned by the shared button components
+  // (LikeButton / WatchlistButton), which read straight from the QueryClient
+  // cache (primed by the route loaders) and call the reaction hooks
+  // internally. React Query dedupes identical query keys, so N cards share
+  // one request. This removes the route → MoviesContent/ContentRow →
   // MovieCard prop chain (~20 lines of pure forwarding).
-  const { isLiked, toggleLike } = useLikedItems();
-  const liked = isLiked(id);
   const [imgSrc, setImgSrc] = useState(posterPath);
   const [hasError, setHasError] = useState(!posterPath);
 
@@ -146,29 +144,7 @@ export default function MovieCard({
               )}
 
               {!sessionPending && session && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => toggleLike(filmInfo)}
-                        className={`${HIT_ZONE} w-8 h-8 rounded-full backdrop-blur-md border transition-colors ${
-                          liked
-                            ? "bg-primary/20 text-primary border-primary/30 hover:bg-primary/30"
-                            : "border-white/20 bg-black/40 text-white hover:bg-white/10"
-                        }`}
-                      >
-                        <ThumbsUp
-                          className={`w-4 h-4 ${liked ? "fill-current" : ""}`}
-                        />
-                      </Button>
-                    </motion.div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{liked ? "Unlike" : "I like this"}</p>
-                  </TooltipContent>
-                </Tooltip>
+                <LikeButton filmInfo={filmInfo} />
               )}
             </div>
           </div>

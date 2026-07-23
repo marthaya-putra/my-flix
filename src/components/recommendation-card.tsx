@@ -1,13 +1,10 @@
 import { Button } from "@/components/ui/button";
-import { ThumbsUp, ThumbsDown, Play, X } from "lucide-react";
+import { Play, X } from "lucide-react";
 import { PlayLink } from "./play-link";
 import { FilmInfo } from "@/lib/types";
-import { HIT_ZONE } from "@/lib/utils";
 import { motion, AnimatePresence } from "motion/react";
 import { ctaDramaSpring, overlayTransition } from "@/lib/motion";
-import { useLikedItems } from "@/hooks/use-liked-items";
-import { useDislikedItems } from "@/hooks/use-disliked-items";
-import { WatchlistButton } from "./buttons";
+import { WatchlistButton, LikeButton, DislikeButton } from "./buttons";
 
 interface Recommendation {
   title: string;
@@ -34,21 +31,14 @@ export function RecommendationCard({
   expanded = false,
   onToggleExpand,
 }: RecommendationCardProps) {
-  // Like/dislike/watchlist state is read straight from the QueryClient cache
-  // (primed by the route loaders) and toggled via the same hooks every other
-  // reader uses. React Query dedupes identical query keys, so N cards share
-  // one request — no Recommendations → CategorySection → card prop chain.
-  const { isLiked, toggleLike } = useLikedItems();
-  const { isDisliked, toggleDislike } = useDislikedItems();
-
   const filmInfo = recommendation.tmdbData;
-  const id = filmInfo?.id;
-  const liked = id !== undefined && isLiked(id);
-  const disliked = id !== undefined && isDisliked(id);
 
-  // Like↔dislike mutual exclusion lives in the hooks (see ADR
-  // docs/adr/0002-reaction-mutual-exclusion-in-hooks.md), so the CTAs call
-  // the hook toggles directly — no caller-side orchestration.
+  // Like/dislike/watchlist state is owned by the shared button components
+  // (LikeButton / DislikeButton / WatchlistButton), which read straight from
+  // the QueryClient cache (primed by the route loaders) and call the reaction
+  // hooks internally. Like↔dislike mutual exclusion lives in the hooks (see
+  // ADR docs/adr/0002-reaction-mutual-exclusion-in-hooks.md), so the buttons
+  // render as fully independent siblings — no caller-side orchestration.
 
   const imageErrorKey = `${recommendation.title}-${recommendation.releasedYear}`;
 
@@ -149,44 +139,8 @@ export function RecommendationCard({
           {recommendation.tmdbData && filmInfo && (
             <div className="flex gap-1 ml-auto">
               <WatchlistButton filmInfo={filmInfo} />
-                  <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleDislike(filmInfo);
-                      }}
-                      className={`${HIT_ZONE} p-1.5 h-8 w-8`}
-                    >
-                      <ThumbsDown
-                        className={`h-4 w-4 ${
-                          disliked
-                            ? "fill-red-500 text-red-500"
-                            : "text-muted-foreground hover:text-red-500 hover:fill-red-100"
-                        }`}
-                      />
-                    </Button>
-                  </motion.div>
-                  <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleLike(filmInfo);
-                      }}
-                      className={`${HIT_ZONE} p-1.5 h-8 w-8`}
-                    >
-                  <ThumbsUp
-                    className={`h-4 w-4 ${
-                      liked
-                        ? "fill-primary text-primary"
-                        : "text-muted-foreground hover:text-primary hover:fill-primary/20"
-                    }`}
-                  />
-                </Button>
-              </motion.div>
+              <DislikeButton filmInfo={filmInfo} />
+              <LikeButton filmInfo={filmInfo} />
             </div>
           )}
         </div>
@@ -251,48 +205,8 @@ export function RecommendationCard({
               {recommendation.tmdbData && filmInfo && (
                 <div className="flex gap-1 ml-auto">
                   <WatchlistButton filmInfo={filmInfo} />
-                  <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleDislike(filmInfo);
-                      }}
-                      className={`${HIT_ZONE} p-1.5 h-8 w-8 rounded-full backdrop-blur-md border transition-colors ${
-                        disliked
-                          ? "border-red-500/30 bg-red-500/20"
-                          : "border-white/20 bg-black/40 hover:bg-white/10"
-                      }`}
-                    >
-                      <ThumbsDown
-                        className={`h-4 w-4 ${
-                          disliked
-                            ? "fill-red-500 text-red-500"
-                            : "text-muted-foreground hover:text-red-500 hover:fill-red-100"
-                        }`}
-                      />
-                    </Button>
-                  </motion.div>
-                  <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleLike(filmInfo);
-                      }}
-                      className={`${HIT_ZONE} p-1.5 h-8 w-8`}
-                    >
-                      <ThumbsUp
-                        className={`h-4 w-4 ${
-                          liked
-                            ? "fill-primary text-primary"
-                            : "text-muted-foreground hover:text-primary hover:fill-primary/20"
-                        }`}
-                      />
-                    </Button>
-                  </motion.div>
+                  <DislikeButton filmInfo={filmInfo} />
+                  <LikeButton filmInfo={filmInfo} />
                 </div>
               )}
             </div>
