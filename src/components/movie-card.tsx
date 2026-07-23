@@ -9,7 +9,7 @@ import { useState } from "react";
 import { FilmInfo } from "@/lib/types";
 import { HIT_ZONE } from "@/lib/utils";
 import { PlayLink } from "./play-link";
-import { WatchlistButton, LikeButton } from "./buttons";
+import { WatchlistButton, LikeButton, DislikeButton } from "./buttons";
 import { authClient } from "@/lib/auth-client";
 import { motion } from "motion/react";
 import { ctaDramaSpring } from "@/lib/motion";
@@ -141,6 +141,10 @@ export default function MovieCard({
             <div className="flex gap-2">
               {!sessionPending && session && (
                 <WatchlistButton filmInfo={filmInfo} />
+              )}
+
+              {!sessionPending && session && (
+                <DislikeButton filmInfo={filmInfo} />
               )}
 
               {!sessionPending && session && (
