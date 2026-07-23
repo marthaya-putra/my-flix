@@ -1,5 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { toggleMoviePreference } from "@/lib/data/preferences";
+import {
+  removeUserDislikeByPreferenceIdFn,
+  toggleMoviePreference,
+} from "@/lib/data/preferences";
 import { likedItemsOptions, preferencesKeys } from "@/lib/queries/preferences";
 import type { FilmInfo } from "@/lib/types";
 
@@ -10,6 +13,12 @@ import type { FilmInfo } from "@/lib/types";
  * The mutation applies an optimistic update to the liked-items cache,
  * and on success invalidates both the liked-items and the user-preferences
  * keys so every read path reflects the new state.
+ *
+ * Like↔dislike mutual exclusion is owned here: turning a like **on** removes
+ * an existing dislike for the same id (optimistically, then via the dislike
+ * removal server fn). Callers do not orchestrate exclusion — the two caches
+ * stay consistent on their own. See ADR
+ * `docs/adr/0002-reaction-mutual-exclusion-in-hooks.md`.
  */
 export function useLikedItems() {
   const queryClient = useQueryClient();
@@ -25,52 +34,89 @@ export function useLikedItems() {
         : new Date().getFullYear();
       const categoryValue = category === "tv" ? "tv-series" : "movie";
 
-      return toggleMoviePreference({
-        data: {
-          preferenceId: id,
-          title,
-          year,
-          category: categoryValue,
-          genres,
-          posterPath: filmInfo.posterPath,
-        },
-      });
+      // Turning the like on: clear any existing dislike first so the server
+      // never holds both. Best-effort — a failure here shouldn't block the
+      // like itself; the caches are reconciled in onSettled regardless.
+      const clearingDislike = likedIds.has(id)
+        ? Promise.resolve()
+        : removeUserDislikeByPreferenceIdFn({
+            data: { preferenceId: id },
+          }).then(() => undefined);
+
+      return clearingDislike.then(() =>
+        toggleMoviePreference({
+          data: {
+            preferenceId: id,
+            title,
+            year,
+            category: categoryValue,
+            genres,
+            posterPath: filmInfo.posterPath,
+          },
+        }),
+      );
     },
     onMutate: async (filmInfo) => {
       // Cancel in-flight reads so they don't clobber the optimistic update.
       await queryClient.cancelQueries({ queryKey: preferencesKeys.likedItems() });
 
-      const previous = queryClient.getQueryData<{ likedIds: number[] }>(
+      const previousLiked = queryClient.getQueryData<{ likedIds: number[] }>(
         preferencesKeys.likedItems(),
       );
 
-      const prevSet = new Set(previous?.likedIds ?? []);
+      const prevSet = new Set(previousLiked?.likedIds ?? []);
       const nextSet = new Set(prevSet);
-      if (nextSet.has(filmInfo.id)) {
-        nextSet.delete(filmInfo.id);
-      } else {
+      const isAdding = !nextSet.has(filmInfo.id);
+      if (isAdding) {
         nextSet.add(filmInfo.id);
+      } else {
+        nextSet.delete(filmInfo.id);
       }
 
       queryClient.setQueryData(preferencesKeys.likedItems(), {
         likedIds: [...nextSet],
       });
 
-      return { previous };
+      // Mutual exclusion: when adding a like, optimistically remove the id
+      // from the disliked-items cache so the UI flips immediately.
+      let previousDisliked: { dislikedIds: number[] } | undefined;
+      if (isAdding) {
+        previousDisliked = queryClient.getQueryData<{ dislikedIds: number[] }>(
+          preferencesKeys.dislikedItems(),
+        );
+        if (previousDisliked?.dislikedIds.includes(filmInfo.id)) {
+          queryClient.setQueryData(preferencesKeys.dislikedItems(), {
+            dislikedIds: previousDisliked.dislikedIds.filter(
+              (dId) => dId !== filmInfo.id,
+            ),
+          });
+        }
+      }
+
+      return { previousLiked, previousDisliked };
     },
     onError: (_err, _filmInfo, context) => {
       // Revert on failure.
-      if (context?.previous) {
+      if (context?.previousLiked) {
         queryClient.setQueryData(
           preferencesKeys.likedItems(),
-          context.previous,
+          context.previousLiked,
+        );
+      }
+      if (context?.previousDisliked) {
+        queryClient.setQueryData(
+          preferencesKeys.dislikedItems(),
+          context.previousDisliked,
         );
       }
     },
     onSettled: () => {
-      // Refetch the canonical list and refresh any preferences views.
+      // Refetch the canonical lists and refresh any preferences views.
       void queryClient.invalidateQueries({
         queryKey: preferencesKeys.likedItems(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: preferencesKeys.dislikedItems(),
       });
       void queryClient.invalidateQueries({
         queryKey: preferencesKeys.userPreferences(),

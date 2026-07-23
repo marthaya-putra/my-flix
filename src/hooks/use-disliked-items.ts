@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   addUserDislikeFn,
   removeUserDislikeByPreferenceIdFn,
+  removeUserPreferenceByPreferenceId,
 } from "@/lib/data/preferences";
 import {
   dislikedItemsOptions,
@@ -13,10 +14,12 @@ import type { FilmInfo } from "@/lib/types";
  * Read the user's disliked items from the QueryClient cache (populated by
  * the route loaders) and toggle a dislike via `useMutation`.
  *
- * Mirrors `useLikedItems`, but only ever touches the disliked-items cache
- * keys. Like↔dislike mutual exclusion is intentionally NOT handled here —
- * the two caches are decoupled so each hook has a single responsibility;
- * callers that need exclusion (e.g. RecommendationCard) orchestrate it.
+ * Mirrors `useLikedItems`, but only ever writes the disliked-items cache for
+ * its own toggle. Like↔dislike mutual exclusion is owned here: turning a
+ * dislike **on** removes an existing like for the same id (optimistically,
+ * then via the preference removal server fn). Callers do not orchestrate
+ * exclusion — the two caches stay consistent on their own. See ADR
+ * `docs/adr/0002-reaction-mutual-exclusion-in-hooks.md`.
  */
 export function useDislikedItems() {
   const queryClient = useQueryClient();
@@ -32,9 +35,28 @@ export function useDislikedItems() {
         : new Date().getFullYear();
       const categoryValue = category === "tv" ? "tv-series" : "movie";
 
-      return dislikedIds.has(id)
-        ? removeUserDislikeByPreferenceIdFn({ data: { preferenceId: id } })
-        : addUserDislikeFn({ data: { preferenceId: id, title, year, category: categoryValue } });
+      const isAdding = !dislikedIds.has(id);
+
+      // Mutual exclusion: turning the dislike on clears any existing like
+      // first so the server never holds both. Best-effort — a failure here
+      // shouldn't block the dislike itself; the caches are reconciled in
+      // onSettled regardless.
+      const clearingLike = isAdding
+        ? removeUserPreferenceByPreferenceId({
+            data: { preferenceId: id },
+          }).then(() => undefined)
+        : Promise.resolve();
+
+      if (isAdding) {
+        return clearingLike.then(() =>
+          addUserDislikeFn({
+            data: { preferenceId: id, title, year, category: categoryValue },
+          }),
+        );
+      }
+      return clearingLike.then(() =>
+        removeUserDislikeByPreferenceIdFn({ data: { preferenceId: id } }),
+      );
     },
     onMutate: async (filmInfo) => {
       // Cancel in-flight reads so they don't clobber the optimistic update.
@@ -42,37 +64,63 @@ export function useDislikedItems() {
         queryKey: preferencesKeys.dislikedItems(),
       });
 
-      const previous = queryClient.getQueryData<{ dislikedIds: number[] }>(
+      const previousDisliked = queryClient.getQueryData<{ dislikedIds: number[] }>(
         preferencesKeys.dislikedItems(),
       );
 
-      const prevSet = new Set(previous?.dislikedIds ?? []);
+      const prevSet = new Set(previousDisliked?.dislikedIds ?? []);
       const nextSet = new Set(prevSet);
-      if (nextSet.has(filmInfo.id)) {
-        nextSet.delete(filmInfo.id);
-      } else {
+      const isAdding = !nextSet.has(filmInfo.id);
+      if (isAdding) {
         nextSet.add(filmInfo.id);
+      } else {
+        nextSet.delete(filmInfo.id);
       }
 
       queryClient.setQueryData(preferencesKeys.dislikedItems(), {
         dislikedIds: [...nextSet],
       });
 
-      return { previous };
+      // Mutual exclusion: when adding a dislike, optimistically remove the id
+      // from the liked-items cache so the UI flips immediately.
+      let previousLiked: { likedIds: number[] } | undefined;
+      if (isAdding) {
+        previousLiked = queryClient.getQueryData<{ likedIds: number[] }>(
+          preferencesKeys.likedItems(),
+        );
+        if (previousLiked?.likedIds.includes(filmInfo.id)) {
+          queryClient.setQueryData(preferencesKeys.likedItems(), {
+            likedIds: previousLiked.likedIds.filter(
+              (lId) => lId !== filmInfo.id,
+            ),
+          });
+        }
+      }
+
+      return { previousDisliked, previousLiked };
     },
     onError: (_err, _filmInfo, context) => {
       // Revert on failure.
-      if (context?.previous) {
+      if (context?.previousDisliked) {
         queryClient.setQueryData(
           preferencesKeys.dislikedItems(),
-          context.previous,
+          context.previousDisliked,
+        );
+      }
+      if (context?.previousLiked) {
+        queryClient.setQueryData(
+          preferencesKeys.likedItems(),
+          context.previousLiked,
         );
       }
     },
     onSettled: () => {
-      // Refetch the canonical list and refresh any preferences views.
+      // Refetch the canonical lists and refresh any preferences views.
       void queryClient.invalidateQueries({
         queryKey: preferencesKeys.dislikedItems(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: preferencesKeys.likedItems(),
       });
       void queryClient.invalidateQueries({
         queryKey: preferencesKeys.userPreferences(),
