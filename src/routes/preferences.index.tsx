@@ -12,6 +12,7 @@ export const Route = createFileRoute("/preferences/")({
   loader: async ({ context }) => {
     await context.queryClient.ensureQueryData(userPreferencesOptions());
   },
+  pendingComponent: () => <PreferencesSkeleton />,
 });
 
 function PreferencesComponent() {

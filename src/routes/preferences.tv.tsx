@@ -12,6 +12,7 @@ export const Route = createFileRoute("/preferences/tv")({
   loader: async ({ context }) => {
     await context.queryClient.ensureQueryData(userPreferencesOptions());
   },
+  pendingComponent: () => <AllPreferencesSkeleton titleWidth="w-36" />,
 });
 
 function AllTvShowsComponent() {
