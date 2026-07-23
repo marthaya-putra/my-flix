@@ -10,6 +10,9 @@ import { FilmInfo } from "@/lib/types";
 import { HIT_ZONE } from "@/lib/utils";
 import { motion, AnimatePresence } from "motion/react";
 import { ctaDramaSpring, overlayTransition } from "@/lib/motion";
+import { useLikedItems } from "@/hooks/use-liked-items";
+import { useDislikedItems } from "@/hooks/use-disliked-items";
+import { useWatchlist } from "@/hooks/use-watchlist";
 
 interface Recommendation {
   title: string;
@@ -22,13 +25,7 @@ interface Recommendation {
 
 interface RecommendationCardProps {
   recommendation: Recommendation;
-  likedItems: Set<string>;
-  dislikedItems: Set<string>;
-  watchlistedItems: Set<string>;
   imageErrors: Set<string>;
-  onLike: (recommendation: Recommendation) => void;
-  onDislike: (recommendation: Recommendation) => void;
-  onWatchlist: (recommendation: Recommendation) => void;
   onImageError: (key: string) => void;
   /** Whether this card is currently expanded (touch). */
   expanded?: boolean;
@@ -37,17 +34,43 @@ interface RecommendationCardProps {
 
 export function RecommendationCard({
   recommendation,
-  likedItems,
-  dislikedItems,
-  watchlistedItems,
   imageErrors,
-  onLike,
-  onDislike,
-  onWatchlist,
   onImageError,
   expanded = false,
   onToggleExpand,
 }: RecommendationCardProps) {
+  // Like/dislike/watchlist state is read straight from the QueryClient cache
+  // (primed by the route loaders) and toggled via the same hooks every other
+  // reader uses. React Query dedupes identical query keys, so N cards share
+  // one request — no Recommendations → CategorySection → card prop chain.
+  const { isLiked, toggleLike } = useLikedItems();
+  const { isDisliked, toggleDislike } = useDislikedItems();
+  const { isWatchlisted, toggleWatchlist } = useWatchlist();
+
+  const filmInfo = recommendation.tmdbData;
+  const id = filmInfo?.id;
+  const liked = id !== undefined && isLiked(id);
+  const disliked = id !== undefined && isDisliked(id);
+  const watchlisted = id !== undefined && isWatchlisted(id);
+
+  // Like↔dislike mutual exclusion. The hooks are intentionally decoupled
+  // (single-responsibility), so the card orchestrates: adding one removes an
+  // existing entry of the opposite kind, matching the old inline behaviour.
+  const handleLike = () => {
+    if (!filmInfo) return;
+    if (!isLiked(filmInfo.id) && isDisliked(filmInfo.id)) {
+      toggleDislike(filmInfo);
+    }
+    toggleLike(filmInfo);
+  };
+  const handleDislike = () => {
+    if (!filmInfo) return;
+    if (!isDisliked(filmInfo.id) && isLiked(filmInfo.id)) {
+      toggleLike(filmInfo);
+    }
+    toggleDislike(filmInfo);
+  };
+
   const imageErrorKey = `${recommendation.title}-${recommendation.releasedYear}`;
 
   const showOverlay = expanded;
@@ -154,17 +177,17 @@ export function RecommendationCard({
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        onWatchlist(recommendation);
+                        if (filmInfo) toggleWatchlist(filmInfo);
                       }}
                       className={`${HIT_ZONE} p-1.5 h-8 w-8 rounded-full backdrop-blur-md border transition-colors ${
-                        watchlistedItems.has(`${recommendation.tmdbData.id}`)
+                        watchlisted
                           ? "border-violet-500/30 bg-violet-500/20"
                           : "border-white/20 bg-black/40 hover:bg-white/10"
                       }`}
                     >
                       <Bookmark
                         className={`h-4 w-4 ${
-                          watchlistedItems.has(`${recommendation.tmdbData.id}`)
+                          watchlisted
                             ? "fill-violet-500 text-violet-500"
                             : "text-muted-foreground hover:text-violet-500 hover:fill-violet-500/20"
                         }`}
@@ -174,7 +197,7 @@ export function RecommendationCard({
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>
-                    {watchlistedItems.has(`${recommendation.tmdbData.id}`)
+                    {watchlisted
                       ? "Remove from Watchlist"
                       : "Add to Watchlist"}
                   </p>
@@ -186,17 +209,17 @@ export function RecommendationCard({
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onDislike(recommendation);
+                    handleDislike();
                   }}
                   className={`${HIT_ZONE} p-1.5 h-8 w-8 rounded-full backdrop-blur-md border transition-colors ${
-                    dislikedItems.has(`${recommendation.tmdbData.id}`)
+                    disliked
                       ? "border-red-500/30 bg-red-500/20"
                       : "border-white/20 bg-black/40 hover:bg-white/10"
                   }`}
                 >
                   <ThumbsDown
                     className={`h-4 w-4 ${
-                      dislikedItems.has(`${recommendation.tmdbData.id}`)
+                      disliked
                         ? "fill-red-500 text-red-500"
                         : "text-muted-foreground hover:text-red-500 hover:fill-red-100"
                     }`}
@@ -209,17 +232,17 @@ export function RecommendationCard({
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onLike(recommendation);
+                    handleLike();
                   }}
                   className={`${HIT_ZONE} p-1.5 h-8 w-8 rounded-full backdrop-blur-md border transition-colors ${
-                    likedItems.has(`${recommendation.tmdbData.id}`)
+                    liked
                       ? "border-primary/30 bg-primary/20"
                       : "border-white/20 bg-black/40 hover:bg-white/10"
                   }`}
                 >
                   <ThumbsUp
                     className={`h-4 w-4 ${
-                      likedItems.has(`${recommendation.tmdbData.id}`)
+                      liked
                         ? "fill-primary text-primary"
                         : "text-muted-foreground hover:text-primary hover:fill-primary/20"
                     }`}
@@ -295,17 +318,17 @@ export function RecommendationCard({
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        onWatchlist(recommendation);
+                        if (filmInfo) toggleWatchlist(filmInfo);
                       }}
                       className={`${HIT_ZONE} p-1.5 h-8 w-8 rounded-full backdrop-blur-md border transition-colors ${
-                        watchlistedItems.has(`${recommendation.tmdbData.id}`)
+                        watchlisted
                           ? "border-violet-500/30 bg-violet-500/20"
                           : "border-white/20 bg-black/40 hover:bg-white/10"
                       }`}
                     >
                       <Bookmark
                         className={`h-4 w-4 ${
-                          watchlistedItems.has(`${recommendation.tmdbData.id}`)
+                          watchlisted
                             ? "fill-violet-500 text-violet-500"
                             : "text-muted-foreground hover:text-violet-500 hover:fill-violet-500/20"
                         }`}
@@ -318,13 +341,13 @@ export function RecommendationCard({
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        onDislike(recommendation);
+                        handleDislike();
                       }}
                       className={`${HIT_ZONE} p-1.5 h-8 w-8`}
                     >
                       <ThumbsDown
                         className={`h-4 w-4 ${
-                          dislikedItems.has(`${recommendation.tmdbData.id}`)
+                          disliked
                             ? "fill-red-500 text-red-500"
                             : "text-muted-foreground hover:text-red-500 hover:fill-red-100"
                         }`}
@@ -337,13 +360,13 @@ export function RecommendationCard({
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        onLike(recommendation);
+                        handleLike();
                       }}
                       className={`${HIT_ZONE} p-1.5 h-8 w-8`}
                     >
                       <ThumbsUp
                         className={`h-4 w-4 ${
-                          likedItems.has(`${recommendation.tmdbData.id}`)
+                          liked
                             ? "fill-primary text-primary"
                             : "text-muted-foreground hover:text-primary hover:fill-primary/20"
                         }`}

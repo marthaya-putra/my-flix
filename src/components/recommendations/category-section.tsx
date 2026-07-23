@@ -33,15 +33,9 @@ interface CategorySectionProps {
   target?: number;
   errorMessage?: string | null;
   loadingMore: boolean;
-  likedItems: Set<string>;
-  dislikedItems: Set<string>;
-  watchlistedItems: Set<string>;
   imageErrors: Set<string>;
   scrollToFirstNew?: number;
   onLoadMore: () => void;
-  onLike: (rec: Recommendation) => void;
-  onDislike: (rec: Recommendation) => void;
-  onWatchlist: (rec: Recommendation) => void;
   onImageError: (key: string) => void;
 }
 
@@ -54,15 +48,9 @@ export function CategorySection({
   target,
   errorMessage,
   loadingMore,
-  likedItems,
-  dislikedItems,
-  watchlistedItems,
   imageErrors,
   scrollToFirstNew,
   onLoadMore,
-  onLike,
-  onDislike,
-  onWatchlist,
   onImageError,
 }: CategorySectionProps) {
   const hasItems = items.length > 0;
@@ -117,13 +105,7 @@ export function CategorySection({
               >
                 <RecommendationCard
                   recommendation={rec}
-                  likedItems={likedItems}
-                  dislikedItems={dislikedItems}
-                  watchlistedItems={watchlistedItems}
                   imageErrors={imageErrors}
-                  onLike={onLike}
-                  onDislike={onDislike}
-                  onWatchlist={onWatchlist}
                   onImageError={onImageError}
                   expanded={expandedIndex === index}
                   onToggleExpand={() =>

@@ -1,18 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  addMoviePreference,
-  removeUserPreferenceByPreferenceId,
-  addUserDislikeFn,
-  removeUserDislikeByPreferenceIdFn,
-  toggleWatchlistItem,
-} from "@/lib/data/preferences";
-import {
-  likedItemsOptions,
-  dislikedItemsOptions,
-  watchlistItemsOptions,
-  preferencesKeys,
-} from "@/lib/queries/preferences";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { authClient } from "@/lib/auth-client";
 import { type StreamEvent, type StreamStage } from "@/lib/data/stream-events";
 import {
@@ -33,51 +19,12 @@ const STATUS_MESSAGES: Record<string, string> = {
 };
 
 // --- Cache mutation helpers for liked/disliked ID lists ---------------------
-// Cards derive their liked state from these query caches via useMemo. Toggles
-// write optimistically with these helpers, then invalidate on success (or
-// restore the snapshot on error) — same shape as useLikedItems on the home
-// page. Centralizing the cache writes keeps the like↔dislike coupling
-// consistent across both handlers.
-type LikedList = { likedIds: number[] };
-type DislikedList = { dislikedIds: number[] };
-type WatchlistList = { watchlistIds: number[] };
-type QueryClientLike = {
-  setQueryData: <T>(key: unknown, data: T) => void;
-};
-
-const addLiked = (cached: LikedList | undefined, id: number): number[] =>
-  Array.from(new Set([...(cached?.likedIds ?? []), id]));
-const removeLiked = (cached: LikedList | undefined, id: number): number[] =>
-  (cached?.likedIds ?? []).filter((x) => x !== id);
-const addDisliked = (cached: DislikedList | undefined, id: number): number[] =>
-  Array.from(new Set([...(cached?.dislikedIds ?? []), id]));
-const removeDisliked = (
-  cached: DislikedList | undefined,
-  id: number,
-): number[] => (cached?.dislikedIds ?? []).filter((x) => x !== id);
-const addWatchlisted = (
-  cached: WatchlistList | undefined,
-  id: number,
-): number[] => Array.from(new Set([...(cached?.watchlistIds ?? []), id]));
-const removeWatchlisted = (
-  cached: WatchlistList | undefined,
-  id: number,
-): number[] => (cached?.watchlistIds ?? []).filter((x) => x !== id);
-
-function writeLiked(qc: QueryClientLike, likedIds: number[]) {
-  qc.setQueryData<LikedList>(preferencesKeys.likedItems(), { likedIds });
-}
-function writeDisliked(qc: QueryClientLike, dislikedIds: number[]) {
-  qc.setQueryData<DislikedList>(preferencesKeys.dislikedItems(), { dislikedIds });
-}
-function writeWatchlisted(qc: QueryClientLike, watchlistIds: number[]) {
-  qc.setQueryData<WatchlistList>(preferencesKeys.watchlistItems(), {
-    watchlistIds,
-  });
-}
+// REMOVED: like/dislike/watchlist state is now read and toggled directly in
+// RecommendationCard via the useLikedItems / useDislikedItems / useWatchlist
+// hooks (same pattern as MovieCard). The route loader still primes those
+// caches via ensureQueryData so first paint agrees with the server.
 
 export function Recommendations() {
-  const queryClient = useQueryClient();
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [loadingMore, setLoadingMore] = useState<Record<Category, boolean>>({
     movie: false,
@@ -85,28 +32,6 @@ export function Recommendations() {
   });
   const [error, setError] = useState<string | null>(null);
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
-
-  // Canonical liked/disliked ID lists, populated by the route loader's
-  // `ensureQueryData` and dehydrated into the client cache. The cards' liked
-  // state is derived straight from this cache via useMemo — no local state,
-  // no seeding effect. Toggles write optimistically to the cache and
-  // invalidate on settle (see handleLike/handleDislike), mirroring the
-  // home-page useLikedItems hook.
-  const { data: likedData } = useQuery(likedItemsOptions());
-  const { data: dislikedData } = useQuery(dislikedItemsOptions());
-  const { data: watchlistData } = useQuery(watchlistItemsOptions());
-  const likedItems = useMemo(
-    () => new Set((likedData?.likedIds ?? []).map(String)),
-    [likedData],
-  );
-  const dislikedItems = useMemo(
-    () => new Set((dislikedData?.dislikedIds ?? []).map(String)),
-    [dislikedData],
-  );
-  const watchlistedItems = useMemo(
-    () => new Set((watchlistData?.watchlistIds ?? []).map(String)),
-    [watchlistData],
-  );
 
   // Per-category lifecycle state driven by StreamEvent protocol.
   const [categoryStatus, setCategoryStatus] = useState<
@@ -368,196 +293,6 @@ export function Recommendations() {
     setLoadingMore((prev) => ({ ...prev, [category]: false }));
   };
 
-  const handleLikeRecommendation = async (recommendation: Recommendation) => {
-    if (!recommendation.tmdbData) {
-      alert("Cannot modify recommendation without TMDB data");
-      return;
-    }
-
-    const id = recommendation.tmdbData.id;
-    const itemKey = `${id}`;
-    const currentlyLiked = likedItems.has(itemKey);
-    const currentlyDisliked = dislikedItems.has(itemKey);
-
-    // Snapshot for rollback.
-    const prevLiked = queryClient.getQueryData<{ likedIds: number[] }>(
-      preferencesKeys.likedItems(),
-    );
-    const prevDisliked = queryClient.getQueryData<{ dislikedIds: number[] }>(
-      preferencesKeys.dislikedItems(),
-    );
-
-    // Optimistic cache update: toggle in liked, drop from disliked if present.
-    if (currentlyLiked) {
-      writeLiked(queryClient, removeLiked(prevLiked, id));
-    } else {
-      writeLiked(queryClient, addLiked(prevLiked, id));
-    }
-    if (!currentlyLiked && currentlyDisliked) {
-      writeDisliked(queryClient, removeDisliked(prevDisliked, id));
-    }
-
-    try {
-      if (currentlyLiked) {
-        await removeUserPreferenceByPreferenceId({
-          data: { preferenceId: id },
-        });
-      } else {
-        await addMoviePreference({
-          data: {
-            preferenceId: id,
-            title: recommendation.title,
-            year: recommendation.releasedYear,
-            category:
-              recommendation.category === "movie" ? "movie" : "tv-series",
-            posterPath: recommendation.tmdbData.posterPath,
-            genres:
-              recommendation.tmdbData.genres.length > 0
-                ? recommendation.tmdbData.genres.join(", ")
-                : undefined,
-          },
-        });
-      }
-      // Refetch the canonical list; the dislike list is unaffected by a like
-      // unless we cleared it above, in which case it also needs refreshing.
-      void queryClient.invalidateQueries({
-        queryKey: preferencesKeys.likedItems(),
-      });
-      if (!currentlyLiked && currentlyDisliked) {
-        void queryClient.invalidateQueries({
-          queryKey: preferencesKeys.dislikedItems(),
-        });
-      }
-    } catch (error) {
-      console.error("Error modifying preferences:", error);
-      if (prevLiked) writeLiked(queryClient, prevLiked.likedIds);
-      if (prevDisliked) writeDisliked(queryClient, prevDisliked.dislikedIds);
-      alert(`Failed to ${currentlyLiked ? "remove" : "add"} to preferences`);
-    }
-  };
-
-  const handleDislikeRecommendation = async (
-    recommendation: Recommendation,
-  ) => {
-    if (!recommendation.tmdbData) {
-      alert("Cannot modify recommendation without TMDB data");
-      return;
-    }
-
-    const id = recommendation.tmdbData.id;
-    const itemKey = `${id}`;
-    const currentlyDisliked = dislikedItems.has(itemKey);
-    const currentlyLiked = likedItems.has(itemKey);
-
-    const prevLiked = queryClient.getQueryData<{ likedIds: number[] }>(
-      preferencesKeys.likedItems(),
-    );
-    const prevDisliked = queryClient.getQueryData<{ dislikedIds: number[] }>(
-      preferencesKeys.dislikedItems(),
-    );
-
-    if (currentlyDisliked) {
-      writeDisliked(queryClient, removeDisliked(prevDisliked, id));
-    } else {
-      writeDisliked(queryClient, addDisliked(prevDisliked, id));
-    }
-    if (!currentlyDisliked && currentlyLiked) {
-      writeLiked(queryClient, removeLiked(prevLiked, id));
-    }
-
-    try {
-      if (currentlyDisliked) {
-        await removeUserDislikeByPreferenceIdFn({
-          data: { preferenceId: id },
-        });
-      } else {
-        await addUserDislikeFn({
-          data: {
-            preferenceId: id,
-            title: recommendation.title,
-            year: recommendation.releasedYear,
-            category:
-              recommendation.category === "movie" ? "movie" : "tv-series",
-          },
-        });
-      }
-      void queryClient.invalidateQueries({
-        queryKey: preferencesKeys.dislikedItems(),
-      });
-      if (!currentlyDisliked && currentlyLiked) {
-        void queryClient.invalidateQueries({
-          queryKey: preferencesKeys.likedItems(),
-        });
-      }
-    } catch (error) {
-      console.error("Error modifying dislikes:", error);
-      if (prevDisliked) writeDisliked(queryClient, prevDisliked.dislikedIds);
-      if (prevLiked) writeLiked(queryClient, prevLiked.likedIds);
-      alert(`Failed to ${currentlyDisliked ? "remove" : "add"} to dislikes`);
-    }
-  };
-
-  // Mirror of handleLikeRecommendation for the watchlist. Watchlist is
-  // orthogonal to Likes/Dislikes (see CONTEXT.md → Watchlist), so unlike
-  // handleLike this NEVER touches the liked/disliked caches — same
-  // snapshot → optimistic → server → invalidate → rollback shape, minus
-  // the mutual-exclusion logic.
-  const handleWatchlistRecommendation = async (
-    recommendation: Recommendation,
-  ) => {
-    if (!recommendation.tmdbData) {
-      alert("Cannot modify recommendation without TMDB data");
-      return;
-    }
-
-    const id = recommendation.tmdbData.id;
-    const itemKey = `${id}`;
-    const currentlyWatchlisted = watchlistedItems.has(itemKey);
-
-    // Snapshot for rollback.
-    const prevWatchlist = queryClient.getQueryData<{ watchlistIds: number[] }>(
-      preferencesKeys.watchlistItems(),
-    );
-
-    // Optimistic cache update: toggle watchlist only.
-    if (currentlyWatchlisted) {
-      writeWatchlisted(queryClient, removeWatchlisted(prevWatchlist, id));
-    } else {
-      writeWatchlisted(queryClient, addWatchlisted(prevWatchlist, id));
-    }
-
-    try {
-      await toggleWatchlistItem({
-        data: {
-          watchListId: id,
-          title: recommendation.title,
-          year: recommendation.releasedYear,
-          category:
-            recommendation.category === "movie" ? "movie" : "tv-series",
-          genres:
-            recommendation.tmdbData.genres.length > 0
-              ? recommendation.tmdbData.genres
-              : undefined,
-          posterPath: recommendation.tmdbData.posterPath,
-        },
-      });
-      // Refetch the canonical list; the page-keyed rows cache (read by
-      // /watchlist) is invalidated too so the grid stays in sync.
-      void queryClient.invalidateQueries({
-        queryKey: preferencesKeys.watchlistItems(),
-      });
-      void queryClient.invalidateQueries({
-        queryKey: preferencesKeys.userWatchlist(),
-      });
-    } catch (error) {
-      console.error("Error modifying watchlist:", error);
-      if (prevWatchlist) {
-        writeWatchlisted(queryClient, prevWatchlist.watchlistIds);
-      }
-      alert(`Failed to ${currentlyWatchlisted ? "remove" : "add"} to watchlist`);
-    }
-  };
-
   const handleImageError = (key: string) => {
     setImageErrors((prev) => new Set(prev).add(key));
   };
@@ -612,15 +347,9 @@ export function Recommendations() {
           target={categoryTarget[category]}
           errorMessage={categoryError[category]}
           loadingMore={loadingMore[category]}
-          likedItems={likedItems}
-          dislikedItems={dislikedItems}
-          watchlistedItems={watchlistedItems}
           imageErrors={imageErrors}
           scrollToFirstNew={scrollToFirstNew[category]}
           onLoadMore={() => handleCategoryLoadMore(category)}
-          onLike={handleLikeRecommendation}
-          onDislike={handleDislikeRecommendation}
-          onWatchlist={handleWatchlistRecommendation}
           onImageError={handleImageError}
         />
       ))}
