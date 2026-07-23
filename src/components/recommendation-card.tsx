@@ -1,5 +1,10 @@
 import { Button } from "@/components/ui/button";
-import { ThumbsUp, ThumbsDown, Play, X } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { ThumbsUp, ThumbsDown, Play, X, Bookmark } from "lucide-react";
 import { PlayLink } from "./play-link";
 import { FilmInfo } from "@/lib/types";
 import { HIT_ZONE } from "@/lib/utils";
@@ -19,9 +24,11 @@ interface RecommendationCardProps {
   recommendation: Recommendation;
   likedItems: Set<string>;
   dislikedItems: Set<string>;
+  watchlistedItems: Set<string>;
   imageErrors: Set<string>;
   onLike: (recommendation: Recommendation) => void;
   onDislike: (recommendation: Recommendation) => void;
+  onWatchlist: (recommendation: Recommendation) => void;
   onImageError: (key: string) => void;
   /** Whether this card is currently expanded (touch). */
   expanded?: boolean;
@@ -32,9 +39,11 @@ export function RecommendationCard({
   recommendation,
   likedItems,
   dislikedItems,
+  watchlistedItems,
   imageErrors,
   onLike,
   onDislike,
+  onWatchlist,
   onImageError,
   expanded = false,
   onToggleExpand,
@@ -137,6 +146,40 @@ export function RecommendationCard({
           </PlayLink>
           {recommendation.tmdbData && (
             <div className="flex gap-1 ml-auto">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onWatchlist(recommendation);
+                      }}
+                      className={`${HIT_ZONE} p-1.5 h-8 w-8 rounded-full backdrop-blur-md border transition-colors ${
+                        watchlistedItems.has(`${recommendation.tmdbData.id}`)
+                          ? "border-violet-500/30 bg-violet-500/20"
+                          : "border-white/20 bg-black/40 hover:bg-white/10"
+                      }`}
+                    >
+                      <Bookmark
+                        className={`h-4 w-4 ${
+                          watchlistedItems.has(`${recommendation.tmdbData.id}`)
+                            ? "fill-violet-500 text-violet-500"
+                            : "text-muted-foreground hover:text-violet-500 hover:fill-violet-500/20"
+                        }`}
+                      />
+                    </Button>
+                  </motion.div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>
+                    {watchlistedItems.has(`${recommendation.tmdbData.id}`)
+                      ? "Remove from Watchlist"
+                      : "Add to Watchlist"}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
               <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
                 <Button
                   variant="ghost"
@@ -246,6 +289,29 @@ export function RecommendationCard({
               </PlayLink>
               {recommendation.tmdbData && (
                 <div className="flex gap-1 ml-auto">
+                  <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onWatchlist(recommendation);
+                      }}
+                      className={`${HIT_ZONE} p-1.5 h-8 w-8 rounded-full backdrop-blur-md border transition-colors ${
+                        watchlistedItems.has(`${recommendation.tmdbData.id}`)
+                          ? "border-violet-500/30 bg-violet-500/20"
+                          : "border-white/20 bg-black/40 hover:bg-white/10"
+                      }`}
+                    >
+                      <Bookmark
+                        className={`h-4 w-4 ${
+                          watchlistedItems.has(`${recommendation.tmdbData.id}`)
+                            ? "fill-violet-500 text-violet-500"
+                            : "text-muted-foreground hover:text-violet-500 hover:fill-violet-500/20"
+                        }`}
+                      />
+                    </Button>
+                  </motion.div>
                   <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
                     <Button
                       variant="ghost"

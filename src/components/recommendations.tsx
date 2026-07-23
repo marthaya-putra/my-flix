@@ -5,10 +5,12 @@ import {
   removeUserPreferenceByPreferenceId,
   addUserDislikeFn,
   removeUserDislikeByPreferenceIdFn,
+  toggleWatchlistItem,
 } from "@/lib/data/preferences";
 import {
   likedItemsOptions,
   dislikedItemsOptions,
+  watchlistItemsOptions,
   preferencesKeys,
 } from "@/lib/queries/preferences";
 import { authClient } from "@/lib/auth-client";
@@ -38,6 +40,7 @@ const STATUS_MESSAGES: Record<string, string> = {
 // consistent across both handlers.
 type LikedList = { likedIds: number[] };
 type DislikedList = { dislikedIds: number[] };
+type WatchlistList = { watchlistIds: number[] };
 type QueryClientLike = {
   setQueryData: <T>(key: unknown, data: T) => void;
 };
@@ -52,12 +55,25 @@ const removeDisliked = (
   cached: DislikedList | undefined,
   id: number,
 ): number[] => (cached?.dislikedIds ?? []).filter((x) => x !== id);
+const addWatchlisted = (
+  cached: WatchlistList | undefined,
+  id: number,
+): number[] => Array.from(new Set([...(cached?.watchlistIds ?? []), id]));
+const removeWatchlisted = (
+  cached: WatchlistList | undefined,
+  id: number,
+): number[] => (cached?.watchlistIds ?? []).filter((x) => x !== id);
 
 function writeLiked(qc: QueryClientLike, likedIds: number[]) {
   qc.setQueryData<LikedList>(preferencesKeys.likedItems(), { likedIds });
 }
 function writeDisliked(qc: QueryClientLike, dislikedIds: number[]) {
   qc.setQueryData<DislikedList>(preferencesKeys.dislikedItems(), { dislikedIds });
+}
+function writeWatchlisted(qc: QueryClientLike, watchlistIds: number[]) {
+  qc.setQueryData<WatchlistList>(preferencesKeys.watchlistItems(), {
+    watchlistIds,
+  });
 }
 
 export function Recommendations() {
@@ -78,6 +94,7 @@ export function Recommendations() {
   // home-page useLikedItems hook.
   const { data: likedData } = useQuery(likedItemsOptions());
   const { data: dislikedData } = useQuery(dislikedItemsOptions());
+  const { data: watchlistData } = useQuery(watchlistItemsOptions());
   const likedItems = useMemo(
     () => new Set((likedData?.likedIds ?? []).map(String)),
     [likedData],
@@ -85,6 +102,10 @@ export function Recommendations() {
   const dislikedItems = useMemo(
     () => new Set((dislikedData?.dislikedIds ?? []).map(String)),
     [dislikedData],
+  );
+  const watchlistedItems = useMemo(
+    () => new Set((watchlistData?.watchlistIds ?? []).map(String)),
+    [watchlistData],
   );
 
   // Per-category lifecycle state driven by StreamEvent protocol.
@@ -476,6 +497,67 @@ export function Recommendations() {
     }
   };
 
+  // Mirror of handleLikeRecommendation for the watchlist. Watchlist is
+  // orthogonal to Likes/Dislikes (see CONTEXT.md → Watchlist), so unlike
+  // handleLike this NEVER touches the liked/disliked caches — same
+  // snapshot → optimistic → server → invalidate → rollback shape, minus
+  // the mutual-exclusion logic.
+  const handleWatchlistRecommendation = async (
+    recommendation: Recommendation,
+  ) => {
+    if (!recommendation.tmdbData) {
+      alert("Cannot modify recommendation without TMDB data");
+      return;
+    }
+
+    const id = recommendation.tmdbData.id;
+    const itemKey = `${id}`;
+    const currentlyWatchlisted = watchlistedItems.has(itemKey);
+
+    // Snapshot for rollback.
+    const prevWatchlist = queryClient.getQueryData<{ watchlistIds: number[] }>(
+      preferencesKeys.watchlistItems(),
+    );
+
+    // Optimistic cache update: toggle watchlist only.
+    if (currentlyWatchlisted) {
+      writeWatchlisted(queryClient, removeWatchlisted(prevWatchlist, id));
+    } else {
+      writeWatchlisted(queryClient, addWatchlisted(prevWatchlist, id));
+    }
+
+    try {
+      await toggleWatchlistItem({
+        data: {
+          watchListId: id,
+          title: recommendation.title,
+          year: recommendation.releasedYear,
+          category:
+            recommendation.category === "movie" ? "movie" : "tv-series",
+          genres:
+            recommendation.tmdbData.genres.length > 0
+              ? recommendation.tmdbData.genres
+              : undefined,
+          posterPath: recommendation.tmdbData.posterPath,
+        },
+      });
+      // Refetch the canonical list; the page-keyed rows cache (read by
+      // /watchlist) is invalidated too so the grid stays in sync.
+      void queryClient.invalidateQueries({
+        queryKey: preferencesKeys.watchlistItems(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: preferencesKeys.userWatchlist(),
+      });
+    } catch (error) {
+      console.error("Error modifying watchlist:", error);
+      if (prevWatchlist) {
+        writeWatchlisted(queryClient, prevWatchlist.watchlistIds);
+      }
+      alert(`Failed to ${currentlyWatchlisted ? "remove" : "add"} to watchlist`);
+    }
+  };
+
   const handleImageError = (key: string) => {
     setImageErrors((prev) => new Set(prev).add(key));
   };
@@ -532,11 +614,13 @@ export function Recommendations() {
           loadingMore={loadingMore[category]}
           likedItems={likedItems}
           dislikedItems={dislikedItems}
+          watchlistedItems={watchlistedItems}
           imageErrors={imageErrors}
           scrollToFirstNew={scrollToFirstNew[category]}
           onLoadMore={() => handleCategoryLoadMore(category)}
           onLike={handleLikeRecommendation}
           onDislike={handleDislikeRecommendation}
+          onWatchlist={handleWatchlistRecommendation}
           onImageError={handleImageError}
         />
       ))}
