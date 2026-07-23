@@ -46,23 +46,9 @@ export function RecommendationCard({
   const liked = id !== undefined && isLiked(id);
   const disliked = id !== undefined && isDisliked(id);
 
-  // Like↔dislike mutual exclusion. The hooks are intentionally decoupled
-  // (single-responsibility), so the card orchestrates: adding one removes an
-  // existing entry of the opposite kind, matching the old inline behaviour.
-  const handleLike = () => {
-    if (!filmInfo) return;
-    if (!isLiked(filmInfo.id) && isDisliked(filmInfo.id)) {
-      toggleDislike(filmInfo);
-    }
-    toggleLike(filmInfo);
-  };
-  const handleDislike = () => {
-    if (!filmInfo) return;
-    if (!isDisliked(filmInfo.id) && isLiked(filmInfo.id)) {
-      toggleLike(filmInfo);
-    }
-    toggleDislike(filmInfo);
-  };
+  // Like↔dislike mutual exclusion lives in the hooks (see ADR
+  // docs/adr/0002-reaction-mutual-exclusion-in-hooks.md), so the CTAs call
+  // the hook toggles directly — no caller-side orchestration.
 
   const imageErrorKey = `${recommendation.title}-${recommendation.releasedYear}`;
 
@@ -169,7 +155,7 @@ export function RecommendationCard({
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDislike();
+                        toggleDislike(filmInfo);
                       }}
                       className={`${HIT_ZONE} p-1.5 h-8 w-8`}
                     >
@@ -188,7 +174,7 @@ export function RecommendationCard({
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleLike();
+                        toggleLike(filmInfo);
                       }}
                       className={`${HIT_ZONE} p-1.5 h-8 w-8`}
                     >
@@ -271,7 +257,7 @@ export function RecommendationCard({
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDislike();
+                        toggleDislike(filmInfo);
                       }}
                       className={`${HIT_ZONE} p-1.5 h-8 w-8 rounded-full backdrop-blur-md border transition-colors ${
                         disliked
@@ -294,7 +280,7 @@ export function RecommendationCard({
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleLike();
+                        toggleLike(filmInfo);
                       }}
                       className={`${HIT_ZONE} p-1.5 h-8 w-8`}
                     >
