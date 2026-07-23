@@ -65,17 +65,18 @@ export function WatchlistPage({
   // toggle" from "ids cache still pending on mount". Trade-off accepted:
   // removing the last item on a page leaves an empty grid until the user
   // pages back. (See issue #38 tradeoff note.)
-  const { isWatchlisted, isPending: isIdsPending } = useWatchlist();
+  //
+  // The ids cache is warmed by the route's <Suspense> boundary before this
+  // component mounts (see watchlist.tsx), so isWatchlisted(*) returns the
+  // real value on first render — no pending window to guard against.
+  const { isWatchlisted } = useWatchlist();
   const visibleItems = items.filter((row) => isWatchlisted(row.watchListId));
 
-  // The empty state must appear the moment the last item is un-bookmarked.
-  // Derive it from the optimistic ids cache (visibleItems), not the rows
-  // cache (totalItems), which only updates after the server refetch. The
-  // isIdsPending guard prevents a false "empty" flash before the ids cache
-  // resolves on first mount — watchlistItemsOptions is not loader-primed,
-  // so during the pending window isWatchlisted(*) returns false and the
-  // filter would otherwise yield [].
-  const isEmpty = !isIdsPending && visibleItems.length === 0;
+  // Derive the empty state from the optimistic ids cache (visibleItems),
+  // not the rows cache (totalItems), which only updates after the server
+  // refetch — so the empty state appears the moment the last item is
+  // un-bookmarked.
+  const isEmpty = visibleItems.length === 0;
 
   const description =
     isEmpty || totalItems === 0

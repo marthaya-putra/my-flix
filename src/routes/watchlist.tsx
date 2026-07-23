@@ -1,10 +1,11 @@
+import { Suspense } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { WatchlistPage } from "@/components/watchlist/watchlist-page";
 import WatchlistSkeleton from "@/components/skeletons/watchlist-skeleton";
 import { guardAuthenticated } from "@/lib/auth-guard";
-import { userWatchlistOptions } from "@/lib/queries/preferences";
+import { userWatchlistOptions, watchlistItemsOptions } from "@/lib/queries/preferences";
 
 export const Route = createFileRoute("/watchlist")({
   // `?page=` mirrors /movies and /tvs — TanStack Router owns the page number
@@ -15,20 +16,33 @@ export const Route = createFileRoute("/watchlist")({
   component: WatchlistComponent,
   beforeLoad: guardAuthenticated,
   loaderDeps: ({ search }) => ({ page: search.page }),
-  // No route `loader`: the rows cache is intentionally NOT awaited here.
-  // Awaiting it (ensureQueryData) blocks the loader past defaultPendingMs
-  // on the first client navigation, surfacing the global spinner. Instead
-  // the component streams the data via useQuery + WatchlistSkeleton — same
-  // pattern as the home route's timezone-dependent rows (no hydration
-  // mismatch because both server and client render the skeleton until the
-  // client fetch resolves).
+  // No route `loader`: awaiting it (ensureQueryData) blocks past
+  // defaultPendingMs on the first client navigation, surfacing the global
+  // spinner. Instead the queries are streamed during render via
+  // useSuspenseQuery under a <Suspense> boundary — server streams the
+  // skeleton, then resolves and dehydrates the cache (same streaming model
+  // as the home route's timezone-dependent rows). The boundary holds both
+  // the page-keyed rows cache and the ids cache, so the cards (which are
+  // `items.filter(isWatchlisted(...))`) never flash an empty grid.
 });
 
 function WatchlistComponent() {
   const { page } = Route.useLoaderDeps();
-  const { data, isPending } = useQuery(userWatchlistOptions(page));
 
-  if (isPending || !data) return <WatchlistSkeleton />;
+  return (
+    <Suspense fallback={<WatchlistSkeleton />}>
+      <WatchlistPageContent page={page} />
+    </Suspense>
+  );
+}
+
+function WatchlistPageContent({ page }: { page: number }) {
+  const { data } = useSuspenseQuery(userWatchlistOptions(page));
+  // Warm the ids cache before the page mounts. The page reads the same key
+  // via useWatchlist() (deduped, no extra fetch) for both filtering and the
+  // optimistic card-vanish on un-bookmark; resolving it under this boundary
+  // means the grid never renders before isWatchlisted(*) can return true.
+  useSuspenseQuery(watchlistItemsOptions());
 
   return (
     <WatchlistPage
