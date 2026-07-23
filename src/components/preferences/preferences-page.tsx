@@ -154,7 +154,7 @@ export function PreferencesPage({ initialPreferences }: PreferencesPageProps) {
                         type="movie"
                         onRemove={(id) => handleRemovePreference(id, "movie")}
                         onAdd={() => handleAddContent("movie")}
-                        limitItems
+                        limit={5}
                       />
                     )}
                     {preferences.tvShows.length > 0 && (
@@ -164,7 +164,7 @@ export function PreferencesPage({ initialPreferences }: PreferencesPageProps) {
                         type="tv"
                         onRemove={(id) => handleRemovePreference(id, "tv")}
                         onAdd={() => handleAddContent("tv")}
-                        limitItems
+                        limit={5}
                       />
                     )}
                     {preferences.people.length > 0 && (
@@ -174,7 +174,7 @@ export function PreferencesPage({ initialPreferences }: PreferencesPageProps) {
                         type="person"
                         onRemove={(id) => handleRemovePreference(id, "person")}
                         onAdd={() => handleAddContent("person")}
-                        limitItems
+                        limit={5}
                       />
                     )}
                     {preferences.movies.length === 0 &&
@@ -212,6 +212,7 @@ export function PreferencesPage({ initialPreferences }: PreferencesPageProps) {
                     onRemove={(id) => handleRemovePreference(id, "movie")}
                     onAdd={() => handleAddContent("movie")}
                     showEmptyState
+                    limit={10}
                   />
                 </TabsContent>
 
@@ -223,6 +224,7 @@ export function PreferencesPage({ initialPreferences }: PreferencesPageProps) {
                     onRemove={(id) => handleRemovePreference(id, "tv")}
                     onAdd={() => handleAddContent("tv")}
                     showEmptyState
+                    limit={10}
                   />
                 </TabsContent>
 
@@ -234,6 +236,7 @@ export function PreferencesPage({ initialPreferences }: PreferencesPageProps) {
                     onRemove={(id) => handleRemovePreference(id, "person")}
                     onAdd={() => handleAddContent("person")}
                     showEmptyState
+                    limit={10}
                   />
                 </TabsContent>
               </Tabs>
@@ -261,7 +264,7 @@ interface ContentSectionProps {
   onRemove: (id: number) => void;
   onAdd: () => void;
   showEmptyState?: boolean;
-  limitItems?: boolean;
+  limit?: number;
 }
 
 function ContentSection({
@@ -271,10 +274,10 @@ function ContentSection({
   onRemove,
   onAdd,
   showEmptyState,
-  limitItems = false,
+  limit,
 }: ContentSectionProps) {
-  const displayItems = limitItems ? items.slice(0, 5) : items;
-  const hasMore = limitItems && items.length > 5;
+  const displayItems = limit ? items.slice(0, limit) : items;
+  const hasMore = limit !== undefined && items.length > limit;
 
   return (
     <div>
