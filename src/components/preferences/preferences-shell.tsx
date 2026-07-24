@@ -11,7 +11,7 @@ import {
   PreferencesContext,
   type PreferencesContextValue,
 } from "./preferences-context";
-import { fadeUpContainer, fadeUpItem, tapSpring } from "@/lib/motion";
+import { fadeUpContainer, fadeUpItem } from "@/lib/motion";
 import { UserPreferences } from "@/lib/types/preferences";
 import { ContentItem, FilmInfo, Person } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -175,13 +175,6 @@ function NavTrigger({
     >
       <Icon className="h-4 w-4" />
       <span>{label}</span>
-      {active && (
-        <motion.span
-          layoutId="preferences-nav-active"
-          transition={tapSpring}
-          className="absolute -bottom-1 left-1/2 h-0.5 w-8 -translate-x-1/2 rounded-full bg-primary"
-        />
-      )}
     </div>
   );
 }
