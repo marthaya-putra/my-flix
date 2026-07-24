@@ -1,6 +1,8 @@
+import { Suspense } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { discoverTvsOptions } from "@/lib/queries/tvs";
+import DiscoverTvsSkeleton from "@/components/skeletons/discover-tvs-skeleton";
 import MoviesContent from "@/components/movies-content";
 import FilterPopovers from "@/components/filter-popovers";
 import TvGenreFilter from "@/components/filters/tv-genre-filter";
@@ -17,6 +19,7 @@ export const Route = createFileRoute("/tvs/")({
     year: z.coerce.number().optional(),
   }),
   component: TVsPage,
+  pendingComponent: () => <DiscoverTvsSkeleton />,
   loaderDeps: ({ search }) => ({
     page: search.page,
     genres: search.genres ?? "",
@@ -42,27 +45,29 @@ function TVsPage() {
   );
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-foreground mb-2">TV Shows</h1>
-        <p className="text-muted-foreground">
-          Discover and explore TV series from around the world
-        </p>
-      </div>
-
-      <FilterPopovers>
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-4 flex-wrap">
-            <TvGenreFilter />
-            <RatingFilter from="/tvs/" />
-            <YearFilter from="/tvs/" />
-          </div>
-
-          <ClearFilters from="/tvs/" />
+    <Suspense fallback={<DiscoverTvsSkeleton />}>
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-foreground mb-2">TV Shows</h1>
+          <p className="text-muted-foreground">
+            Discover and explore TV series from around the world
+          </p>
         </div>
-      </FilterPopovers>
 
-      <MoviesContent moviesData={tvsData} from="/tvs/" />
-    </div>
+        <FilterPopovers>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
+              <TvGenreFilter />
+              <RatingFilter from="/tvs/" />
+              <YearFilter from="/tvs/" />
+            </div>
+
+            <ClearFilters from="/tvs/" />
+          </div>
+        </FilterPopovers>
+
+        <MoviesContent moviesData={tvsData} from="/tvs/" />
+      </div>
+    </Suspense>
   );
 }
