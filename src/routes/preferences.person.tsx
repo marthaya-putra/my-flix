@@ -1,26 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Suspense } from "react";
-import { useSuspenseQuery } from "@tanstack/react-query";
-import AllPreferencesSkeleton from "@/components/skeletons/all-preferences-skeleton";
 import { AllPreferencesPage } from "@/components/preferences/all-preferences-page";
-import { guardAuthenticated } from "@/lib/auth-guard";
-import { userPreferencesOptions } from "@/lib/queries/preferences";
 
+/**
+ * Auth guard + data prefetch live on the parent layout route
+ * (preferences.tsx); this renders into the shell's <Outlet /> and reads state
+ * from the shared PreferencesContext.
+ */
 export const Route = createFileRoute("/preferences/person")({
-  component: AllPeopleComponent,
-  beforeLoad: guardAuthenticated,
-  loader: async ({ context }) => {
-    await context.queryClient.ensureQueryData(userPreferencesOptions());
-  },
-  pendingComponent: () => <AllPreferencesSkeleton />,
+  component: () => <AllPreferencesPage category="people" />,
 });
-
-function AllPeopleComponent() {
-  const { data: preferences } = useSuspenseQuery(userPreferencesOptions());
-
-  return (
-    <Suspense fallback={<AllPreferencesSkeleton />}>
-      <AllPreferencesPage initialPreferences={preferences} category="people" />
-    </Suspense>
-  );
-}
