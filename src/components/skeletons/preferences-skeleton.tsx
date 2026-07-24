@@ -1,7 +1,7 @@
 /**
  * Loading frame for the /preferences layout route. Mirrors the real shell
  * (header + segmented sub-nav) so the chrome is stable during prefetch, then
- * shows a shimmering dashboard + favorites grid where the content streams in.
+ * shows shimmering favorites grids where the content streams in.
  */
 export default function PreferencesSkeleton() {
   return (
@@ -26,39 +26,21 @@ export default function PreferencesSkeleton() {
         ))}
       </div>
 
-      {/* Dashboard: profile strength + stats */}
-      <div className="pt-8 grid grid-cols-1 lg:grid-cols-5 gap-6">
-        <div className="lg:col-span-2 glass rounded-xl h-36 p-6">
-          <div className="h-4 w-28 rounded shimmer" />
-          <div className="h-10 w-20 rounded shimmer mt-3" />
-          <div className="h-1.5 w-full rounded-full shimmer mt-4" />
-        </div>
-        <div className="lg:col-span-3 glass rounded-xl p-6">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="h-24 rounded-lg shimmer" />
-            ))}
+      {/* Favorites sections */}
+      <div className="pt-8 space-y-8">
+        {["w-24", "w-28"].map((titleW, sectionIdx) => (
+          <div key={sectionIdx}>
+            <div className="flex items-center justify-between mb-4">
+              <div className={`h-5 rounded shimmer ${titleW}`} />
+              <div className="h-8 w-16 rounded-lg shimmer" />
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="h-28 rounded-xl shimmer" />
+              ))}
+            </div>
           </div>
-        </div>
-      </div>
-
-      {/* Favorites card */}
-      <div className="glass rounded-xl mt-8 p-6">
-        <div className="h-5 w-32 rounded shimmer mb-6" />
-        <div className="flex gap-1 mb-8">
-          {[40, 56, 48, 56].map((w, i) => (
-            <div
-              key={i}
-              className="h-9 rounded-lg shimmer"
-              style={{ width: w }}
-            />
-          ))}
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-          {Array.from({ length: 10 }).map((_, i) => (
-            <div key={i} className="h-28 rounded-xl shimmer" />
-          ))}
-        </div>
+        ))}
       </div>
     </div>
   );
