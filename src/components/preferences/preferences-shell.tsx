@@ -22,7 +22,12 @@ interface PreferencesShellProps {
 }
 
 const NAV_ITEMS = [
-  { to: "/preferences" as const, label: "Home", icon: LayoutGrid },
+  {
+    to: "/preferences" as const,
+    label: "Home",
+    icon: LayoutGrid,
+    exact: true,
+  },
   { to: "/preferences/movie" as const, label: "Movies", icon: Film },
   { to: "/preferences/tv" as const, label: "TV Shows", icon: Tv },
   { to: "/preferences/person" as const, label: "People", icon: Users },
@@ -124,7 +129,12 @@ export function PreferencesShell({
         >
           <div className="glass rounded-xl p-1 flex items-center gap-1 overflow-x-auto hide-scrollbar">
             {NAV_ITEMS.map((item) => (
-              <Link key={item.to} to={item.to} className="flex-1 min-w-fit">
+              <Link
+                key={item.to}
+                to={item.to}
+                className="flex-1 min-w-fit"
+                activeOptions={{ exact: item.exact }}
+              >
                 {({ isActive }) => (
                   <NavTrigger
                     active={isActive}
