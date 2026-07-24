@@ -3,20 +3,13 @@ import { Button } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  Trash2,
-  Calendar,
-  Film,
-  Tv,
-  Users,
-  Camera,
-  UserIcon,
-} from "lucide-react";
+import { motion } from "motion/react";
+import { Trash2, Calendar, Film, Users, Camera, UserIcon } from "lucide-react";
 import { ContentItem } from "@/lib/types";
 import { HIT_ZONE } from "@/lib/utils";
+import { tapSpring } from "@/lib/motion";
 
 interface PreferenceItemProps {
   item: ContentItem;
@@ -36,21 +29,6 @@ const getCategoryIcon = (category: "actor" | "director" | "other") => {
   }
 };
 
-const getCategoryBadgeVariant = (
-  category: "actor" | "director" | "other"
-): "default" | "secondary" | "outline" => {
-  switch (category) {
-    case "actor":
-      return "default";
-    case "director":
-      return "secondary";
-    case "other":
-      return "outline";
-    default:
-      return "secondary";
-  }
-};
-
 const getItemInfo = (item: ContentItem) => {
   if (item.contentType === "person") {
     return {
@@ -59,75 +37,71 @@ const getItemInfo = (item: ContentItem) => {
       imageUrl: item.profileImageUrl,
       rating: null,
       date: null,
-      genres: [],
       category: item.category,
-      extraInfo: item.knownFor?.slice(0, 5).map((film) => film.title),
       badgeText: item.category,
-      badgeVariant: getCategoryBadgeVariant(item.category),
       categoryIcon: getCategoryIcon(item.category),
     };
-  } else {
-    return {
-      title: item.title,
-      subtitle: item.contentType === "movie" ? "Movie" : "TV Show",
-      imageUrl: item.posterPath,
-      rating: item.voteAverage,
-      date: item.releaseDate ? new Date(item.releaseDate).getFullYear() : null,
-      genres: item.genres,
-      category: item.contentType,
-      extraInfo: null,
-      badgeText: item.contentType === "movie" ? "Film" : "TV",
-      badgeVariant: "secondary" as const,
-    };
   }
+  return {
+    title: item.title,
+    subtitle: item.contentType === "movie" ? "Movie" : "TV Show",
+    imageUrl: item.posterPath,
+    rating: item.voteAverage,
+    date: item.releaseDate ? new Date(item.releaseDate).getFullYear() : null,
+    category: item.contentType,
+    badgeText: item.contentType === "movie" ? "Film" : "TV",
+    categoryIcon: null,
+  };
 };
 
 export function PreferenceItem({ item, onRemove }: PreferenceItemProps) {
   const info = getItemInfo(item);
 
   return (
-    <TooltipProvider delayDuration={100}>
-      <Card className="group hover:shadow-md transition-shadow cursor-pointer relative w-full">
-      {/* Close Button */}
+    <Card className="hover-lift group relative w-full">
+      {/* Remove — destructive tint, works on the OLED theme */}
       <Button
         size="sm"
         variant="ghost"
         onClick={onRemove}
-        className={`${HIT_ZONE} absolute top-2 right-2 h-6 w-6 p-0 text-muted-foreground hover:text-red-500 hover:bg-red-50 rounded-md transition-[color,background-color] duration-200 z-10`}
+        className={`${HIT_ZONE} absolute top-2 right-2 h-7 w-7 p-0 z-10 text-muted-foreground/0 group-hover:text-muted-foreground hover:text-destructive hover:bg-destructive/15 rounded-md transition-[color,background-color,opacity] duration-200`}
+        aria-label={`Remove ${info.title}`}
       >
-        <Trash2 className="h-3 w-3" />
+        <Trash2 className="h-3.5 w-3.5" />
       </Button>
 
-      <CardContent className="p-4">
-        <div className="flex gap-4">
-          {/* Image */}
+      <CardContent className="p-3">
+        <div className="flex gap-3">
+          {/* Poster / profile */}
           <div className="shrink-0">
             {info.imageUrl ? (
               <img
                 src={info.imageUrl}
                 alt={info.title}
-                className="w-16 h-24 object-cover rounded-lg"
+                className="w-14 h-20 object-cover rounded-md"
                 loading="lazy"
               />
             ) : (
-              <div className="w-16 h-24 bg-muted rounded-lg flex items-center justify-center">
+              <div className="w-14 h-20 bg-muted rounded-md flex items-center justify-center">
                 {item.contentType === "person" ? (
                   <div className="flex flex-col items-center gap-1 text-muted-foreground">
                     {info.categoryIcon}
-                    <span className="text-xs capitalize">{info.badgeText}</span>
+                    <span className="text-[10px] capitalize">
+                      {info.badgeText}
+                    </span>
                   </div>
                 ) : (
-                  <Film className="h-8 w-8 text-muted-foreground" />
+                  <Film className="h-6 w-6 text-muted-foreground" />
                 )}
               </div>
             )}
           </div>
 
-          {/* Content */}
-          <div className="flex-1 min-w-0 pr-8">
+          {/* Meta */}
+          <div className="flex-1 min-w-0 pr-6 flex flex-col justify-center">
             <Tooltip>
               <TooltipTrigger asChild>
-                <h3 className="font-medium text-sm truncate transition-colors mb-1">
+                <h3 className="font-medium text-sm leading-tight line-clamp-2">
                   {info.title}
                 </h3>
               </TooltipTrigger>
@@ -136,20 +110,21 @@ export function PreferenceItem({ item, onRemove }: PreferenceItemProps) {
               </TooltipContent>
             </Tooltip>
 
-            <p className="text-xs text-muted-foreground mb-2">
-              {info.subtitle}
-            </p>
+            {info.subtitle && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {info.subtitle}
+              </p>
+            )}
 
-            {/* Metadata */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 mt-1.5">
               {item.contentType === "person" && (
-                <div className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-muted-foreground bg-muted">
+                <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] bg-muted text-muted-foreground">
                   {info.categoryIcon}
                   <span className="capitalize">{info.badgeText}</span>
                 </div>
               )}
               {info.date && (
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 text-muted-foreground">
                   <Calendar className="h-3 w-3" />
                   <span className="text-xs">{info.date}</span>
                 </div>
@@ -158,7 +133,13 @@ export function PreferenceItem({ item, onRemove }: PreferenceItemProps) {
           </div>
         </div>
       </CardContent>
+
+      {/* Press feedback — origin-aware, subtle squish on tap */}
+      <motion.div
+        aria-hidden
+        transition={tapSpring}
+        className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-transparent group-active:ring-primary/20"
+      />
     </Card>
-    </TooltipProvider>
   );
 }
