@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { Suspense } from "react";
 import { searchPeopleOptions } from "@/lib/queries/search";
 import PersonContent from "@/components/person-content";
+import PersonSearchSkeleton from "@/components/skeletons/person-search-skeleton";
 import { z } from "zod";
 
 export const Route = createFileRoute("/person/search")({
@@ -10,6 +12,7 @@ export const Route = createFileRoute("/person/search")({
     page: z.coerce.number().default(1),
   }),
   component: PersonSearchPage,
+  pendingComponent: () => <PersonSearchSkeleton />,
   loaderDeps: ({ search }) => ({
     query: search.query,
     page: search.page,
@@ -28,14 +31,16 @@ function PersonSearchPage() {
   );
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-foreground mb-2">
-          Person results for "{Route.useSearch().query}"
-        </h1>
-      </div>
+    <Suspense fallback={<PersonSearchSkeleton />}>
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-foreground mb-2">
+            Person results for "{Route.useSearch().query}"
+          </h1>
+        </div>
 
-      <PersonContent personData={personData} />
-    </div>
+        <PersonContent personData={personData} />
+      </div>
+    </Suspense>
   );
 }
