@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { Suspense } from "react";
 import { searchTvsOptions } from "@/lib/queries/search";
 import MoviesContent from "@/components/movies-content";
+import TvsSearchSkeleton from "@/components/skeletons/tvs-search-skeleton";
 import { z } from "zod";
 
 export const Route = createFileRoute("/tvs/search")({
@@ -10,6 +12,7 @@ export const Route = createFileRoute("/tvs/search")({
     page: z.coerce.number().default(1),
   }),
   component: TvsSearchPage,
+  pendingComponent: () => <TvsSearchSkeleton />,
   loaderDeps: ({ search }) => ({
     query: search.query,
     page: search.page,
@@ -28,14 +31,16 @@ function TvsSearchPage() {
   );
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-foreground mb-2">
-          TV results for "{Route.useSearch().query}"
-        </h1>
-      </div>
+    <Suspense fallback={<TvsSearchSkeleton />}>
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-foreground mb-2">
+            TV results for "{Route.useSearch().query}"
+          </h1>
+        </div>
 
-      <MoviesContent moviesData={tvsData} from="/tvs/search" />
-    </div>
+        <MoviesContent moviesData={tvsData} from="/tvs/search" />
+      </div>
+    </Suspense>
   );
 }
