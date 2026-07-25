@@ -2,7 +2,12 @@ import { DiscoverResult } from "../types";
 import { convertToDiscoverResult } from "../utils";
 
 const TMDB_URL = "https://api.themoviedb.org/3";
-export const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
+// Same-origin proxy (src/routes/api/img/$.ts). ParticleScroll's
+// HTML-in-Canvas capture drops cross-origin images unless CORS-clean, and
+// Chrome can't reuse cached TMDB responses for crossOrigin="anonymous" because
+// TMDB omits Vary: Origin — so proxy through our own origin instead.
+// The path after /api/img mirrors the TMDB path (e.g. /t/p/w500/<file>.jpg).
+export const TMDB_IMAGE_BASE = "/api/img/t/p/w500";
 
 export async function fetchFromTMDB(
   path: URL | RequestInfo,
