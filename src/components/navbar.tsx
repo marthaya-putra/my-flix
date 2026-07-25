@@ -60,7 +60,7 @@ export default function Navbar() {
         "w-full fixed top-0 z-50 transition-[background-color,backdrop-filter,border-color] duration-300 ease-out px-4 md:px-12 py-4",
         scrolled
           ? "glass glass-edge"
-          : "bg-transparent"
+          : "bg-gradient-to-b from-background/85 via-background/55 to-background/0"
       )}
     >
       <div className="flex items-center justify-between mx-auto">
