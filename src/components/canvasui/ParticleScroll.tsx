@@ -231,32 +231,14 @@ void main () {
 }`;
 
 export function supportsHtmlInCanvas(): boolean {
-  if (typeof document === "undefined") {
-    console.warn("[ParticleScroll] HTML-in-Canvas: SSR (no document) → fallback");
-    return false;
-  }
+  if (typeof document === "undefined") return false;
   const probe = document.createElement("canvas") as PaintableCanvas;
   const ctx = probe.getContext("2d") as ElementImageContext | null;
-  const ok =
-    !!ctx &&
+  return Boolean(
+    ctx &&
     typeof ctx.drawElementImage === "function" &&
-    typeof probe.requestPaint === "function";
-  if (!ok) {
-    const ua = navigator.userAgent;
-    const hasFlag = typeof ctx?.drawElementImage === "function";
-    console.warn(
-      `[ParticleScroll] HTML-in-Canvas unavailable → fallback (plain scroll).`,
-      `\n  ctx: ${ctx ? "yes" : "no"}`,
-      `\n  drawElementImage: ${typeof ctx?.drawElementImage}`,
-      `\n  requestPaint: ${typeof probe.requestPaint}`,
-      `\n  flag-enabled: ${hasFlag}`,
-      `\n  UA: ${ua}`,
-      `\n  Enable: chrome://flags#canvas-draw-element (Chrome 147+)`,
-    );
-  } else {
-    console.info("[ParticleScroll] HTML-in-Canvas available → particle effect ON");
-  }
-  return ok;
+    typeof probe.requestPaint === "function",
+  );
 }
 
 export function createParticleScroll(
@@ -298,42 +280,8 @@ export function createParticleScroll(
         contentDirty = true;
         paintCount++;
         lastPaintTime = performance.now();
-        if (paintCount <= 3) {
-          // Read back a few pixels to confirm capture actually has content.
-          // Throws SecurityError if tainted by cross-origin images.
-          let probe = "no-readback";
-          try {
-            const w = source.width;
-            const h = source.height;
-            const samples: string[] = [];
-            for (const [sx, sy] of [
-              [Math.floor(w * 0.1), Math.floor(h * 0.1)],
-              [Math.floor(w * 0.5), Math.floor(h * 0.2)],
-              [Math.floor(w * 0.5), Math.floor(h * 0.5)],
-              [Math.floor(w * 0.5), Math.floor(h * 0.8)],
-            ]) {
-              const d = sourceCtx!.getImageData(sx, sy, 1, 1).data;
-              samples.push(`(${sx},${sy})=${d[0]},${d[1]},${d[2]},${d[3]}`);
-            }
-            probe = samples.join(" ");
-          } catch (e) {
-            probe = `getImageData threw: ${e}`;
-          }
-          console.log(
-            `[ParticleScroll] onpaint fired, drawElementImage OK`,
-            `\n  paintCount: ${paintCount}`,
-            `\n  source.width x source.height: ${source.width} x ${source.height}`,
-            `\n  content.scrollWidth x scrollHeight: ${content.scrollWidth} x ${content.scrollHeight}`,
-            `\n  pixels: ${probe}`,
-            `\n  images: ${images.length} total, ${
-              Array.from(images).filter((i) => i.complete && i.naturalWidth > 0)
-                .length
-            } loaded`,
-          );
-        }
         wake();
-      } catch (err) {
-        console.warn(`[ParticleScroll] drawElementImage threw:`, err);
+      } catch {
         markCaptureFailed();
       }
     };
@@ -525,15 +473,9 @@ export function createParticleScroll(
         source,
       );
       gl!.generateMipmap(gl!.TEXTURE_2D);
-    } catch (err) {
+    } catch {
       // Most likely: source canvas is tainted by cross-origin images
       // without CORS → texImage2D throws SecurityError. Drop to fallback.
-      console.warn(
-        `[ParticleScroll] texImage2D threw → capture unusable.`,
-        `\n  error: ${err}`,
-        `\n  paintCount: ${paintCount}`,
-        `\n  → switching to fallback.`,
-      );
       markCaptureFailed();
     }
   }
@@ -776,6 +718,65 @@ export function createParticleScroll(
   });
   intersection.observe(output);
 
+  // ─── Custom fade-in scrollbar thumb ───
+  // Native scrollbar is hidden via .hide-scrollbar on the inner div. This
+  // floating thumb gives the user a subtle scroll indicator: appears on
+  // scroll, fades out after 1s idle. Matches canvasui.dev's aesthetic.
+  // Only runs in native mode (htmlInCanvas) — fallback uses the normal
+  // page scrollbar.
+  let thumb: HTMLDivElement | null = null;
+  let thumbHideTimer: ReturnType<typeof setTimeout> | null = null;
+  const thumbLayout = () => {
+    if (!thumb) return false;
+    const max = content.scrollHeight - content.clientHeight;
+    if (max <= 1) {
+      thumb.style.opacity = "0";
+      return false;
+    }
+    const trackTop = 8;
+    const trackHeight = window.innerHeight - 16;
+    const height = Math.max(
+      36,
+      (content.clientHeight / content.scrollHeight) * trackHeight,
+    );
+    const top = trackTop + (content.scrollTop / max) * (trackHeight - height);
+    thumb.style.height = `${height}px`;
+    thumb.style.transform = `translateY(${top}px)`;
+    return true;
+  };
+  const thumbShow = () => {
+    if (!thumbLayout()) return;
+    if (!thumb) return;
+    thumb.style.opacity = "1";
+    if (thumbHideTimer) clearTimeout(thumbHideTimer);
+    thumbHideTimer = setTimeout(() => {
+      if (thumb) thumb.style.opacity = "0";
+    }, 1000);
+  };
+  if (htmlInCanvas) {
+    thumb = document.createElement("div");
+    thumb.setAttribute("aria-hidden", "true");
+    Object.assign(thumb.style, {
+      position: "fixed",
+      right: "8px",
+      top: "0",
+      width: "4px",
+      background: "hsl(var(--foreground) / 0.3)",
+      borderRadius: "2px",
+      opacity: "0",
+      transition: "opacity 0.3s ease",
+      pointerEvents: "none",
+      zIndex: "50",
+    } as Partial<CSSStyleDeclaration>);
+    document.body.appendChild(thumb);
+    content.addEventListener("scroll", thumbShow, { passive: true });
+    window.addEventListener("resize", thumbShow);
+    const thumbObserver = new ResizeObserver(thumbLayout);
+    thumbObserver.observe(content);
+    // Initial layout pass.
+    thumbLayout();
+  }
+
   return {
     setOptions(next) {
       Object.assign(config, next);
@@ -796,6 +797,13 @@ export function createParticleScroll(
         .querySelectorAll("img")
         .forEach((img) => img.removeEventListener("load", onImageLoad));
       mutationObserver.disconnect();
+      if (thumb) {
+        content.removeEventListener("scroll", thumbShow);
+        window.removeEventListener("resize", thumbShow);
+        if (thumbHideTimer) clearTimeout(thumbHideTimer);
+        thumb.remove();
+        thumb = null;
+      }
       gl!.deleteTexture(contentTexture);
       gl!.deleteTexture(rowTex);
       gl!.deleteProgram(base.program);
@@ -840,15 +848,18 @@ export function ParticleScroll({
   );
   const native = supported && !failed;
 
+  // Lock body scroll in native mode: ParticleScroll owns an inner overflow:auto
+  // scroller, and the root layout also has a <footer> below <main>. Without
+  // this, both the inner div and body would scroll (two scrollbars). Lock
+  // body so only the inner div scrolls.
   useEffect(() => {
-    console.log(
-      `[ParticleScroll] render state:`,
-      `\n  supported: ${supported}`,
-      `\n  failed: ${failed}`,
-      `\n  native (effect active): ${native}`,
-      `\n  origin: ${typeof location !== "undefined" ? location.origin : "ssr"}`,
-    );
-  });
+    if (!native) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [native]);
 
   useEffect(() => {
     const source = sourceRef.current;
@@ -878,6 +889,12 @@ export function ParticleScroll({
     instanceRef.current?.setOptions(options);
   });
 
+  // Unsupported browser (or SSR snapshot): render children bare — no wrapper,
+  // no canvases, no bounded-height scroll container. The page behaves exactly
+  // as if <ParticleScroll> weren't mounted. SSR also lands here (server
+  // snapshot is false), so hydration matches without a flash.
+  if (!native) return <>{children}</>;
+
   return (
     <div className={className} style={{ position: "relative", ...style }}>
       <canvas
@@ -885,29 +902,16 @@ export function ParticleScroll({
         // @ts-expect-error experimental html-in-canvas attribute
         layoutsubtree="true"
         suppressHydrationWarning
-        style={
-          native
-            ? { position: "absolute", inset: 0, width: "100%", height: "100%" }
-            : { display: "none" }
-        }
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+        }}
       >
-        {native ? (
-          <div
-            ref={contentRef}
-            style={{
-              position: "relative",
-              width: "100%",
-              height: "100%",
-              overflow: "auto",
-            }}
-          >
-            {children}
-          </div>
-        ) : null}
-      </canvas>
-      {!native ? (
         <div
           ref={contentRef}
+          className="hide-scrollbar"
           style={{
             position: "relative",
             width: "100%",
@@ -917,7 +921,7 @@ export function ParticleScroll({
         >
           {children}
         </div>
-      ) : null}
+      </canvas>
       <canvas
         ref={outputRef}
         aria-hidden
