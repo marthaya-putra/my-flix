@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query";
 import type { DiscoverResult } from "@/lib/types";
 import ContentRow from "@/components/content-row";
+import { ParticleScroll } from "@/components/canvasui/ParticleScroll";
 import Hero from "@/components/hero";
 import ContentRowSkeleton from "@/components/content-row-skeleton";
 import { popularMoviesOptions, trendingMoviesOptions } from "@/lib/queries/movies";
@@ -52,31 +53,33 @@ function Home() {
     popularMovies.results.length > 0 ? popularMovies.results[0] : undefined;
 
   return (
-    <div className="relative space-y-8 pb-8">
-      {mostPopularMovie && <Hero {...mostPopularMovie} />}
-      <Suspense fallback={<ContentRowSkeleton />}>
+    <ParticleScroll className="h-[calc(100dvh-72px)] bg-background">
+      <div className="space-y-8 pb-8">
+        {mostPopularMovie && <Hero {...mostPopularMovie} />}
+        <Suspense fallback={<ContentRowSkeleton />}>
+          <ContentRowSection
+            title="Trending Movies"
+            options={trendingMoviesOptions()}
+          />
+        </Suspense>
+        <Suspense fallback={<ContentRowSkeleton />}>
+          <ContentRowSection
+            title="Trending TV Shows"
+            options={trendingTvsOptions()}
+          />
+        </Suspense>
         <ContentRowSection
-          title="Trending Movies"
-          options={trendingMoviesOptions()}
+          title="New Episode Today"
+          exploreAllUrl="/tvs/airing-today"
+          options={airingTodayTvsOptions({ page: 1, timezone })}
         />
-      </Suspense>
-      <Suspense fallback={<ContentRowSkeleton />}>
         <ContentRowSection
-          title="Trending TV Shows"
-          options={trendingTvsOptions()}
+          title="New Episode This Week"
+          exploreAllUrl="/tvs/airing-this-week"
+          options={onTheAirTvsOptions({ page: 1, timezone })}
         />
-      </Suspense>
-      <ContentRowSection
-        title="New Episode Today"
-        exploreAllUrl="/tvs/airing-today"
-        options={airingTodayTvsOptions({ page: 1, timezone })}
-      />
-      <ContentRowSection
-        title="New Episode This Week"
-        exploreAllUrl="/tvs/airing-this-week"
-        options={onTheAirTvsOptions({ page: 1, timezone })}
-      />
-    </div>
+      </div>
+    </ParticleScroll>
   );
 }
 

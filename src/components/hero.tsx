@@ -9,11 +9,15 @@ import { motion } from "motion/react";
 export default function Hero(filmInfo: FilmInfo) {
   return (
     <div className="relative w-full h-[50vh] min-h-[400px] overflow-hidden">
-      {/* Backdrop — fade-in only, content just appears with it */}
-      <div
-        className="absolute inset-0 w-full h-full bg-cover bg-center animate-in fade-in duration-1000"
-        style={{ backgroundImage: `url(${filmInfo.backdropPath})` }}
-      >
+      {/* Backdrop — fade-in only, content just appears with it.
+          Now served same-origin via /api/img proxy, so it's CORS-clean
+          for ParticleScroll's HTML-in-Canvas capture. */}
+      <img
+        src={filmInfo.backdropPath}
+        alt=""
+        className="absolute inset-0 w-full h-full object-cover animate-in fade-in duration-1000"
+      />
+      <div className="absolute inset-0 pointer-events-none">
         <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/40 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/10 to-transparent" />
       </div>

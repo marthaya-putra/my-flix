@@ -79,6 +79,17 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
       <html>
         <head>
           <HeadContent />
+          {/*
+            HTML-in-Canvas origin-trial token (ParticleScroll effect).
+            Scope: https://my-flix-brown.vercel.app — unlocks the
+            experimental `drawElementImage`/`layoutsubtree` API on the
+            deployed site only. Localhost needs its own token or the
+            chrome://flags#canvas-draw-element flag. Expires 2026-10-20.
+          */}
+          <meta
+            httpEquiv="origin-trial"
+            content="ArE+wy0NVZJ+oy6RUFcJljsjNaQ3YTyt5gHiSk9m20JLNqX6rdJ//ujOLk83AB8TrpYzk5DeNt/cTsYaG4bLDQcAAABxeyJvcmlnaW4iOiJodHRwczovL215LWZsaXgtYnJvd24udmVyY2VsLmFwcDo0NDMiLCJmZWF0dXJlIjoiSFRNTEluQ2FudmFzIiwiZXhwaXJ5IjoxNzkyNDU0NDAwLCJpc1N1YmRvbWFpbiI6dHJ1ZX0="
+          />
         </head>
         <body className="grid grid-rows-[auto_1fr_auto]">
           <MotionConfig reducedMotion="user">
