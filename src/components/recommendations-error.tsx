@@ -1,64 +1,37 @@
+import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertCircle } from "lucide-react";
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import { Glitch } from "@/components/canvasui/Glitch";
 
-// Issue #65: a single broadcast-style glitch burst plays once when the error
-// renders, then never recurs. Glitch's timeline fires an initial burst ~0.6s
-// after mount and reschedules the next `interval` seconds out; this sentinel
-// pushes that reschedule so far into the future the burst is effectively
-// one-shot. Named so the intent reads at the call site.
-const PLAY_ONCE_INTERVAL = 99999;
-
 export function RecommendationsError({ error }: ErrorComponentProps) {
-
   console.error("Recommendations route error:", error);
 
-  const isNetworkError = error instanceof Error &&
+  const isNetworkError =
+    error instanceof Error &&
     (error.message.includes("fetch") || error.message.includes("network"));
 
-  const isServerError = error instanceof Error &&
-    error.message.includes("500");
+  const isServerError = error instanceof Error && error.message.includes("500");
 
-  const isTimeoutError = error instanceof Error &&
-    error.message.includes("timeout");
+  const isTimeoutError = error instanceof Error && error.message.includes("timeout");
 
   return (
     <div className="container mx-auto p-4 max-w-4xl mt-8">
       {/*
-        Canvas UI Glitch — Issue #65: a broadcast-style tear burst plays once
-        when the error renders (single burst, never loops). Per the acceptance
-        criteria the effect is over the BACKDROP, not the actionable content:
-        the Card (error text + Try Again / Go Back) floats crisp on top, so it
-        stays fully legible and clickable at all times; only the decorative
-        panel behind it tears.
-          - Backdrop: absolute, fills the wrapper, sits BEHIND the card
-            (z-0). The Glitch captures and distorts it.
-          - Card: relative z-10, in normal flow — fully interactive (its
-            buttons live in the DOM subtree, never under the output canvas).
-          - prefers-reduced-motion: Glitch zeroes its envelope → clean
-            backdrop. No HTML-in-Canvas API: Glitch renders the backdrop in a
-            plain div → identical flat card, zero regression.
+        Canvas UI Glitch — Issue #65: broadcast-style tear bursts play
+        continuously while the error is shown (defaults: a burst every ~3s,
+        ~0.4s long). Glitch = breakage is the one surface where aggressive,
+        recurring motion fits thematically. Deviates from the issue's "play
+        once" wording — deliberately made recurring for dramatic effect.
+          - Output canvas is pointer-events:none → the live Card subtree (Try
+            Again / Go Back) stays interactive even during each burst.
+          - prefers-reduced-motion: Glitch zeroes its envelope → clean card.
+          - No HTML-in-Canvas API: Glitch renders children in a plain div →
+            identical flat card, zero regression.
       */}
-      <div className="relative">
-        <Glitch
-          interval={PLAY_ONCE_INTERVAL}
-          duration={0.55}
-          intensity={1.1}
-          // Overscan the card on all sides so the tear reads past the card
-          // edges, not just within them. z-0 keeps it behind the crisp card.
-          className="absolute -inset-4 z-0"
-        >
-          {/* Decorative panel — fills the overscan box. bg-card keeps it
-              in-theme; the destructive-tinted border anchors the "error"
-              read. aria-hidden: purely decorative, no content to expose. */}
-          <div
-            aria-hidden="true"
-            className="w-full h-full min-h-[440px] bg-card/40 border border-destructive/20 rounded-xl"
-          />
-        </Glitch>
-        <Card className="relative z-10">
+      <GlitchCard>
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-red-600">
               <AlertCircle className="h-5 w-5" />
@@ -68,40 +41,88 @@ export function RecommendationsError({ error }: ErrorComponentProps) {
           <CardContent>
             <div className="space-y-4">
               <p className="text-gray-600">
-              {isNetworkError && "We're having trouble connecting to our recommendation service. Please check your internet connection and try again."}
-              {isServerError && "Our recommendation service is currently experiencing issues. We're working on fixing this problem."}
-              {isTimeoutError && "The recommendation service is taking longer than expected. Please try again in a moment."}
-              {!isNetworkError && !isServerError && !isTimeoutError &&
-                "We encountered an unexpected error while generating your recommendations."}
-            </p>
+                {isNetworkError &&
+                  "We're having trouble connecting to our recommendation service. Please check your internet connection and try again."}
+                {isServerError &&
+                  "Our recommendation service is currently experiencing issues. We're working on fixing this problem."}
+                {isTimeoutError &&
+                  "The recommendation service is taking longer than expected. Please try again in a moment."}
+                {!isNetworkError && !isServerError && !isTimeoutError &&
+                  "We encountered an unexpected error while generating your recommendations."}
+              </p>
 
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button
-                onClick={() => window.location.reload()}
-                variant="default"
-              >
-                Try Again
-              </Button>
-              <Button
-                onClick={() => window.history.back()}
-                variant="outline"
-              >
-                Go Back
-              </Button>
-            </div>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button onClick={() => window.location.reload()} variant="default">
+                  Try Again
+                </Button>
+                <Button onClick={() => window.history.back()} variant="outline">
+                  Go Back
+                </Button>
+              </div>
 
-            {process.env.NODE_ENV === "development" && error instanceof Error && (
-              <details className="mt-6 p-4 bg-gray-100 rounded text-sm">
-                <summary className="cursor-pointer font-medium">Error details (dev only)</summary>
-                <pre className="mt-2 whitespace-pre-wrap text-xs">
-                  {error.stack || error.message}
-                </pre>
-              </details>
-            )}
+              {process.env.NODE_ENV === "development" && error instanceof Error && (
+                <details className="mt-6 p-4 bg-muted rounded text-sm">
+                  <summary className="cursor-pointer font-medium">
+                    Error details (dev only)
+                  </summary>
+                  <pre className="mt-2 whitespace-pre-wrap text-xs">
+                    {error.stack || error.message}
+                  </pre>
+                </details>
+              )}
             </div>
           </CardContent>
         </Card>
-      </div>
+      </GlitchCard>
     </div>
+  );
+}
+
+/**
+ * Wraps the error card in <Glitch> and feeds it the card's measured height.
+ *
+ * Why this wrapper exists: the upstream Glitch renders its source/output
+ * canvases as `position: absolute; inset: 0` and hosts the children inside
+ * the source canvas (also out of flow). With no in-flow content the wrapper
+ * collapses to 0px, so the canvases end up 0×0 — capture and render produce
+ * nothing and the card vanishes. ParticleScroll (the sister component) avoids
+ * this by always being given an explicit height at its call site; the error
+ * card's height isn't known ahead of time, so we measure it (one paint) and
+ * pass the pixel value to Glitch via `style.height`. Until the measurement
+ * lands we render the plain card — same content, no regression, no duplicate.
+ */
+function GlitchCard({ children }: { children: React.ReactNode }) {
+  const measureRef = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    const el = measureRef.current;
+    if (!el) return;
+    const measure = () => {
+      const h = el.offsetHeight;
+      if (h && h > 0) setHeight(h);
+    };
+    measure();
+    // Re-measure if the card resizes (e.g. dev-only error-details disclosure,
+    // responsive reflow) so Glitch stays in sync.
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // No height yet: render the plain card and remember it via measureRef.
+  // Once measured, swap to <Glitch> sized to the card.
+  if (height == null) {
+    return (
+      <div ref={measureRef} style={{ width: "100%" }}>
+        {children}
+      </div>
+    );
+  }
+
+  return (
+    <Glitch style={{ height, width: "100%" }}>
+      {children}
+    </Glitch>
   );
 }

@@ -531,5 +531,4 @@ export function Glitch({ children, className, style, ...options }: GlitchProps) 
   );
 }
 
-
 export default Glitch;
