@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
+import { AuthBackdrop } from "@/components/auth-backdrop";
 
 export const Route = createFileRoute("/sign-up")({
   component: SignUpComponent,
@@ -46,7 +47,7 @@ function SignUpComponent() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4">
+      <AuthBackdrop>
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Check your email</CardTitle>
@@ -60,12 +61,12 @@ function SignUpComponent() {
             </Button>
           </CardContent>
         </Card>
-      </div>
+      </AuthBackdrop>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
+    <AuthBackdrop>
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Create an account</CardTitle>
@@ -136,6 +137,6 @@ function SignUpComponent() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </AuthBackdrop>
   );
 }

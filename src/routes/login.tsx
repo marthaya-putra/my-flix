@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
+import { AuthBackdrop } from "@/components/auth-backdrop";
 
 export const Route = createFileRoute("/login")({
   component: LoginComponent,
@@ -59,7 +60,7 @@ function LoginComponent() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
+    <AuthBackdrop>
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Welcome back</CardTitle>
@@ -117,6 +118,6 @@ function LoginComponent() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </AuthBackdrop>
   );
 }
