@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
-import { Play, X } from "lucide-react";
+import { Play, X, ExternalLink } from "lucide-react";
 import { PlayLink } from "./play-link";
+import { MoreInfoLink } from "./more-info-link";
 import { FilmInfo } from "@/lib/types";
 import { motion, AnimatePresence } from "motion/react";
 import { ctaDramaSpring, overlayTransition } from "@/lib/motion";
@@ -103,7 +104,15 @@ export function RecommendationCard({
       >
         <div className="space-y-1.5 shrink-0">
           <h4 className="font-semibold text-base md:text-lg text-white leading-snug">
-            {recommendation.title}
+            <MoreInfoLink
+              title={recommendation.title}
+              category={recommendation.category}
+              releasedYear={recommendation.releasedYear}
+              className="text-white hover:text-white border-b border-transparent hover:border-white"
+            >
+              {recommendation.title}
+              <ExternalLink className="inline-block h-3.5 w-3.5 ml-1 align-baseline text-white/50" />
+            </MoreInfoLink>
           </h4>
           <div className="flex items-center gap-2 text-xs text-white/70">
             <span className="px-1.5 py-0.5 bg-yellow-600/90 text-white rounded">
@@ -170,7 +179,15 @@ export function RecommendationCard({
 
             <div className="space-y-1.5 shrink-0">
               <h4 className="font-semibold text-base md:text-lg text-white leading-snug">
-                {recommendation.title}
+                <MoreInfoLink
+                  title={recommendation.title}
+                  category={recommendation.category}
+                  releasedYear={recommendation.releasedYear}
+                  className="text-white hover:text-white border-b border-transparent hover:border-white"
+                >
+                  {recommendation.title}
+                  <ExternalLink className="inline-block h-3.5 w-3.5 ml-1 align-baseline text-white/50" />
+                </MoreInfoLink>
               </h4>
               <div className="flex items-center gap-2 text-xs text-white/70">
                 <span className="px-1.5 py-0.5 bg-yellow-600/90 text-white rounded">
