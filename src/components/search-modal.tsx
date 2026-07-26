@@ -14,6 +14,7 @@ import { Link } from "@tanstack/react-router";
 import Card from "./card";
 import { PlayLink } from "./play-link";
 import { searchContent } from "@/lib/data/search";
+import { FrostEmptyState } from "@/components/frost-empty-state";
 
 interface SearchModalProps {
   open: boolean;
@@ -214,11 +215,15 @@ export default function SearchModal({ open, onOpenChange }: SearchModalProps) {
               {movies.length === 0 &&
                 tvShows.length === 0 &&
                 people.length === 0 && (
-                  <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                    <Search className="w-16 h-16 mb-4 opacity-50" />
-                    <p className="text-lg">No results found</p>
-                    <p className="text-sm mt-2">Try different keywords</p>
-                  </div>
+                  <FrostEmptyState>
+                    {/* Canvas UI Frost — Issue #67: static ambient frost
+                        pane behind the message. See frost-empty-state. */}
+                    <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                      <Search className="w-16 h-16 mb-4 opacity-50" />
+                      <p className="text-lg">No results found</p>
+                      <p className="text-sm mt-2">Try different keywords</p>
+                    </div>
+                  </FrostEmptyState>
                 )}
             </div>
           )}
