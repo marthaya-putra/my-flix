@@ -8,6 +8,7 @@ import {
   type Recommendation,
 } from "./recommendations/category-section";
 import { InitialLoadComposition } from "./recommendations/initial-load-composition";
+import { Laser } from "./canvasui/Laser";
 
 // Spec 0006: manual NDJSON transport.
 const STREAM_ROUTE = "/api/recommendations/stream";
@@ -323,7 +324,17 @@ export function Recommendations() {
     );
   }
 
-  return (
+  // The Laser only wraps the resolved card grids — it engages once the AI
+  // stream has COMPLETED and cards have materialized, NOT during the
+  // streaming-in-progress state (issue #64: "after the AI recommendation
+  // stream has completed … engage only once cards have materialized").
+  // `allSettled` is true once both categories leave the pending state.
+  const showLaser = allSettled && (movieRecs.length > 0 || tvRecs.length > 0);
+
+  // The category-grid JSX is identical in both branches — only the wrapper
+  // differs (plain div vs. Laser). Hoisted into one closure so a wiring
+  // change is a single edit, not two.
+  const renderSections = () => (
     <div className="space-y-8">
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -354,5 +365,15 @@ export function Recommendations() {
         />
       ))}
     </div>
+  );
+
+  if (!showLaser) return renderSections();
+
+  // Resolved state: wrap the card grids in the Laser so each row is unveiled
+  // from behind a horizontal beam at the viewport bottom as it scrolls into
+  // view. On unsupported browsers, capture failure, or reduced-motion, Laser
+  // renders children bare — plain DOM scroll, no regression.
+  return (
+    <Laser className="h-full">{renderSections()}</Laser>
   );
 }
