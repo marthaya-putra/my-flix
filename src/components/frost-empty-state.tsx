@@ -1,36 +1,29 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Frost } from "@/components/canvasui/Frost";
 
-// Ambient Frost overlay for empty states (issue #67). The Frost effect
-// captures its children into the canvas and frosts them — that would
-// frost the empty-state text itself, harming legibility. So, mirroring
-// auth-backdrop.tsx's Clouds pattern, we mount Frost as a sibling
-// backdrop *behind* the message wrapping an empty capture surface:
-//   - the frost pane + refraction are visible in the space around / behind
-//     the text,
-//   - the message sits on top in normal flow, fully readable and clickable,
-//   - pointer events over the message go to the message, not the frost.
+// Frost overlay for empty states (issue #67). Mirrors the canvasui.dev
+// Frost experience: the message is captured into the canvas and frozen
+// over — hover to melt a hole through the ice and read the text, then
+// watch it freeze back over.
 //
-// Static instance (staticMode) — no cursor melt, no intro grow-in, no
-// shimmer — because these are passive moments where interaction-driven
-// motion would be noisy (issue constraint). The frost settles on its
-// first frame and the render loop stops, so it costs nothing when idle.
+// Mounts <Frost> wrapping the message itself (not a sibling backdrop),
+// so the captured content — the empty-state text + icon — is what gets
+// frosted, blurred and refracted. Defaults match the canonical demo.
 //
 // Skips when the user has opted out of effects:
-//   - prefers-reduced-motion: reduce → flat empty state shows (issue
-//     acceptance criterion; static mode would otherwise still render the
-//     pane since introDuration is already 0).
+//   - prefers-reduced-motion: reduce → flat empty state (the melt
+//     tracker and intro grow-in are motion; Frost itself also zeroes
+//     introProgress under reduced motion).
 //   - prefers-reduced-transparency: reduce → same flat state (same
 //     precedent as the `.glass` solid fallback in app.css).
 //
-// No HTML-in-Canvas API: Frost still renders a frost pane over a
-// transparent backdrop (no DOM capture), so the empty state gains an icy
-// texture behind the text with zero content regression. If WebGL2 is also
-// unavailable, createFrost returns null and the React wrapper's `failed`
-// state falls back to rendering the children (empty surface) untouched —
-// the empty state shows flat, exactly as today.
+// No HTML-in-Canvas API: Frost renders the message untouched in the DOM
+// and draws a frost pane over a transparent backdrop — the empty state
+// shows flat with no regression. If WebGL2 is also unavailable,
+// createFrost returns null and the React wrapper's `failed` fallback
+// renders the message untouched → same flat empty state.
 export function FrostEmptyState({ children }: Readonly<{ children: ReactNode }>) {
   // SSR-safe: default to false on server, re-check on client so the
   // effect only mounts when the user has NOT opted out of motion or
@@ -51,44 +44,42 @@ export function FrostEmptyState({ children }: Readonly<{ children: ReactNode }>)
     };
   }, []);
 
-  if (!enabled) {
-    return <div className="relative">{children}</div>;
+  const measureRef = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState<{ width: number; height: number } | null>(
+    null,
+  );
+
+  useEffect(() => {
+    if (!enabled) return;
+    const el = measureRef.current;
+    if (!el) return;
+    const measure = () => {
+      const w = el.offsetWidth;
+      const h = el.offsetHeight;
+      if (w > 0 && h > 0) setSize({ width: w, height: h });
+    };
+    measure();
+    // Re-measure if the message resizes (responsive reflow) so Frost
+    // stays in sync.
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [enabled]);
+
+  // Effect opted out, or not measured yet: render the plain message.
+  // Same content, no regression, no duplicate.
+  if (!enabled || size == null) {
+    return (
+      <div ref={measureRef} style={{ width: "100%" }}>
+        {children}
+      </div>
+    );
   }
 
   return (
-    <div className="relative">
-      {/* Frost backdrop — absolute, behind the message. */}
-      <Frost
-        // Frost hardcodes `position: relative` in its inline style and
-        // spreads `...style` after it, so positioning must come through
-        // `style` (not className) to win. Absolute + inset-0 sits the
-        // pane behind the centered message.
-        style={{ position: "absolute", inset: 0 }}
-        // Cool blue-white ice tints — the canonical Frost defaults. Kept
-        // (not recoloured) because they read as "frost" against the dark
-        // empty-state backgrounds of both surfaces. No new theme tokens.
-        tintThin={[0.82, 0.86, 1.05]}
-        tintThick={[0.92, 0.96, 1.1]}
-        // Quiet coverage: lower strength + opacity than the cursor-melt
-        // default so the texture stays ambient behind the text rather
-        // than frosting it opaque.
-        strength={0.5}
-        opacity={0.45}
-        haze={0.35}
-        highlight={0.25}
-        // Static ambient instance — the core constraint of issue #67.
-        staticMode
-        introDuration={0}
-        shimmer={0}
-      >
-        {/* Empty capture surface — gives Frost a sized content area to
-            wrap so the frost pane has dimensions. */}
-        <div className="h-full w-full" />
-      </Frost>
-      {/* Message on top — z-10 lifts it above the Frost wrapper's
-          canvases. */}
-      <div className="relative z-10">{children}</div>
-    </div>
+    <Frost style={{ width: size.width, height: size.height }}>
+      {children}
+    </Frost>
   );
 }
 

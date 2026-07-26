@@ -5,7 +5,8 @@
 // src/lib/Frost/FrostVanilla.ts). A multi-pass WebGL2 pipeline: an
 // FBM-derived frost pattern, a gaussian blur haze over the captured DOM
 // content, a pointer melt simulation, and a refraction composite that
-// bends light through the icy surface.
+// bends light through the icy surface. Hover to melt a hole through the
+// frost and watch it freeze back over.
 //
 // Like ParticleScroll/Glitch/Clouds this component depends on the
 // experimental HTML-in-Canvas origin-trial in src/routes/__root.tsx to
@@ -13,11 +14,6 @@
 // DOM and the frost draws over a transparent backdrop (no content blur /
 // refraction of underlying text) — a clean degraded frost pane rather
 // than the full ice-over-content composite.
-//
-// `staticMode` (issue #67) disables the cursor-melt tracker and intro /
-// shimmer animation: the frost settles on its first frame and the loop
-// stops. Used for ambient overlays behind passive empty states where
-// interaction-driven motion would be noisy.
 
 import {
   useEffect,
@@ -83,12 +79,6 @@ export interface FrostOptions {
   shimmer?: number;
   /** Resolution multiplier for the blur passes (0.25-1). */
   quality?: number;
-  /**
-   * Disables the cursor-melt tracker, the intro grow-in, and shimmer —
-   * the frost settles on its first frame and the render loop stops.
-   * Ambient/passive use only (issue #67 empty-state overlays).
-   */
-  staticMode?: boolean;
 }
 
 export interface FrostElements {
@@ -111,7 +101,7 @@ export interface FrostInstance {
   destroy: () => void;
 }
 
-const DEFAULTS: Required<Omit<FrostOptions, "staticMode">> = {
+const DEFAULTS: Required<FrostOptions> = {
   frost: 0.05,
   strength: 0.7,
   contrast: 3,
@@ -570,21 +560,13 @@ function buildBlurWeights(kernel: number): string {
   ].join("\n");
 }
 
-type FrostConfig = Required<Omit<FrostOptions, "staticMode">> & {
-  staticMode: boolean;
-};
+type FrostConfig = Required<FrostOptions>;
 
 export function createFrost(
   elements: FrostElements,
   options: FrostOptions = {},
 ): FrostInstance | null {
-  const { staticMode: _omit, ...rest } = options;
-  void _omit;
-  const config: FrostConfig = {
-    ...DEFAULTS,
-    ...rest,
-    staticMode: options.staticMode ?? false,
-  };
+  const config: FrostConfig = { ...DEFAULTS, ...options };
   const { source, content, output } = elements;
 
   const gl = output.getContext("webgl2", {
@@ -1062,8 +1044,7 @@ export function createFrost(
 
   function introProgress(now: number) {
     const introMs = Math.max(config.introDuration, 0) * 1000;
-    // Static mode or reduced motion: skip the grow-in, show the full pane.
-    if (introMs <= 0 || reducedMotion || config.staticMode) return 1;
+    if (introMs <= 0 || reducedMotion) return 1;
     const t = Math.min(Math.max((now - introStart) / introMs, 0), 1);
     return t * t * (3 - 2 * t);
   }
@@ -1122,7 +1103,7 @@ export function createFrost(
   motionQuery.addEventListener("change", onMotionChange);
 
   function onPointerMove(event: PointerEvent) {
-    if (reducedMotion || config.staticMode) return;
+    if (reducedMotion) return;
     const rect = output.getBoundingClientRect();
     pointerX = (event.clientX - rect.left) / Math.max(rect.width, 1);
     pointerY = (event.clientY - rect.top) / Math.max(rect.height, 1);
@@ -1138,21 +1119,12 @@ export function createFrost(
   }
 
   // Pointer listeners attach to the wrapper so the melt tracks the cursor
-  // across the whole pane. Static mode skips them entirely — no
-  // cursor-coupled melt for ambient overlays (issue #67).
+  // across the whole pane.
   const listenTarget = output.parentElement ?? output;
-  if (!config.staticMode) {
-    listenTarget.addEventListener("pointermove", onPointerMove as EventListener);
-    listenTarget.addEventListener("pointerdown", onPointerMove as EventListener);
-    listenTarget.addEventListener(
-      "pointerleave",
-      onPointerLeave as EventListener,
-    );
-    listenTarget.addEventListener(
-      "pointercancel",
-      onPointerLeave as EventListener,
-    );
-  }
+  listenTarget.addEventListener("pointermove", onPointerMove as EventListener);
+  listenTarget.addEventListener("pointerdown", onPointerMove as EventListener);
+  listenTarget.addEventListener("pointerleave", onPointerLeave as EventListener);
+  listenTarget.addEventListener("pointercancel", onPointerLeave as EventListener);
 
   function onScroll() {
     activeUntil = Math.max(activeUntil, performance.now() + 400);
@@ -1194,17 +1166,16 @@ export function createFrost(
 
   return {
     melt(x, y) {
-      if (reducedMotion || config.staticMode) return;
+      if (reducedMotion) return;
       queuedMelts.push([x, y]);
       activeUntil = performance.now() + refreezeDelayMs();
       start();
     },
     setOptions(next) {
-      const { quality, staticMode: sm, ...restOpts } = next;
+      const { quality, ...rest } = next;
       const qualityChanged =
         quality !== undefined && quality !== config.quality;
-      Object.assign(config, restOpts);
-      if (sm !== undefined) config.staticMode = sm;
+      Object.assign(config, rest);
       if (qualityChanged) {
         config.quality = quality!;
         rebuildTargets();
