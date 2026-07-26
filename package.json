@@ -11,6 +11,10 @@
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "preview": "npm run build && vite preview --port 3000",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "e2e:install": "playwright install --with-deps",
     "skills:validate": "npx @tanstack/intent@latest validate",
     "skills:stale": "npx @tanstack/intent@latest stale",
     "db:generate": "drizzle-kit generate",
@@ -83,6 +87,10 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^24.10.1",
     "@types/pg": "^8.15.6",
     "@types/react": "^19.2.7",
@@ -90,8 +98,10 @@
     "@vitejs/plugin-react": "^5.1.1",
     "dotenv": "^17.2.3",
     "drizzle-kit": "^0.31.7",
+    "jsdom": "^25.0.1",
     "typescript": "^5.9.3",
     "vite": "^7.2.4",
-    "vite-tsconfig-paths": "^5.1.4"
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^3.2.7"
   }
 }
