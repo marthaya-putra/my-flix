@@ -1,31 +1,66 @@
 "use client";
 
+// Canvas UI Clouds — canonical implementation adapted from
+// https://canvasui.dev/docs/components/clouds. A three-pass WebGL2
+// pipeline: an FBM cloud field, a cursor-wind trail that parts the
+// fog along the pointer, and a composite that blends the captured DOM
+// content with the mist and its shadow.
+//
+// Like ParticleScroll/Glitch this component depends on the experimental
+// HTML-in-Canvas origin-trial in src/routes/__root.tsx to capture the
+// DOM. Without it (or under prefers-reduced-motion), the children are
+// rendered untouched in the DOM and only the cloud field is drawn,
+// giving a clean degraded backdrop rather than the full fog/refraction
+// composite.
+
 import {
   useEffect,
   useRef,
   useState,
   useSyncExternalStore,
-  type CSSProperties,
+  type ReactNode,
 } from "react";
 
-// Clouds is a procedural WebGL2 mist — it does NOT capture DOM, so unlike
-// ParticleScroll/Glitch it does not depend on the experimental HTML-in-Canvas
-// API or the origin-trial token. The only fallback signal is WebGL2 being
-// unavailable (or context loss), in which case we render nothing and the
-// body's existing background shows through.
-
 export interface CloudsOptions {
-  /** Overall opacity of the mist (0 to 1). */
-  opacity?: number;
-  /** Time-scale of drift. 1 = nominal; lower = slower. */
+  /** Cloud pattern scale. Lower = larger clouds. */
+  scale?: number;
+  /** Drift speed multiplier. 0 freezes animation. */
   speed?: number;
-  /** Mist density (0 to 1). Higher = thicker, more coverage. */
+  /** Base cloud coverage applied everywhere. */
+  cover?: number;
+  /** How sharply cloud shapes condense from the noise field. */
   density?: number;
-  /** Constant horizontal drift added per frame (small values, e.g. 0.01). */
-  drift?: number;
+  /** Internal depth shading — darkens crevices on light bg, lifts on dark. */
+  shading?: number;
+  /** Cloud color RGB, or "auto" to match the page background. */
+  color?: [number, number, number] | "auto";
+  /** Maximum opacity of the clouds over the content. */
+  opacity?: number;
+  /** Strength of the shadows the clouds cast on underlying content. */
+  shadow?: number;
+  /** Shadow x offset in CSS pixels. */
+  shadowOffsetX?: number;
+  /** Shadow y offset in CSS pixels. */
+  shadowOffsetY?: number;
+  /** Shadow softness (LOD bias), 0 to 1. */
+  shadowSoftness?: number;
+  /** How strongly cursor movement pushes the clouds away. */
+  wind?: number;
+  /** Radius (CSS pixels) of the clearing left by the cursor. */
+  windRadius?: number;
+  /** How far the fog bends the captured page beneath it. */
+  refraction?: number;
+  /** How much the fog blurs the captured page underneath it. */
+  fogBlur?: number;
+  /** Internal render resolution as a fraction of the viewport. */
+  quality?: number;
 }
 
 export interface CloudsElements {
+  /** Canvas with layoutsubtree that hosts the HTML content. */
+  source: HTMLCanvasElement;
+  /** The element inside the source canvas that gets captured. */
+  content: HTMLElement;
   /** Canvas the WebGL effect renders to. */
   output: HTMLCanvasElement;
 }
@@ -35,170 +70,246 @@ export interface CloudsInstance {
   setOptions: (options: CloudsOptions) => void;
   /** Re-read canvas size. Call when the element is resized. */
   resize: () => void;
-  /** Update theme colors sampled from CSS variables. */
-  setColors: (colors: { mist: [number, number, number, number] }) => void;
   /** Stop the loop and release all GPU resources. */
   destroy: () => void;
 }
 
+type PaintableCanvas = HTMLCanvasElement & {
+  requestPaint?: () => void;
+  onpaint: (() => void) | null;
+};
+
+type ElementImageContext = CanvasRenderingContext2D & {
+  drawElementImage?: (element: Element, x: number, y: number) => void;
+};
+
 const DEFAULTS: Required<CloudsOptions> = {
-  opacity: 0.35,
-  speed: 1,
-  density: 0.55,
-  drift: 0.01,
+  scale: 1,
+  speed: 0.6,
+  cover: 0.1,
+  density: 2.5,
+  shading: 0.1,
+  color: "auto",
+  opacity: 0.64,
+  shadow: 0.06,
+  shadowOffsetX: 200,
+  shadowOffsetY: -10,
+  shadowSoftness: 1,
+  wind: 0.6,
+  windRadius: 350,
+  refraction: 0,
+  fogBlur: 0,
+  quality: 1,
 };
 
 const VERT = `#version 300 es
 precision highp float;
 layout(location = 0) in vec2 aPos;
-out vec2 vUv;
 void main () {
-  vUv = aPos * 0.5 + 0.5;
-  gl_Position = vec4(aPos, 0.0, 1.0);
+gl_Position = vec4(aPos, 0.0, 1.0);
 }`;
 
-// FBM mist field. Slow-evolving value noise summed over a few octaves,
-// drifted horizontally. Output is premultiplied alpha so it composites
-// cleanly over the body's radial gradients.
-const FRAG = `#version 300 es
+const FIELD_FRAG = `#version 300 es
 precision highp float;
-in vec2 vUv;
 out vec4 outColor;
 uniform vec2 uResolution;
+uniform vec2 uOffset;
 uniform float uTime;
+uniform float uScale;
+uniform float uCover;
 uniform float uDensity;
-uniform float uOpacity;
-uniform vec4 uMist;
 
-// hash + value noise (Ashima-style)
-float hash (vec2 p) {
-  vec3 p3 = fract(vec3(p.xyx) * 0.1031);
-  p3 += dot(p3, p3.yzx + 33.33);
-  return fract((p3.x + p3.y) * p3.z);
+const mat2 m = mat2(1.6, 1.2, -1.2, 1.6);
+
+vec2 hash (vec2 p) {
+p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)));
+return -1.0 + 2.0 * fract(sin(p) * 43758.5453123);
 }
 
 float noise (vec2 p) {
-  vec2 i = floor(p);
-  vec2 f = fract(p);
-  vec2 u = f * f * (3.0 - 2.0 * f);
-  return mix(
-    mix(hash(i + vec2(0.0, 0.0)), hash(i + vec2(1.0, 0.0)), u.x),
-    mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x),
-    u.y
-  );
+const float K1 = 0.366025404;
+const float K2 = 0.211324865;
+vec2 i = floor(p + (p.x + p.y) * K1);
+vec2 a = p - i + (i.x + i.y) * K2;
+vec2 o = (a.x > a.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+vec2 b = a - o + K2;
+vec2 c = a - 1.0 + 2.0 * K2;
+vec3 h = max(0.5 - vec3(dot(a, a), dot(b, b), dot(c, c)), 0.0);
+vec3 n = h * h * h * h
+* vec3(dot(a, hash(i)), dot(b, hash(i + o)), dot(c, hash(i + 1.0)));
+return dot(n, vec3(70.0));
 }
 
-float fbm (vec2 p) {
-  float v = 0.0;
-  float a = 0.5;
-  mat2 rot = mat2(0.8, -0.6, 0.6, 0.8);
-  for (int i = 0; i < 5; i++) {
-    v += a * noise(p);
-    p = rot * p * 2.02;
-    a *= 0.5;
-  }
-  return v;
+float fbm (vec2 n) {
+float total = 0.0;
+float amplitude = 0.1;
+for (int i = 0; i < 7; i++) {
+total += noise(n) * amplitude;
+n = m * n;
+amplitude *= 0.4;
+}
+return total;
 }
 
 void main () {
-  vec2 uv = vUv;
-  // Aspect-correct so clouds aren't stretched on portrait screens.
-  float aspect = uResolution.x / max(uResolution.y, 1.0);
-  vec2 p = vec2(uv.x * aspect, uv.y) * 2.2;
+vec2 p = gl_FragCoord.xy / uResolution + uOffset;
+vec2 asp = vec2(uResolution.x / uResolution.y, 1.0);
+float q = fbm(p * asp * uScale * 0.5);
 
-  float t = uTime * 0.04;
+float r = 0.0;
+vec2 uv = p * asp * uScale;
+uv -= q - uTime;
+float weight = 0.8;
+for (int i = 0; i < 8; i++) {
+r += abs(weight * noise(uv));
+uv = m * uv + uTime;
+weight *= 0.7;
+}
 
-  // Two layers of fbm at different scales + phases for parallax depth.
-  float n1 = fbm(p + vec2(t, t * 0.3));
-  float n2 = fbm(p * 1.7 - vec2(t * 0.6, t * 0.2) + n1);
+float f = 0.0;
+uv = p * asp * uScale;
+uv -= q - uTime;
+weight = 0.7;
+for (int i = 0; i < 8; i++) {
+f += weight * noise(uv);
+uv = m * uv + uTime;
+weight *= 0.6;
+}
+f *= r + f;
 
-  float cloud = smoothstep(0.5 - uDensity * 0.4, 0.75, n2);
+float c = 0.0;
+float t2 = uTime * 2.0;
+uv = p * asp * uScale * 2.0;
+uv -= q - t2;
+weight = 0.4;
+for (int i = 0; i < 7; i++) {
+c += weight * noise(uv);
+uv = m * uv + t2;
+weight *= 0.6;
+}
 
-  // Soft vignette toward edges so the form area reads cleanest.
-  vec2 c = uv - 0.5;
-  float vig = 1.0 - smoothstep(0.2, 0.75, length(c));
+float c1 = 0.0;
+float t3 = uTime * 3.0;
+uv = p * asp * uScale * 3.0;
+uv -= q - t3;
+weight = 0.4;
+for (int i = 0; i < 7; i++) {
+c1 += abs(weight * noise(uv));
+uv = m * uv + t3;
+weight *= 0.6;
+}
+c += c1;
 
-  float a = cloud * uOpacity * (0.55 + 0.45 * vig);
-
-  outColor = vec4(uMist.rgb * uMist.a, uMist.a) * a;
+float coverage = clamp(uCover + uDensity * f * r + c, 0.0, 1.0);
+outColor = vec4(coverage, clamp(c, 0.0, 1.0), 0.0, 1.0);
 }`;
 
-// SSR-safe feature detection: WebGL2 availability. Server snapshot is
-// `false` so the first client render matches SSR (no canvas), then the
-// post-hydration effect confirms WebGL2 is real before starting the loop.
-function supportsWebGL2(): boolean {
+const WIND_FRAG = `#version 300 es
+precision highp float;
+out vec4 outColor;
+uniform sampler2D uPrev;
+uniform vec2 uResolution;
+uniform float uDecay;
+uniform vec2 uA;
+uniform vec2 uB;
+uniform float uRadius;
+uniform float uStrength;
+
+void main () {
+vec2 uv = gl_FragCoord.xy / uResolution;
+float prev = texture(uPrev, uv).r * uDecay;
+vec2 asp = vec2(uResolution.x / uResolution.y, 1.0);
+vec2 p = uv * asp;
+vec2 a = uA * asp;
+vec2 b = uB * asp;
+vec2 pa = p - a;
+vec2 ba = b - a;
+float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-6), 0.0, 1.0);
+float d = length(pa - ba * h) / max(uRadius, 1e-4);
+float stamp = exp(-d * d * 3.0) * uStrength;
+outColor = vec4(clamp(prev + stamp, 0.0, 1.0), 0.0, 0.0, 1.0);
+}`;
+
+const COMPOSITE_FRAG = `#version 300 es
+precision highp float;
+out vec4 outColor;
+uniform sampler2D uField;
+uniform sampler2D uContent;
+uniform sampler2D uWind;
+uniform vec2 uResolution;
+uniform vec2 uContentScale;
+uniform vec3 uBase;
+uniform float uShading;
+uniform float uOpacity;
+uniform float uShadow;
+uniform vec2 uShadowShift;
+uniform float uShadowLod;
+uniform float uWindAmt;
+uniform float uRefraction;
+uniform float uFogBlur;
+uniform float uHasContent;
+
+void main () {
+vec2 uv = gl_FragCoord.xy / uResolution;
+vec2 field = texture(uField, uv).rg;
+float wind = texture(uWind, uv).r * uWindAmt;
+float cov = field.r - wind;
+float mist = smoothstep(0.04, 0.9, cov);
+float cloudA = mist * uOpacity;
+
+float lum = dot(uBase, vec3(0.299, 0.587, 0.114));
+float sh = clamp(field.g, 0.0, 1.0);
+float k = uShading * 0.35;
+vec3 cloudRGB = lum > 0.5
+? uBase - vec3((1.0 - sh) * k)
+: uBase + vec3(sh * k);
+cloudRGB = clamp(cloudRGB, 0.0, 1.0);
+
+vec2 sUv = uv + uShadowShift;
+float s = textureLod(uField, sUv, uShadowLod).r
+- texture(uWind, sUv).r * uWindAmt;
+float shadowA = smoothstep(0.35, 1.0, s) * uShadow * (1.0 - mist);
+
+float a;
+vec3 rgb;
+if (uHasContent > 0.5) {
+vec2 e = vec2(8.0) / uResolution;
+float gx = texture(uField, uv + vec2(e.x, 0.0)).r
+- texture(uField, uv - vec2(e.x, 0.0)).r;
+float gy = texture(uField, uv + vec2(0.0, e.y)).r
+- texture(uField, uv - vec2(0.0, e.y)).r;
+vec2 rUv = uv + vec2(gx, gy) * uRefraction * mist;
+vec3 fogged = textureLod(
+uContent, vec2(rUv.x, 1.0 - rUv.y) * uContentScale, mist * uFogBlur * 5.0
+).rgb;
+vec3 layer = mix(fogged, cloudRGB, cloudA) * (1.0 - shadowA);
+float aF = smoothstep(0.02, 0.2, mist);
+a = aF + shadowA * (1.0 - aF);
+rgb = layer * aF;
+} else {
+a = cloudA + shadowA * (1.0 - cloudA);
+rgb = cloudRGB * cloudA;
+}
+outColor = vec4(rgb, a);
+}`;
+
+export function supportsHtmlInCanvas(): boolean {
   if (typeof document === "undefined") return false;
-  const probe = document.createElement("canvas");
+  const probe = document.createElement("canvas") as PaintableCanvas;
+  const ctx = probe.getContext("2d") as ElementImageContext | null;
   return Boolean(
-    probe.getContext("webgl2") || probe.getContext("experimental-webgl2"),
+    ctx &&
+      typeof ctx.drawElementImage === "function" &&
+      typeof probe.requestPaint === "function",
   );
-}
-
-// Resolve the mist tint from the existing theme tokens. We lift the
-// near-black background by a few lightness steps and tint very faintly
-// with the foreground, so the mist stays inside the established palette
-// without introducing new CSS variables.
-function resolveMistColor(): [number, number, number, number] {
-  if (typeof window === "undefined") {
-    return [0.1, 0.11, 0.15, 0.9];
-  }
-  const styles = getComputedStyle(document.documentElement);
-  const bg = styles.getPropertyValue("--background").trim();
-  const fg = styles.getPropertyValue("--foreground").trim();
-  const bgHsl = parseHsl(bg) ?? [240, 6, 5];
-  const fgHsl = parseHsl(fg) ?? [210, 40, 98];
-  // Lift background lightness toward foreground — ambient, not white.
-  const liftedL = Math.min(bgHsl[2] + 12, fgHsl[2] * 0.35);
-  const [r, g, b] = hslToRgb(bgHsl[0], bgHsl[1], liftedL);
-  // Faint foreground tint mixed in for cool coherence.
-  const [fr, fg2, fb] = hslToRgb(fgHsl[0], fgHsl[1], fgHsl[2]);
-  const mix = 0.12;
-  return [
-    r * (1 - mix) + fr * mix,
-    g * (1 - mix) + fg2 * mix,
-    b * (1 - mix) + fb * mix,
-    0.9,
-  ];
-}
-
-function parseHsl(value: string): [number, number, number] | null {
-  const parts = value.split(/\s+/).filter(Boolean);
-  if (parts.length < 3) return null;
-  const h = parseFloat(parts[0]);
-  const s = parseFloat(parts[1]);
-  const l = parseFloat(parts[2]);
-  if (Number.isNaN(h) || Number.isNaN(s) || Number.isNaN(l)) return null;
-  return [h, s, l];
-}
-
-function hslToRgb(h: number, s: number, l: number): [number, number, number] {
-  const sn = s / 100;
-  const ln = l / 100;
-  const c = (1 - Math.abs(2 * ln - 1)) * sn;
-  const hp = (h % 360) / 60;
-  const x = c * (1 - Math.abs((hp % 2) - 1));
-  let r = 0;
-  let g = 0;
-  let b = 0;
-  if (hp >= 0 && hp < 1) [r, g, b] = [c, x, 0];
-  else if (hp < 2) [r, g, b] = [x, c, 0];
-  else if (hp < 3) [r, g, b] = [0, c, x];
-  else if (hp < 4) [r, g, b] = [0, x, c];
-  else if (hp < 5) [r, g, b] = [x, 0, c];
-  else [r, g, b] = [c, 0, x];
-  const m = ln - c / 2;
-  return [r + m, g + m, b + m];
 }
 
 export function createClouds(
   elements: CloudsElements,
   options: CloudsOptions = {},
-  initialColors?: { mist: [number, number, number, number] },
 ): CloudsInstance | null {
   const config = { ...DEFAULTS, ...options };
-  const { output } = elements;
-  let mist: [number, number, number, number] =
-    initialColors?.mist ?? [0.1, 0.11, 0.15, 0.9];
+  const { source, content, output } = elements;
 
   const gl = output.getContext("webgl2", {
     alpha: true,
@@ -208,6 +319,28 @@ export function createClouds(
     premultipliedAlpha: true,
   });
   if (!gl || gl.isContextLost()) return null;
+
+  const sourceCtx = source.getContext("2d") as ElementImageContext | null;
+  const paintable = source as PaintableCanvas;
+  const htmlInCanvas = Boolean(
+    sourceCtx &&
+      typeof sourceCtx.drawElementImage === "function" &&
+      typeof paintable.requestPaint === "function",
+  );
+
+  let contentDirty = false;
+  let wake = () => {};
+
+  if (htmlInCanvas) {
+    paintable.onpaint = () => {
+      try {
+        sourceCtx!.reset();
+        sourceCtx!.drawElementImage!(content, 0, 0);
+        contentDirty = true;
+        wake();
+      } catch {}
+    };
+  }
 
   function compile(type: number, text: string): WebGLShader {
     const shader = gl!.createShader(type)!;
@@ -219,19 +352,25 @@ export function createClouds(
     return shader;
   }
 
-  const vertexShader = compile(gl.VERTEX_SHADER, VERT);
-  const fragmentShader = compile(gl.FRAGMENT_SHADER, FRAG);
-  const program = gl.createProgram()!;
-  gl.attachShader(program, vertexShader);
-  gl.attachShader(program, fragmentShader);
-  gl.linkProgram(program);
-
-  const uniforms: Record<string, WebGLUniformLocation> = {};
-  const count = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
-  for (let i = 0; i < count; i++) {
-    const info = gl.getActiveUniform(program, i)!;
-    uniforms[info.name] = gl.getUniformLocation(program, info.name)!;
+  function link(fragSource: string) {
+    const vs = compile(gl!.VERTEX_SHADER, VERT);
+    const fs = compile(gl!.FRAGMENT_SHADER, fragSource);
+    const program = gl!.createProgram()!;
+    gl!.attachShader(program, vs);
+    gl!.attachShader(program, fs);
+    gl!.linkProgram(program);
+    const uniforms: Record<string, WebGLUniformLocation> = {};
+    const count = gl!.getProgramParameter(program, gl!.ACTIVE_UNIFORMS);
+    for (let i = 0; i < count; i++) {
+      const info = gl!.getActiveUniform(program, i)!;
+      uniforms[info.name] = gl!.getUniformLocation(program, info.name)!;
+    }
+    return { program, vs, fs, uniforms };
   }
+
+  const field = link(FIELD_FRAG);
+  const windPass = link(WIND_FRAG);
+  const composite = link(COMPOSITE_FRAG);
 
   const quad = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, quad);
@@ -243,7 +382,97 @@ export function createClouds(
   gl.enableVertexAttribArray(0);
   gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
 
+  const fieldTexture = gl.createTexture()!;
+  gl.bindTexture(gl.TEXTURE_2D, fieldTexture);
+  gl.texParameteri(
+    gl.TEXTURE_2D,
+    gl.TEXTURE_MIN_FILTER,
+    gl.LINEAR_MIPMAP_LINEAR,
+  );
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+  const contentTexture = gl.createTexture()!;
+  gl.bindTexture(gl.TEXTURE_2D, contentTexture);
+  gl.texParameteri(
+    gl.TEXTURE_2D,
+    gl.TEXTURE_MIN_FILTER,
+    gl.LINEAR_MIPMAP_LINEAR,
+  );
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texImage2D(
+    gl.TEXTURE_2D,
+    0,
+    gl.RGBA,
+    1,
+    1,
+    0,
+    gl.RGBA,
+    gl.UNSIGNED_BYTE,
+    new Uint8Array([0, 0, 0, 255]),
+  );
+  gl.generateMipmap(gl.TEXTURE_2D);
+
+  function makeWindTexture() {
+    const texture = gl!.createTexture()!;
+    gl!.bindTexture(gl!.TEXTURE_2D, texture);
+    gl!.texParameteri(gl!.TEXTURE_2D, gl!.TEXTURE_MIN_FILTER, gl!.LINEAR);
+    gl!.texParameteri(gl!.TEXTURE_2D, gl!.TEXTURE_MAG_FILTER, gl!.LINEAR);
+    gl!.texParameteri(gl!.TEXTURE_2D, gl!.TEXTURE_WRAP_S, gl!.CLAMP_TO_EDGE);
+    gl!.texParameteri(gl!.TEXTURE_2D, gl!.TEXTURE_WRAP_T, gl!.CLAMP_TO_EDGE);
+    return texture;
+  }
+  const windTextures = [makeWindTexture(), makeWindTexture()];
+  let windIndex = 0;
+
+  const fbo = gl.createFramebuffer();
+
+  let fieldW = 0;
+  let fieldH = 0;
+  let contentScaleX = 1;
+  let contentScaleY = 1;
+
+  let baseColor: [number, number, number] = [1, 1, 1];
+  const probe = document.createElement("canvas");
+  probe.width = probe.height = 1;
+  const probeCtx = probe.getContext("2d", { willReadFrequently: true });
+
+  function syncBaseColor() {
+    if (config.color !== "auto") {
+      baseColor = config.color;
+      return;
+    }
+    if (!probeCtx) return;
+    let el: Element | null = content;
+    while (el) {
+      const bg = getComputedStyle(el).backgroundColor;
+      if (bg && bg !== "transparent") {
+        probeCtx.clearRect(0, 0, 1, 1);
+        probeCtx.fillStyle = bg;
+        probeCtx.fillRect(0, 0, 1, 1);
+        const [r, g, b, a] = probeCtx.getImageData(0, 0, 1, 1).data;
+        if (a > 0) {
+          baseColor = [r / 255, g / 255, b / 255];
+          return;
+        }
+      }
+      el = el.parentElement;
+    }
+    baseColor = [1, 1, 1];
+  }
+
   function syncCanvasSize() {
+    const cw = content.clientWidth;
+    const ch = content.clientHeight;
+    if (cw > 0 && ch > 0) {
+      const wpx = `${cw}px`;
+      const hpx = `${ch}px`;
+      if (output.style.width !== wpx) output.style.width = wpx;
+      if (output.style.height !== hpx) output.style.height = hpx;
+    }
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const width = Math.max(1, Math.round(output.clientWidth * dpr));
     const height = Math.max(1, Math.round(output.clientHeight * dpr));
@@ -251,23 +480,197 @@ export function createClouds(
       output.width = width;
       output.height = height;
     }
+    contentScaleX = htmlInCanvas
+      ? Math.min(1, cw / Math.max(source.clientWidth, 1))
+      : 1;
+    contentScaleY = htmlInCanvas
+      ? Math.min(1, ch / Math.max(source.clientHeight, 1))
+      : 1;
+    const quality = Math.min(Math.max(config.quality, 0.2), 1);
+    const cap = 1440 / Math.max(output.clientWidth, 1);
+    const q = Math.min(quality, cap);
+    const nextW = Math.max(
+      16,
+      Math.round(output.clientWidth * q * dpr),
+    );
+    const nextH = Math.max(
+      16,
+      Math.round(output.clientHeight * q * dpr),
+    );
+    if (fieldW !== nextW || fieldH !== nextH) {
+      fieldW = nextW;
+      fieldH = nextH;
+      gl!.bindTexture(gl!.TEXTURE_2D, fieldTexture);
+      gl!.texImage2D(
+        gl!.TEXTURE_2D,
+        0,
+        gl!.RGBA,
+        fieldW,
+        fieldH,
+        0,
+        gl!.RGBA,
+        gl!.UNSIGNED_BYTE,
+        null,
+      );
+      for (const t of windTextures) {
+        gl!.bindTexture(gl!.TEXTURE_2D, t);
+        gl!.texImage2D(
+          gl!.TEXTURE_2D,
+          0,
+          gl!.RGBA,
+          fieldW,
+          fieldH,
+          0,
+          gl!.RGBA,
+          gl!.UNSIGNED_BYTE,
+          null,
+        );
+      }
+    }
   }
 
   syncCanvasSize();
+  syncBaseColor();
 
-  let time = 0;
+  function uploadContent() {
+    if (!htmlInCanvas || !contentDirty) return;
+    contentDirty = false;
+    gl!.bindTexture(gl!.TEXTURE_2D, contentTexture);
+    gl!.texImage2D(
+      gl!.TEXTURE_2D,
+      0,
+      gl!.RGBA,
+      gl!.RGBA,
+      gl!.UNSIGNED_BYTE,
+      source,
+    );
+    gl!.generateMipmap(gl!.TEXTURE_2D);
+  }
 
-  function render() {
-    gl!.useProgram(program);
-    gl!.uniform2f(uniforms.uResolution, output.width, output.height);
-    gl!.uniform1f(uniforms.uTime, time);
-    gl!.uniform1f(uniforms.uDensity, Math.min(Math.max(config.density, 0), 1));
-    gl!.uniform1f(uniforms.uOpacity, Math.min(Math.max(config.opacity, 0), 1));
-    gl!.uniform4f(uniforms.uMist, mist[0], mist[1], mist[2], mist[3]);
+  let pointerX = 0.5;
+  let pointerY = 0.5;
+  let prevPointerX = 0.5;
+  let prevPointerY = 0.5;
+  let hasPointer = false;
+  let lastPointerMove = 0;
+
+  let time = Math.random() * 64;
+
+  function render(delta: number) {
+    uploadContent();
+
+    gl!.bindFramebuffer(gl!.FRAMEBUFFER, fbo);
+    gl!.framebufferTexture2D(
+      gl!.FRAMEBUFFER,
+      gl!.COLOR_ATTACHMENT0,
+      gl!.TEXTURE_2D,
+      fieldTexture,
+      0,
+    );
+    gl!.viewport(0, 0, fieldW, fieldH);
+    gl!.useProgram(field.program);
+    gl!.uniform2f(field.uniforms.uResolution, fieldW, fieldH);
+    gl!.uniform2f(
+      field.uniforms.uOffset,
+      content.scrollLeft / Math.max(content.clientWidth, 1),
+      -content.scrollTop / Math.max(content.clientHeight, 1),
+    );
+    gl!.uniform1f(field.uniforms.uTime, time);
+    gl!.uniform1f(field.uniforms.uScale, Math.max(config.scale, 0.05));
+    gl!.uniform1f(field.uniforms.uCover, Math.max(config.cover, 0));
+    gl!.uniform1f(field.uniforms.uDensity, Math.max(config.density, 0));
+    gl!.drawArrays(gl!.TRIANGLE_STRIP, 0, 4);
+
+    const prevWind = windTextures[windIndex];
+    const nextWind = windTextures[1 - windIndex];
+    windIndex = 1 - windIndex;
+    gl!.framebufferTexture2D(
+      gl!.FRAMEBUFFER,
+      gl!.COLOR_ATTACHMENT0,
+      gl!.TEXTURE_2D,
+      nextWind,
+      0,
+    );
+    gl!.useProgram(windPass.program);
+    gl!.activeTexture(gl!.TEXTURE0);
+    gl!.bindTexture(gl!.TEXTURE_2D, prevWind);
+    gl!.uniform1i(windPass.uniforms.uPrev, 0);
+    gl!.uniform2f(windPass.uniforms.uResolution, fieldW, fieldH);
+    gl!.uniform1f(windPass.uniforms.uDecay, Math.pow(0.5, delta / 0.7));
+    const moved = Math.hypot(pointerX - prevPointerX, pointerY - prevPointerY);
+    const stamping = hasPointer && moved > 0;
+    gl!.uniform2f(windPass.uniforms.uA, prevPointerX, prevPointerY);
+    gl!.uniform2f(windPass.uniforms.uB, pointerX, pointerY);
+    gl!.uniform1f(
+      windPass.uniforms.uRadius,
+      Math.max(config.windRadius, 1) / Math.max(output.clientHeight, 1),
+    );
+    gl!.uniform1f(
+      windPass.uniforms.uStrength,
+      stamping ? Math.min(0.2 + moved * 12, 1) * 0.5 : 0,
+    );
+    gl!.drawArrays(gl!.TRIANGLE_STRIP, 0, 4);
+    prevPointerX = pointerX;
+    prevPointerY = pointerY;
+
     gl!.bindFramebuffer(gl!.FRAMEBUFFER, null);
+    gl!.bindTexture(gl!.TEXTURE_2D, fieldTexture);
+    gl!.generateMipmap(gl!.TEXTURE_2D);
+
     gl!.viewport(0, 0, output.width, output.height);
-    gl!.clearColor(0, 0, 0, 0);
-    gl!.clear(gl!.COLOR_BUFFER_BIT);
+    gl!.useProgram(composite.program);
+    gl!.activeTexture(gl!.TEXTURE0);
+    gl!.bindTexture(gl!.TEXTURE_2D, fieldTexture);
+    gl!.uniform1i(composite.uniforms.uField, 0);
+    gl!.activeTexture(gl!.TEXTURE1);
+    gl!.bindTexture(gl!.TEXTURE_2D, contentTexture);
+    gl!.uniform1i(composite.uniforms.uContent, 1);
+    gl!.activeTexture(gl!.TEXTURE2);
+    gl!.bindTexture(gl!.TEXTURE_2D, nextWind);
+    gl!.uniform1i(composite.uniforms.uWind, 2);
+    gl!.uniform2f(composite.uniforms.uResolution, output.width, output.height);
+    gl!.uniform2f(
+      composite.uniforms.uContentScale,
+      contentScaleX,
+      contentScaleY,
+    );
+    gl!.uniform3f(
+      composite.uniforms.uBase,
+      baseColor[0],
+      baseColor[1],
+      baseColor[2],
+    );
+    gl!.uniform1f(
+      composite.uniforms.uOpacity,
+      Math.min(Math.max(config.opacity, 0), 1),
+    );
+    gl!.uniform1f(composite.uniforms.uShading, Math.max(config.shading, 0));
+    gl!.uniform1f(
+      composite.uniforms.uShadow,
+      Math.min(Math.max(config.shadow, 0), 1),
+    );
+    gl!.uniform2f(
+      composite.uniforms.uShadowShift,
+      -config.shadowOffsetX / Math.max(output.clientWidth, 1),
+      config.shadowOffsetY / Math.max(output.clientHeight, 1),
+    );
+    gl!.uniform1f(
+      composite.uniforms.uShadowLod,
+      Math.min(Math.max(config.shadowSoftness, 0), 1) * 4,
+    );
+    gl!.uniform1f(
+      composite.uniforms.uWindAmt,
+      Math.min(Math.max(config.wind, 0), 1),
+    );
+    gl!.uniform1f(
+      composite.uniforms.uRefraction,
+      Math.max(config.refraction, 0) / Math.max(output.clientWidth, 1),
+    );
+    gl!.uniform1f(
+      composite.uniforms.uFogBlur,
+      Math.min(Math.max(config.fogBlur, 0), 1),
+    );
+    gl!.uniform1f(composite.uniforms.uHasContent, htmlInCanvas ? 1 : 0);
     gl!.drawArrays(gl!.TRIANGLE_STRIP, 0, 4);
   }
 
@@ -276,7 +679,6 @@ export function createClouds(
   let destroyed = false;
   let running = false;
   let visible = true;
-  let needsStaticRender = true;
 
   const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
   let reducedMotion = motionQuery.matches;
@@ -287,21 +689,16 @@ export function createClouds(
       running = false;
       return;
     }
-    const delta = Math.min(Math.max((now - lastTime) / 1000, 0), 1 / 30);
+    const delta = Math.min((now - lastTime) / 1000, 1 / 30);
     lastTime = now;
-    if (!reducedMotion) {
-      time += delta * Math.max(config.speed, 0);
-      time += config.drift;
-      render();
-      raf = requestAnimationFrame(frame);
-    } else {
-      // Reduced motion: render one static frame, then stop the loop.
-      if (needsStaticRender) {
-        render();
-        needsStaticRender = false;
-      }
+    if (!reducedMotion) time += delta * config.speed * 0.03;
+    render(delta);
+    const windActive = now - lastPointerMove < 3000;
+    if (reducedMotion && !windActive && !contentDirty) {
       running = false;
+      return;
     }
+    raf = requestAnimationFrame(frame);
   }
 
   function start() {
@@ -311,45 +708,80 @@ export function createClouds(
     raf = requestAnimationFrame(frame);
   }
 
+  wake = start;
+
   start();
 
   function onMotionChange() {
     reducedMotion = motionQuery.matches;
-    if (reducedMotion) needsStaticRender = true;
     start();
   }
   motionQuery.addEventListener("change", onMotionChange);
 
   const observer = new ResizeObserver(() => {
     syncCanvasSize();
-    if (reducedMotion) needsStaticRender = true;
     start();
   });
   observer.observe(output);
+  observer.observe(content);
 
   const intersection = new IntersectionObserver((entries) => {
     visible = entries[entries.length - 1]?.isIntersecting ?? true;
-    if (visible) {
-      if (reducedMotion) needsStaticRender = true;
-      start();
-    }
+    if (visible) start();
   });
   intersection.observe(output);
+
+  function onPointerMove(event: PointerEvent) {
+    const rect = output.getBoundingClientRect();
+    const x = (event.clientX - rect.left) / Math.max(rect.width, 1);
+    const y = 1 - (event.clientY - rect.top) / Math.max(rect.height, 1);
+    if (!hasPointer) {
+      prevPointerX = x;
+      prevPointerY = y;
+      hasPointer = true;
+    }
+    pointerX = x;
+    pointerY = y;
+    lastPointerMove = performance.now();
+    start();
+  }
+
+  function onPointerLeave() {
+    hasPointer = false;
+  }
+
+  content.addEventListener("pointermove", onPointerMove, { passive: true });
+  content.addEventListener("pointerleave", onPointerLeave, { passive: true });
+  content.addEventListener("scroll", start, { passive: true });
+
+  let themeTimer = 0;
+  function onThemeShift() {
+    syncBaseColor();
+    start();
+    window.clearTimeout(themeTimer);
+    themeTimer = window.setTimeout(() => {
+      syncBaseColor();
+      start();
+    }, 300);
+  }
+
+  const themeObserver = new MutationObserver(onThemeShift);
+  themeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["class", "style", "data-theme"],
+  });
+  const schemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
+  schemeQuery.addEventListener("change", onThemeShift);
 
   return {
     setOptions(next) {
       Object.assign(config, next);
-      if (reducedMotion) needsStaticRender = true;
+      syncCanvasSize();
+      syncBaseColor();
       start();
     },
     resize() {
       syncCanvasSize();
-      if (reducedMotion) needsStaticRender = true;
-      start();
-    },
-    setColors(next) {
-      mist = next.mist;
-      if (reducedMotion) needsStaticRender = true;
       start();
     },
     destroy() {
@@ -357,68 +789,132 @@ export function createClouds(
       cancelAnimationFrame(raf);
       observer.disconnect();
       intersection.disconnect();
+      themeObserver.disconnect();
+      schemeQuery.removeEventListener("change", onThemeShift);
+      window.clearTimeout(themeTimer);
       motionQuery.removeEventListener("change", onMotionChange);
-      gl!.deleteProgram(program);
-      gl!.deleteShader(vertexShader);
-      gl!.deleteShader(fragmentShader);
+      content.removeEventListener("pointermove", onPointerMove);
+      content.removeEventListener("pointerleave", onPointerLeave);
+      content.removeEventListener("scroll", start);
+      if (htmlInCanvas) paintable.onpaint = null;
+      gl!.deleteTexture(fieldTexture);
+      gl!.deleteTexture(contentTexture);
+      gl!.deleteTexture(windTextures[0]);
+      gl!.deleteTexture(windTextures[1]);
+      gl!.deleteFramebuffer(fbo);
+      gl!.deleteProgram(field.program);
+      gl!.deleteProgram(windPass.program);
+      gl!.deleteProgram(composite.program);
+      gl!.deleteShader(field.vs);
+      gl!.deleteShader(field.fs);
+      gl!.deleteShader(windPass.vs);
+      gl!.deleteShader(windPass.fs);
+      gl!.deleteShader(composite.vs);
+      gl!.deleteShader(composite.fs);
       gl!.deleteBuffer(quad);
     },
   };
 }
 
 export interface CloudsProps extends CloudsOptions {
+  children: ReactNode;
   className?: string;
-  style?: CSSProperties;
+  style?: React.CSSProperties;
 }
 
 const emptySubscribe = () => () => {};
 
-export function Clouds({ className, style, ...options }: CloudsProps) {
+export function Clouds({
+  children,
+  className,
+  style,
+  ...options
+}: CloudsProps) {
+  const sourceRef = useRef<HTMLCanvasElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const outputRef = useRef<HTMLCanvasElement>(null);
   const instanceRef = useRef<CloudsInstance | null>(null);
   const [initialOptions] = useState(options);
+  const [failed, setFailed] = useState(false);
 
-  // SSR-safe WebGL2 detection. Server snapshot `false` keeps first paint
-  // matching SSR; client confirms and the canvas mounts post-hydration.
   const supported = useSyncExternalStore(
     emptySubscribe,
-    supportsWebGL2,
+    supportsHtmlInCanvas,
     () => false,
   );
+  const native = supported && !failed;
 
   useEffect(() => {
-    if (!supported) return;
+    const source = sourceRef.current;
+    const content = contentRef.current;
     const output = outputRef.current;
-    if (!output) return;
+    if (!source || !content || !output) return;
     instanceRef.current = createClouds(
-      { output },
+      { source, content, output },
       initialOptions,
-      { mist: resolveMistColor() },
     );
+    if (native && !instanceRef.current) setFailed(true);
     return () => {
       instanceRef.current?.destroy();
       instanceRef.current = null;
     };
-  }, [initialOptions, supported]);
+  }, [initialOptions, native]);
 
   useEffect(() => {
     instanceRef.current?.setOptions(options);
   });
 
   return (
-    <div className={className} style={style} aria-hidden>
-      {supported ? (
-        <canvas
-          ref={outputRef}
+    <div className={className} style={{ position: "relative", ...style }}>
+      <canvas
+        ref={sourceRef}
+        // @ts-expect-error experimental html-in-canvas attribute
+        layoutsubtree="true"
+        suppressHydrationWarning
+        style={
+          native
+            ? { position: "absolute", inset: 0, width: "100%", height: "100%" }
+            : { display: "none" }
+        }
+      >
+        {native ? (
+          <div
+            ref={contentRef}
+            style={{
+              position: "relative",
+              width: "100%",
+              height: "100%",
+              overflow: "auto",
+            }}
+          >
+            {children}
+          </div>
+        ) : null}
+      </canvas>
+      {!native ? (
+        <div
+          ref={contentRef}
           style={{
-            position: "absolute",
-            inset: 0,
+            position: "relative",
             width: "100%",
             height: "100%",
-            pointerEvents: "none",
+            overflow: "auto",
           }}
-        />
+        >
+          {children}
+        </div>
       ) : null}
+      <canvas
+        ref={outputRef}
+        aria-hidden
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          pointerEvents: "none",
+        }}
+      />
     </div>
   );
 }
