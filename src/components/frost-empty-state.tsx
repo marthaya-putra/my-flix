@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Frost } from "@/components/canvasui/Frost";
 
 // Frost overlay for empty states (issue #67). Mirrors the canvasui.dev
@@ -8,9 +8,10 @@ import { Frost } from "@/components/canvasui/Frost";
 // over — hover to melt a hole through the ice and read the text, then
 // watch it freeze back over.
 //
-// Mounts <Frost> wrapping the message itself (not a sibling backdrop),
-// so the captured content — the empty-state text + icon — is what gets
-// frosted, blurred and refracted. Defaults match the canonical demo.
+// The frost pane fills the whole empty-state box (w-full h-full, with a
+// min-h floor for containers that have no definite height), and the
+// message is centred inside it — so the ice covers the full empty
+// region, not just a tight box around the text.
 //
 // Skips when the user has opted out of effects:
 //   - prefers-reduced-motion: reduce → flat empty state (the melt
@@ -44,40 +45,17 @@ export function FrostEmptyState({ children }: Readonly<{ children: ReactNode }>)
     };
   }, []);
 
-  const measureRef = useRef<HTMLDivElement>(null);
-  const [size, setSize] = useState<{ width: number; height: number } | null>(
-    null,
-  );
+  // Shared layout for both paths: fill the empty box, centre the message.
+  // h-full fills containers with a definite height (e.g. the search
+  // modal's scroll area); min-h is the floor when the container has none.
+  const box = "flex w-full h-full min-h-[240px] flex-col items-center justify-center text-center";
 
-  useEffect(() => {
-    if (!enabled) return;
-    const el = measureRef.current;
-    if (!el) return;
-    const measure = () => {
-      const w = el.offsetWidth;
-      const h = el.offsetHeight;
-      if (w > 0 && h > 0) setSize({ width: w, height: h });
-    };
-    measure();
-    // Re-measure if the message resizes (responsive reflow) so Frost
-    // stays in sync.
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [enabled]);
-
-  // Effect opted out, or not measured yet: render the plain message.
-  // Same content, no regression, no duplicate.
-  if (!enabled || size == null) {
-    return (
-      <div ref={measureRef} style={{ width: "100%" }}>
-        {children}
-      </div>
-    );
+  if (!enabled) {
+    return <div className={box}>{children}</div>;
   }
 
   return (
-    <Frost style={{ width: size.width, height: size.height }}>
+    <Frost className={box}>
       {children}
     </Frost>
   );
