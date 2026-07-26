@@ -22,10 +22,16 @@ TanStack Start + Router + Query · React 19 · Vite 7 · Nitro · Tailwind v4
 - **Typecheck:** `npm run typecheck` (`tsc --noEmit`). Must pass.
 - **Tests:** two layers (see ADR 0002). Vitest + React Testing Library is
   the primary runner (`npm test`); Playwright is a thin E2E smoke layer
-  (`npm run test:e2e`). `/implement` uses `/tdd` at the required seams:
-  `stream-events` classifier, optimistic-toggle hooks, zod
-  `validateSearch` + `inputValidator` schemas, repositories. Route
-  loader→SSR→hydrate flow is covered by Playwright.
+  (`npm run test:e2e`). **Integration tests only — no isolated unit tests
+  on a single function.** Drive the unit through its public API (the hook's
+  returned object, the rendered component, the loader's return), wire real
+  collaborators (real `QueryClient`, real providers), mock only the
+  external edge (server fns, `fetch`, DB). Write a test **only** where the
+  API hides complex logic — optimistic-toggle + rollback recipes, error-
+  to-UI mapping, branching that maps inputs to qualitatively different
+  outputs. Thin pass-throughs are not tested; the consumer's integration
+  test and the type checker cover them. Route loader→SSR→hydrate flow is
+  covered by Playwright.
 
 ## 2. TypeScript
 
