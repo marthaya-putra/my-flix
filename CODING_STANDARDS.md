@@ -20,9 +20,12 @@ TanStack Start + Router + Query · React 19 · Vite 7 · Nitro · Tailwind v4
 - **Lint/format:** Biome. One config, formatter + linter. Do not add ESLint or
   Prettier.
 - **Typecheck:** `npm run typecheck` (`tsc --noEmit`). Must pass.
-- **Tests:** deferred. No runner yet. `/implement` skips `/tdd` until a
-  page-level test infra decision is made (Vitest+RTL with SSR context vs
-  Playwright E2E).
+- **Tests:** two layers (see ADR 0002). Vitest + React Testing Library is
+  the primary runner (`npm test`); Playwright is a thin E2E smoke layer
+  (`npm run test:e2e`). `/implement` uses `/tdd` at the required seams:
+  `stream-events` classifier, optimistic-toggle hooks, zod
+  `validateSearch` + `inputValidator` schemas, repositories. Route
+  loader→SSR→hydrate flow is covered by Playwright.
 
 ## 2. TypeScript
 

@@ -31,5 +31,11 @@ dist-ssr
 # Build output
 .output
 
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache
+
 # ZCode local session files
 .zcode
