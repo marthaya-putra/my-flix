@@ -8,6 +8,7 @@ import {
   type Recommendation,
 } from "./recommendations/category-section";
 import { InitialLoadComposition } from "./recommendations/initial-load-composition";
+import { FrostEmptyState } from "@/components/frost-empty-state";
 
 // Spec 0006: manual NDJSON transport.
 const STREAM_ROUTE = "/api/recommendations/stream";
@@ -314,12 +315,16 @@ export function Recommendations() {
 
   if (empty) {
     return (
-      <div className="text-center py-8">
-        <p className="text-gray-500">
-          No recommendations available. Try adding some movies or TV shows to
-          your preferences first!
-        </p>
-      </div>
+      <FrostEmptyState>
+        {/* Canvas UI Frost — Issue #67: static ambient frost pane behind
+            the message. See frost-empty-state. */}
+        <div className="text-center py-8">
+          <p className="text-gray-500">
+            No recommendations available. Try adding some movies or TV shows to
+            your preferences first!
+          </p>
+        </div>
+      </FrostEmptyState>
     );
   }
 
