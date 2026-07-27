@@ -53,7 +53,7 @@ function Home() {
     popularMovies.results.length > 0 ? popularMovies.results[0] : undefined;
 
   return (
-    <ParticleScroll className="h-[calc(100dvh-72px)] bg-background">
+    <ParticleScroll className="h-[calc(100dvh-72px)] top-[72px] bg-background">
       <div className="space-y-8 pb-8">
         {mostPopularMovie && <Hero {...mostPopularMovie} />}
         <Suspense fallback={<ContentRowSkeleton />}>

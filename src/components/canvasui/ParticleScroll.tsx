@@ -693,11 +693,15 @@ export function createParticleScroll(
   wake = start;
   start();
 
+  // The body owns the scroll now; the inner content div's scrollTop is a
+  // mirror of window.scrollY so drawElementImage captures the right crop.
+  // (The .hide-scrollbar div is never scrolled by the user directly.)
   function onScroll() {
+    content.scrollTop = window.scrollY;
     if (htmlInCanvas) paintable.requestPaint!();
     start();
   }
-  content.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("scroll", onScroll, { passive: true });
 
   function onMotionChange() {
     reducedMotion = motionQuery.matches;
@@ -718,65 +722,6 @@ export function createParticleScroll(
   });
   intersection.observe(output);
 
-  // ─── Custom fade-in scrollbar thumb ───
-  // Native scrollbar is hidden via .hide-scrollbar on the inner div. This
-  // floating thumb gives the user a subtle scroll indicator: appears on
-  // scroll, fades out after 1s idle. Matches canvasui.dev's aesthetic.
-  // Only runs in native mode (htmlInCanvas) — fallback uses the normal
-  // page scrollbar.
-  let thumb: HTMLDivElement | null = null;
-  let thumbHideTimer: ReturnType<typeof setTimeout> | null = null;
-  const thumbLayout = () => {
-    if (!thumb) return false;
-    const max = content.scrollHeight - content.clientHeight;
-    if (max <= 1) {
-      thumb.style.opacity = "0";
-      return false;
-    }
-    const trackTop = 8;
-    const trackHeight = window.innerHeight - 16;
-    const height = Math.max(
-      36,
-      (content.clientHeight / content.scrollHeight) * trackHeight,
-    );
-    const top = trackTop + (content.scrollTop / max) * (trackHeight - height);
-    thumb.style.height = `${height}px`;
-    thumb.style.transform = `translateY(${top}px)`;
-    return true;
-  };
-  const thumbShow = () => {
-    if (!thumbLayout()) return;
-    if (!thumb) return;
-    thumb.style.opacity = "1";
-    if (thumbHideTimer) clearTimeout(thumbHideTimer);
-    thumbHideTimer = setTimeout(() => {
-      if (thumb) thumb.style.opacity = "0";
-    }, 1000);
-  };
-  if (htmlInCanvas) {
-    thumb = document.createElement("div");
-    thumb.setAttribute("aria-hidden", "true");
-    Object.assign(thumb.style, {
-      position: "fixed",
-      right: "8px",
-      top: "0",
-      width: "4px",
-      background: "hsl(var(--foreground) / 0.3)",
-      borderRadius: "2px",
-      opacity: "0",
-      transition: "opacity 0.3s ease",
-      pointerEvents: "none",
-      zIndex: "50",
-    } as Partial<CSSStyleDeclaration>);
-    document.body.appendChild(thumb);
-    content.addEventListener("scroll", thumbShow, { passive: true });
-    window.addEventListener("resize", thumbShow);
-    const thumbObserver = new ResizeObserver(thumbLayout);
-    thumbObserver.observe(content);
-    // Initial layout pass.
-    thumbLayout();
-  }
-
   return {
     setOptions(next) {
       Object.assign(config, next);
@@ -789,7 +734,7 @@ export function createParticleScroll(
     destroy() {
       destroyed = true;
       cancelAnimationFrame(raf);
-      content.removeEventListener("scroll", onScroll);
+      window.removeEventListener("scroll", onScroll);
       observer.disconnect();
       intersection.disconnect();
       motionQuery.removeEventListener("change", onMotionChange);
@@ -797,13 +742,6 @@ export function createParticleScroll(
         .querySelectorAll("img")
         .forEach((img) => img.removeEventListener("load", onImageLoad));
       mutationObserver.disconnect();
-      if (thumb) {
-        content.removeEventListener("scroll", thumbShow);
-        window.removeEventListener("resize", thumbShow);
-        if (thumbHideTimer) clearTimeout(thumbHideTimer);
-        thumb.remove();
-        thumb = null;
-      }
       gl!.deleteTexture(contentTexture);
       gl!.deleteTexture(rowTex);
       gl!.deleteProgram(base.program);
@@ -840,6 +778,11 @@ export function ParticleScroll({
   const instanceRef = useRef<ParticleScrollInstance | null>(null);
   const [initialOptions] = useState(options);
   const [failed, setFailed] = useState(false);
+  // Height of the window-scroll spacer. The sticky viewport box rides inside
+  // a spacer sized to the full content height, so the document can scroll
+  // the whole page (including the root <footer>) while the canvas stays
+  // pinned to the viewport.
+  const [spacerHeight, setSpacerHeight] = useState(0);
 
   const supported = useSyncExternalStore(
     emptySubscribe,
@@ -848,17 +791,18 @@ export function ParticleScroll({
   );
   const native = supported && !failed;
 
-  // Lock body scroll in native mode: ParticleScroll owns an inner overflow:auto
-  // scroller, and the root layout also has a <footer> below <main>. Without
-  // this, both the inner div and body would scroll (two scrollbars). Lock
-  // body so only the inner div scrolls.
+  // Track content height so the spacer grows/shrinks with it (Suspense rows
+  // resolving, images loading, etc.). This is what gives the body a scroll
+  // range equal to the content — without it the page couldn't scroll at all.
   useEffect(() => {
     if (!native) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
+    const content = contentRef.current;
+    if (!content) return;
+    const update = () => setSpacerHeight(content.scrollHeight);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(content);
+    return () => observer.disconnect();
   }, [native]);
 
   useEffect(() => {
@@ -896,43 +840,53 @@ export function ParticleScroll({
   if (!native) return <>{children}</>;
 
   return (
-    <div className={className} style={{ position: "relative", ...style }}>
-      <canvas
-        ref={sourceRef}
-        // @ts-expect-error experimental html-in-canvas attribute
-        layoutsubtree="true"
-        suppressHydrationWarning
-        style={{
-          position: "absolute",
-          inset: 0,
-          width: "100%",
-          height: "100%",
-        }}
+    <div style={{ height: spacerHeight ? `${spacerHeight}px` : undefined }}>
+      <div
+        className={className}
+        style={{ position: "sticky", ...style }}
       >
-        <div
-          ref={contentRef}
-          className="hide-scrollbar"
+        <canvas
+          ref={sourceRef}
+          // @ts-expect-error experimental html-in-canvas attribute
+          layoutsubtree="true"
+          suppressHydrationWarning
           style={{
-            position: "relative",
+            position: "absolute",
+            inset: 0,
             width: "100%",
             height: "100%",
-            overflow: "auto",
           }}
         >
-          {children}
-        </div>
-      </canvas>
-      <canvas
-        ref={outputRef}
-        aria-hidden
-        style={{
-          position: "absolute",
-          inset: 0,
-          width: "100%",
-          height: "100%",
-          pointerEvents: "none",
-        }}
-      />
+          <div
+            ref={contentRef}
+            className="hide-scrollbar"
+            style={{
+              position: "relative",
+              width: "100%",
+              height: "100%",
+              // overflow:hidden (not auto): the body is the sole scroller.
+              // We still set content.scrollTop programmatically (mirrored
+              // from window.scrollY) so drawElementImage captures the right
+              // crop, but the div itself can't be scrolled by the user and
+              // shows no scrollbar — exactly one scroller on the page.
+              overflow: "hidden",
+            }}
+          >
+            {children}
+          </div>
+        </canvas>
+        <canvas
+          ref={outputRef}
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            pointerEvents: "none",
+          }}
+        />
+      </div>
     </div>
   );
 }
