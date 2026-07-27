@@ -31,6 +31,19 @@ export async function fetchFromTMDB(
     ...otherOptions,
   });
 
-  const data = await res.json();
-  return data;
+  // Issue #78 / CODING_STANDARDS.md §7: throw on non-2xx so callers never
+  // get a TMDB error body (status_message etc.) silently shaped like a
+  // success. Includes the body for diagnostics — TMDB errors are small JSON.
+  if (!res.ok) {
+    let detail: unknown;
+    try {
+      detail = await res.json();
+    } catch {
+      detail = await res.text().catch(() => undefined);
+    }
+    console.error(`TMDB ${res.status} for ${path}:`, detail);
+    throw new Error(`TMDB request failed: ${res.status} ${res.statusText}`);
+  }
+
+  return res.json();
 }

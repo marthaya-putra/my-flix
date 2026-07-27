@@ -47,7 +47,9 @@ export function usePreferences(initialPreferences?: UserPreferences) {
     });
   };
 
-  // Add a movie/TV show to preferences
+  // Add a movie/TV show to preferences. Server fns throw on failure (Issue
+  // #78); this hook recovers locally by surfacing the error in `error`
+  // state, so it wraps the call in try/catch.
   const addPreference = async (content: FilmInfo | Person) => {
     try {
       // Add item to adding set
@@ -58,7 +60,7 @@ export function usePreferences(initialPreferences?: UserPreferences) {
         const person = content as Person;
 
         const personType = person.category;
-        const result = await addPersonPreference({
+        await addPersonPreference({
           data: {
             personId: person.id,
             personName: person.name,
@@ -66,11 +68,6 @@ export function usePreferences(initialPreferences?: UserPreferences) {
             profilePath: person.profileImageUrl,
           },
         });
-
-        if (!result.success) {
-          setError(result.error || "Failed to add person preference");
-          return;
-        }
 
         // Update local state
         setPreferences((prev) => ({
@@ -84,7 +81,7 @@ export function usePreferences(initialPreferences?: UserPreferences) {
         const category = film.category === "tv" ? "tv-series" : "movie";
         const genres = film.genres.join(", ");
 
-        const result = await addMoviePreference({
+        await addMoviePreference({
           data: {
             preferenceId: film.id,
             title: film.title,
@@ -94,11 +91,6 @@ export function usePreferences(initialPreferences?: UserPreferences) {
             posterPath: film.posterPath,
           },
         });
-
-        if (!result.success) {
-          setError(result.error || "Failed to add film preference");
-          return;
-        }
 
         // Update local state
         if (film.category === "movie") {
@@ -115,7 +107,9 @@ export function usePreferences(initialPreferences?: UserPreferences) {
         }
       }
     } catch (err) {
-      setError("Failed to add preference");
+      setError(
+        err instanceof Error ? err.message : "Failed to add preference"
+      );
       console.error("Error adding preference:", err);
     } finally {
       // Remove item from adding set
@@ -130,80 +124,70 @@ export function usePreferences(initialPreferences?: UserPreferences) {
     }
   };
 
-  // Remove a preference
+  // Remove a preference. Server fns throw on failure (Issue #78); this hook
+  // recovers locally via `error` state.
   const removePreference = async (
     id: number,
     type: "movie" | "tv" | "person"
   ) => {
     try {
-      let result;
-
       if (type === "person") {
         // Find the person and get database ID
         const person = preferences.people.find((p) => p.id === id);
         const dbId = person?.dbId;
         const personType = person?.category || "actor";
 
-        result = await removePersonPreference({
+        await removePersonPreference({
           data: {
             id: dbId || id, // Use dbId if available, fallback to id
             personType,
           },
         });
 
-        if (result.success) {
-          setPreferences((prev) => ({
-            ...prev,
-            people: prev.people.filter((p) => p.id !== id),
-          }));
-        }
+        setPreferences((prev) => ({
+          ...prev,
+          people: prev.people.filter((p) => p.id !== id),
+        }));
       } else if (type === "movie") {
         // Find the movie and get database ID
         const movie = preferences.movies.find((m) => m.id === id);
         const dbId = (movie as any)?.dbId;
 
-        result = await removeMoviePreference({
+        await removeMoviePreference({
           data: {
             id: dbId || id, // Use dbId if available, fallback to id
             type: "movie",
           },
         });
 
-        if (result.success) {
-          setPreferences((prev) => ({
-            ...prev,
-            movies: prev.movies.filter((m) => m.id !== id),
-          }));
-        }
+        setPreferences((prev) => ({
+          ...prev,
+          movies: prev.movies.filter((m) => m.id !== id),
+        }));
       } else {
         // TV show
         const tvShow = preferences.tvShows.find((t) => t.id === id);
         const dbId = (tvShow as any)?.dbId;
 
-        result = await removeMoviePreference({
+        await removeMoviePreference({
           data: {
             id: dbId || id, // Use dbId if available, fallback to id
             type: "tv-series",
           },
         });
 
-        if (result.success) {
-          setPreferences((prev) => ({
-            ...prev,
-            tvShows: prev.tvShows.filter((t) => t.id !== id),
-          }));
-        }
-      }
-
-      if (!result?.success) {
-        setError(result?.error || "Failed to remove preference");
-        return;
+        setPreferences((prev) => ({
+          ...prev,
+          tvShows: prev.tvShows.filter((t) => t.id !== id),
+        }));
       }
 
       // Local state already updated above; keep the query cache in sync.
       invalidatePreferenceQueries();
     } catch (err) {
-      setError("Failed to remove preference");
+      setError(
+        err instanceof Error ? err.message : "Failed to remove preference"
+      );
       console.error("Error removing preference:", err);
     }
   };

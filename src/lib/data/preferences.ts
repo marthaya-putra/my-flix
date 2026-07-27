@@ -1,3 +1,8 @@
+// Issue #78 / CODING_STANDARDS.md §7: every server fn here THROWS on
+// failure. No `{ success, error }` shape, no silent catch→empty-data.
+// TanStack Router's errorComponent renders thrown errors; mutations
+// roll back via the optimistic hooks' onError. Callers that recover
+// locally wrap the call in try/catch.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { getRequest } from "@tanstack/react-start/server";
@@ -48,50 +53,56 @@ const RemovePersonInput = z.object({
   personType: z.enum(["actor", "director", "other"]),
 });
 
+// Resolve the authenticated user id from the request, or throw. Reused by
+// every fn below so the auth check reads once and throws a single error
+// type ("User not authenticated") that errorComponent renders uniformly.
+async function requireUserId(): Promise<string> {
+  const session = await auth.api.getSession({
+    headers: getRequest().headers,
+  });
+  if (!session?.user?.id) {
+    throw new Error("User not authenticated");
+  }
+  return session.user.id;
+}
+
+// Empty UserPreferences — the legit "new user / nothing stored" shape.
+// Used by fetchUserPreferences when the user is genuinely unauthenticated
+// (a real state, not an error). DB read failures throw, not return this.
+const EMPTY_USER_PREFERENCES: UserPreferences = {
+  movies: [],
+  tvShows: [],
+  people: [],
+  favoriteGenres: [],
+  minRating: 6,
+  preferredContent: {
+    movie: true,
+    tv: true,
+  },
+  notes: "",
+};
+
 // Add movie/TV show to user preferences
 export const addMoviePreference = createServerFn({
   method: "POST",
 })
   .inputValidator(AddMoviePreferenceInput)
   .handler(async ({ data }) => {
-    try {
-      const { preferenceId, title, year, category, genres, posterPath } = data;
+    const { preferenceId, title, year, category, genres, posterPath } = data;
+    const userId = await requireUserId();
 
-      // Get the current session to retrieve authenticated user ID
-      const session = await auth.api.getSession({
-        headers: getRequest().headers,
-      });
+    const db = getDb();
+    const result = await addUserPreference(db, {
+      userId,
+      preferenceId,
+      title,
+      year,
+      category,
+      genres,
+      posterPath,
+    });
 
-      if (!session?.user?.id) {
-        return { success: false, error: "User not authenticated" };
-      }
-
-      const db = getDb();
-      const result = await addUserPreference(db, {
-        userId: session.user.id,
-        preferenceId,
-        title,
-        year,
-        category,
-        genres,
-        posterPath,
-      });
-
-      if (result.success && result.preference) {
-        return { success: true, data: result.preference };
-      } else {
-        return { success: false, error: "Already in preferences" };
-      }
-    } catch (error) {
-      console.error("Error adding movie preference:", error);
-      return {
-        success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to add movie preference",
-      };
-    }
+    return result.preference;
   });
 
 // Remove movie/TV show from user preferences
@@ -100,53 +111,33 @@ export const removeMoviePreference = createServerFn({
 })
   .inputValidator(RemovePreferenceInput)
   .handler(async ({ data }) => {
-    try {
-      const db = getDb();
-      const { id, type } = data;
+    const db = getDb();
+    const { id, type } = data;
+    const userId = await requireUserId();
 
-      // Get the current session to retrieve authenticated user ID
-      const session = await auth.api.getSession({
-        headers: getRequest().headers,
-      });
+    // First get the preference to find the TMDB ID
+    const preferenceToDelete = await db
+      .select()
+      .from(userPreferences)
+      .where(eq(userPreferences.id, id))
+      .limit(1);
 
-      if (!session?.user?.id) {
-        return { success: false, error: "User not authenticated" };
-      }
-
-      // First get the preference to find the TMDB ID
-      const preferenceToDelete = await db
-        .select()
-        .from(userPreferences)
-        .where(eq(userPreferences.id, id))
-        .limit(1);
-
-      if (preferenceToDelete.length === 0) {
-        return { success: false, error: "Preference not found" };
-      }
-
-      const preference = preferenceToDelete[0];
-
-      // Use repository function to remove by TMDB ID
-      const result = await removeUserPreferenceByPreferenceIdRepo(db, {
-        userId: session.user.id,
-        preferenceId: preference.preferenceId,
-      });
-
-      if (result.success && result.deletedPreference) {
-        return { success: true, data: result.deletedPreference };
-      } else {
-        return { success: false, error: "Failed to remove preference" };
-      }
-    } catch (error) {
-      console.error("Error removing movie preference:", error);
-      return {
-        success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to remove movie preference",
-      };
+    if (preferenceToDelete.length === 0) {
+      throw new Error("Preference not found");
     }
+
+    const preference = preferenceToDelete[0];
+
+    // Use repository function to remove by TMDB ID
+    const result = await removeUserPreferenceByPreferenceIdRepo(db, {
+      userId,
+      preferenceId: preference.preferenceId,
+    });
+
+    if (!result.deletedPreference) {
+      throw new Error("Failed to remove preference");
+    }
+    return result.deletedPreference;
   });
 
 // Add person (actor/director) to user people
@@ -155,42 +146,19 @@ export const addPersonPreference = createServerFn({
 })
   .inputValidator(AddPersonPreferenceInput)
   .handler(async ({ data }) => {
-    try {
-      const { personId, personName, personType, profilePath } = data;
+    const { personId, personName, personType, profilePath } = data;
+    const userId = await requireUserId();
 
-      // Get the current session to retrieve authenticated user ID
-      const session = await auth.api.getSession({
-        headers: getRequest().headers,
-      });
+    const db = getDb();
+    const result = await addUserPerson(db, {
+      userId,
+      personId,
+      personName,
+      personType,
+      profilePath,
+    });
 
-      if (!session?.user?.id) {
-        return { success: false, error: "User not authenticated" };
-      }
-
-      const db = getDb();
-      const result = await addUserPerson(db, {
-        userId: session.user.id,
-        personId,
-        personName,
-        personType,
-        profilePath,
-      });
-
-      if (result.success && result.person) {
-        return { success: true, data: result.person };
-      } else {
-        return { success: false, error: "Already in preferences" };
-      }
-    } catch (error) {
-      console.error("Error adding person preference:", error);
-      return {
-        success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to add person preference",
-      };
-    }
+    return result.person;
   });
 
 // Remove person (actor/director) from user people
@@ -199,168 +167,114 @@ export const removePersonPreference = createServerFn({
 })
   .inputValidator(RemovePersonInput)
   .handler(async ({ data }) => {
-    try {
-      const { id, personType } = data;
+    const { id, personType } = data;
+    const userId = await requireUserId();
 
-      // Get the current session to retrieve authenticated user ID
-      const session = await auth.api.getSession({
-        headers: getRequest().headers,
-      });
+    const db = getDb();
+    const result = await removeUserPerson(db, {
+      id,
+      userId,
+    });
 
-      if (!session?.user?.id) {
-        return { success: false, error: "User not authenticated" };
-      }
-
-      const db = getDb();
-      const result = await removeUserPerson(db, {
-        id,
-        userId: session.user.id,
-      });
-
-      if (result.success && result.deletedPerson) {
-        return { success: true, data: result.deletedPerson };
-      } else {
-        return { success: false, error: "Person not found" };
-      }
-    } catch (error) {
-      console.error("Error removing person preference:", error);
-      return {
-        success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to remove person preference",
-      };
+    if (!result.deletedPerson) {
+      throw new Error("Person not found");
     }
+    return result.deletedPerson;
   });
 
 // Fetch all user preferences for the preferences page
 export const fetchUserPreferences = createServerFn({
   method: "GET",
 }).handler(async (): Promise<UserPreferences> => {
-  try {
-    const session = await auth.api.getSession({
-      headers: getRequest().headers,
-    });
+  // Unauthenticated is a real state (public view) — return the empty
+  // profile. Authenticated users with a DB read failure throw — no silent
+  // empty-data mask (Issue #78).
+  const session = await auth.api.getSession({
+    headers: getRequest().headers,
+  });
+  if (!session?.user?.id) {
+    return { ...EMPTY_USER_PREFERENCES };
+  }
 
-    if (!session?.user?.id) {
-      // Return empty UserPreferences if not authenticated
-      return {
-        movies: [],
-        tvShows: [],
-        people: [],
-        favoriteGenres: [],
-        minRating: 6,
-        preferredContent: {
-          movie: true,
-          tv: true,
-        },
-        notes: "",
-      };
-    }
+  const db = getDb();
+  const [movieTVResult, peopleResult] = await Promise.all([
+    getUserPreferences(db, { userId: session.user.id }),
+    getUserPeople(db, { userId: session.user.id }),
+  ]);
 
-    // Fetch movie and TV preferences using repository
-    const db = getDb();
-    const movieTVResult = await getUserPreferences(db, {
-      userId: session.user.id,
-    });
+  const movieTVPreferences = movieTVResult.preferences;
+  const peoplePreferences = peopleResult.people;
 
-    // Fetch people preferences using repository
-    const peopleResult = await getUserPeople(db, {
-      userId: session.user.id,
-    });
-
-    const movieTVPreferences = movieTVResult.success
-      ? movieTVResult.preferences
-      : [];
-    const peoplePreferences = peopleResult.success ? peopleResult.people : [];
-
-    // Separate movies and TV shows
-    const movies = movieTVPreferences
-      .filter((pref) => pref.category === "movie")
-      .map((pref) => ({
-        id: pref.preferenceId, // Use TMDB ID for display/search comparison
-        dbId: pref.id, // Keep database ID for removal operations
-        title: pref.title,
-        category: "movie" as const,
-        genreIds: [],
-        genres: pref.genres
-          ? pref.genres
-              .split(",")
-              .map((g) => g.trim())
-              .filter(Boolean)
-          : [],
-        posterPath: pref.posterPath || "",
-        backdropPath: "",
-        overview: "",
-        voteAverage: 0,
-        releaseDate: pref.year?.toString() || "",
-        contentType: "movie" as const, // Add contentType to match ContentItem type
-      }));
-
-    const tvShows = movieTVPreferences
-      .filter((pref) => pref.category === "tv-series")
-      .map((pref) => ({
-        id: pref.preferenceId, // Use TMDB ID for display/search comparison
-        dbId: pref.id, // Keep database ID for removal operations
-        title: pref.title,
-        category: "tv" as const,
-        genreIds: [],
-        genres: pref.genres
-          ? pref.genres
-              .split(",")
-              .map((g) => g.trim())
-              .filter(Boolean)
-          : [],
-        posterPath: pref.posterPath || "",
-        backdropPath: "",
-        overview: "",
-        voteAverage: 0,
-        releaseDate: pref.year?.toString() || "",
-        contentType: "tv" as const, // Add contentType to match ContentItem type
-      }));
-
-    // Convert people preferences
-    const people = peoplePreferences.map((pref) => ({
-      id: pref.personId, // Use TMDB ID for display/search comparison
+  // Separate movies and TV shows
+  const movies = movieTVPreferences
+    .filter((pref) => pref.category === "movie")
+    .map((pref) => ({
+      id: pref.preferenceId, // Use TMDB ID for display/search comparison
       dbId: pref.id, // Keep database ID for removal operations
-      name: pref.personName,
-      profileImageUrl: pref.profilePath || "",
-      popularity: 0,
-      knownFor: [],
-      category: pref.personType,
-      contentType: "person" as const, // Add contentType to match ContentItem type
+      title: pref.title,
+      category: "movie" as const,
+      genreIds: [],
+      genres: pref.genres
+        ? pref.genres
+            .split(",")
+            .map((g) => g.trim())
+            .filter(Boolean)
+        : [],
+      posterPath: pref.posterPath || "",
+      backdropPath: "",
+      overview: "",
+      voteAverage: 0,
+      releaseDate: pref.year?.toString() || "",
+      contentType: "movie" as const, // Add contentType to match ContentItem type
     }));
 
-    // Return UserPreferences directly
-    return {
-      movies,
-      tvShows,
-      people,
-      favoriteGenres: [], // This would be stored separately in the future
-      minRating: 6,
-      preferredContent: {
-        movie: true,
-        tv: true,
-      },
-      notes: "",
-    };
-  } catch (error) {
-    console.error("Error fetching user preferences:", error);
-    // Return empty UserPreferences on error
-    return {
-      movies: [],
-      tvShows: [],
-      people: [],
-      favoriteGenres: [],
-      minRating: 6,
-      preferredContent: {
-        movie: true,
-        tv: true,
-      },
-      notes: "",
-    };
-  }
+  const tvShows = movieTVPreferences
+    .filter((pref) => pref.category === "tv-series")
+    .map((pref) => ({
+      id: pref.preferenceId, // Use TMDB ID for display/search comparison
+      dbId: pref.id, // Keep database ID for removal operations
+      title: pref.title,
+      category: "tv" as const,
+      genreIds: [],
+      genres: pref.genres
+        ? pref.genres
+            .split(",")
+            .map((g) => g.trim())
+            .filter(Boolean)
+        : [],
+      posterPath: pref.posterPath || "",
+      backdropPath: "",
+      overview: "",
+      voteAverage: 0,
+      releaseDate: pref.year?.toString() || "",
+      contentType: "tv" as const, // Add contentType to match ContentItem type
+    }));
+
+  // Convert people preferences
+  const people = peoplePreferences.map((pref) => ({
+    id: pref.personId, // Use TMDB ID for display/search comparison
+    dbId: pref.id, // Keep database ID for removal operations
+    name: pref.personName,
+    profileImageUrl: pref.profilePath || "",
+    popularity: 0,
+    knownFor: [],
+    category: pref.personType,
+    contentType: "person" as const, // Add contentType to match ContentItem type
+  }));
+
+  // Return UserPreferences directly
+  return {
+    movies,
+    tvShows,
+    people,
+    favoriteGenres: [], // This would be stored separately in the future
+    minRating: 6,
+    preferredContent: {
+      movie: true,
+      tv: true,
+    },
+    notes: "",
+  };
 });
 
 // Helper function to add content from FilmInfo
@@ -379,33 +293,22 @@ export const addFilmInfoPreference = createServerFn({
     })
   )
   .handler(async ({ data }) => {
-    try {
-      const { filmInfo } = data;
-      const category = filmInfo.category === "tv" ? "tv-series" : "movie";
-      const genres = filmInfo.genres.join(", ");
-      const year = filmInfo.releaseDate
-        ? new Date(filmInfo.releaseDate).getFullYear()
-        : new Date().getFullYear();
+    const { filmInfo } = data;
+    const category = filmInfo.category === "tv" ? "tv-series" : "movie";
+    const genres = filmInfo.genres.join(", ");
+    const year = filmInfo.releaseDate
+      ? new Date(filmInfo.releaseDate).getFullYear()
+      : new Date().getFullYear();
 
-      return await addMoviePreference({
-        data: {
-          preferenceId: filmInfo.id,
-          title: filmInfo.title,
-          year,
-          category,
-          genres: genres || undefined,
-        },
-      });
-    } catch (error) {
-      console.error("Error adding film info preference:", error);
-      return {
-        success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to add film info preference",
-      };
-    }
+    return addMoviePreference({
+      data: {
+        preferenceId: filmInfo.id,
+        title: filmInfo.title,
+        year,
+        category,
+        genres: genres || undefined,
+      },
+    });
   });
 
 // Helper function to add content from Person
@@ -424,27 +327,16 @@ export const addPersonInfoPreference = createServerFn({
     })
   )
   .handler(async ({ data }) => {
-    try {
-      const { person, personType } = data;
+    const { person, personType } = data;
 
-      return await addPersonPreference({
-        data: {
-          personId: person.id,
-          personName: person.name,
-          personType,
-          profilePath: person.profilePath,
-        },
-      });
-    } catch (error) {
-      console.error("Error adding person info preference:", error);
-      return {
-        success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to add person info preference",
-      };
-    }
+    return addPersonPreference({
+      data: {
+        personId: person.id,
+        personName: person.name,
+        personType,
+        profilePath: person.profilePath,
+      },
+    });
   });
 
 // Add content to user dislikes
@@ -460,40 +352,19 @@ export const addUserDislikeFn = createServerFn({
     })
   )
   .handler(async ({ data }) => {
-    try {
-      const { preferenceId, title, year, category } = data;
+    const { preferenceId, title, year, category } = data;
+    const userId = await requireUserId();
 
-      // Get the current session to retrieve authenticated user ID
-      const session = await auth.api.getSession({
-        headers: getRequest().headers,
-      });
+    const db = getDb();
+    const result = await addUserDislike(db, {
+      userId,
+      preferenceId,
+      title,
+      year,
+      category,
+    });
 
-      if (!session?.user?.id) {
-        return { success: false, error: "User not authenticated" };
-      }
-
-      const db = getDb();
-      const result = await addUserDislike(db, {
-        userId: session.user.id,
-        preferenceId,
-        title,
-        year,
-        category,
-      });
-
-      if (result.success && result.dislike) {
-        return { success: true, data: result.dislike };
-      } else {
-        return { success: false, error: "Already in dislikes" };
-      }
-    } catch (error) {
-      console.error("Error adding user dislike:", error);
-      return {
-        success: false,
-        error:
-          error instanceof Error ? error.message : "Failed to add user dislike",
-      };
-    }
+    return result.dislike;
   });
 
 // Remove content from user dislikes
@@ -506,39 +377,16 @@ export const removeUserDislikeByPreferenceIdFn = createServerFn({
     })
   )
   .handler(async ({ data }) => {
-    try {
-      const { preferenceId } = data;
+    const { preferenceId } = data;
+    const userId = await requireUserId();
 
-      // Get the current session to retrieve authenticated user ID
-      const session = await auth.api.getSession({
-        headers: getRequest().headers,
-      });
+    const db = getDb();
+    const result = await removeUserDislikeByPreferenceId(db, {
+      userId,
+      preferenceId,
+    });
 
-      if (!session?.user?.id) {
-        return { success: false, error: "User not authenticated" };
-      }
-
-      const db = getDb();
-      const result = await removeUserDislikeByPreferenceId(db, {
-        userId: session.user.id,
-        preferenceId,
-      });
-
-      if (result.success && result.deletedDislike) {
-        return { success: true, data: result.deletedDislike };
-      } else {
-        return { success: false, error: "Failed to remove from dislikes" };
-      }
-    } catch (error) {
-      console.error("Error removing user dislike:", error);
-      return {
-        success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to remove user dislike",
-      };
-    }
+    return result.deletedDislike;
   });
 
 // Remove movie/TV show from user preferences by preferenceId
@@ -547,69 +395,41 @@ export const removeUserPreferenceByPreferenceId = createServerFn({
 })
   .inputValidator(RemovePreferenceByPreferenceIdInput)
   .handler(async ({ data }) => {
-    try {
-      const db = getDb();
-      const { preferenceId } = data;
+    const db = getDb();
+    const { preferenceId } = data;
+    const userId = await requireUserId();
 
-      // Get the current session to retrieve authenticated user ID
-      const session = await auth.api.getSession({
-        headers: getRequest().headers,
-      });
+    // Use repository function to remove by preference ID
+    const result = await removeUserPreferenceByPreferenceIdRepo(db, {
+      userId,
+      preferenceId,
+    });
 
-      if (!session?.user?.id) {
-        return { success: false, error: "User not authenticated" };
-      }
-
-      // Use repository function to remove by preference ID
-      const result = await removeUserPreferenceByPreferenceIdRepo(db, {
-        userId: session.user.id,
-        preferenceId,
-      });
-
-      if (result.success && result.deletedPreference) {
-        return { success: true, data: result.deletedPreference };
-      } else {
-        return { success: false, error: "Failed to remove preference" };
-      }
-    } catch (error) {
-      console.error("Error removing movie preference:", error);
-      return {
-        success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to remove movie preference",
-      };
+    if (!result.deletedPreference) {
+      throw new Error("Failed to remove preference");
     }
+    return result.deletedPreference;
   });
 
 // Get user's liked items (preferenceIds)
 export const getUserLikedItems = createServerFn({
   method: "GET",
 }).handler(async (): Promise<{ likedIds: number[] }> => {
-  try {
-    const session = await auth.api.getSession({
-      headers: getRequest().headers,
-    });
-
-    if (!session?.user?.id) {
-      return { likedIds: [] };
-    }
-
-    const db = getDb();
-    const result = await getUserPreferences(db, {
-      userId: session.user.id,
-    });
-
-    if (result.success) {
-      const likedIds = result.preferences.map((p) => p.preferenceId);
-      return { likedIds };
-    }
-
-    return { likedIds: [] };
-  } catch {
+  const session = await auth.api.getSession({
+    headers: getRequest().headers,
+  });
+  // Unauthenticated = empty list (no liked items to seed). A DB failure
+  // throws — the optimistic fill on the client relies on this being either
+  // truthful or absent, never a stale empty mask.
+  if (!session?.user?.id) {
     return { likedIds: [] };
   }
+
+  const db = getDb();
+  const result = await getUserPreferences(db, {
+    userId: session.user.id,
+  });
+  return { likedIds: result.preferences.map((p) => p.preferenceId) };
 });
 
 // Get user's disliked items (preferenceIds). Parallel to getUserLikedItems —
@@ -618,32 +438,23 @@ export const getUserLikedItems = createServerFn({
 export const getUserDislikedItems = createServerFn({
   method: "GET",
 }).handler(async (): Promise<{ dislikedIds: number[] }> => {
-  try {
-    const session = await auth.api.getSession({
-      headers: getRequest().headers,
-    });
-
-    if (!session?.user?.id) {
-      return { dislikedIds: [] };
-    }
-
-    const db = getDb();
-    const result = await getUserDislikes(db, {
-      userId: session.user.id,
-    });
-
-    if (result.success) {
-      const dislikedIds = result.dislikes.map((d) => d.preferenceId);
-      return { dislikedIds };
-    }
-
-    return { dislikedIds: [] };
-  } catch {
+  const session = await auth.api.getSession({
+    headers: getRequest().headers,
+  });
+  if (!session?.user?.id) {
     return { dislikedIds: [] };
   }
+
+  const db = getDb();
+  const result = await getUserDislikes(db, {
+    userId: session.user.id,
+  });
+  return { dislikedIds: result.dislikes.map((d) => d.preferenceId) };
 });
 
-// Toggle movie/TV show preference (add if not liked, remove if liked)
+// Toggle movie/TV show preference (add if not liked, remove if liked).
+// Returns the action taken ("added" | "removed") so the optimistic hook can
+// reconcile. Throws on auth/DB failure — the hook rolls back via onError.
 export const toggleMoviePreference = createServerFn({
   method: "POST",
 })
@@ -658,68 +469,41 @@ export const toggleMoviePreference = createServerFn({
     })
   )
   .handler(async ({ data }) => {
-    try {
-      const session = await auth.api.getSession({
-        headers: getRequest().headers,
+    const userId = await requireUserId();
+
+    const db = getDb();
+    const { preferenceId, title, year, category, genres, posterPath } = data;
+
+    // Check if already liked
+    const existingResult = await getUserPreferences(db, {
+      userId,
+    });
+
+    const existing = existingResult.preferences.find(
+      (p) => p.preferenceId === preferenceId
+    );
+
+    if (existing) {
+      // Remove from preferences
+      await removeUserPreferenceByPreferenceIdRepo(db, {
+        userId,
+        preferenceId,
       });
-
-      if (!session?.user?.id) {
-        return { success: false, error: "User not authenticated" };
-      }
-
-      const db = getDb();
-      const { preferenceId, title, year, category, genres, posterPath } = data;
-
-      // Check if already liked
-      const existingResult = await getUserPreferences(db, {
-        userId: session.user.id,
-      });
-
-      if (!existingResult.success) {
-        return { success: false, error: "Failed to check preferences" };
-      }
-
-      const existing = existingResult.preferences.find(
-        (p) => p.preferenceId === preferenceId
-      );
-
-      if (existing) {
-        // Remove from preferences
-        const result = await removeUserPreferenceByPreferenceIdRepo(db, {
-          userId: session.user.id,
-          preferenceId,
-        });
-        return {
-          success: result.success,
-          action: "removed" as const,
-        };
-      } else {
-        // Add to preferences
-        const genresString = genres?.join(", ");
-        const result = await addUserPreference(db, {
-          userId: session.user.id,
-          preferenceId,
-          title,
-          year,
-          category,
-          genres: genresString,
-          posterPath,
-        });
-        return {
-          success: result.success,
-          action: "added" as const,
-        };
-      }
-    } catch (error) {
-      console.error("Error toggling movie preference:", error);
-      return {
-        success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to toggle preference",
-      };
+      return { action: "removed" as const };
     }
+
+    // Add to preferences
+    const genresString = genres?.join(", ");
+    await addUserPreference(db, {
+      userId,
+      preferenceId,
+      title,
+      year,
+      category,
+      genres: genresString,
+      posterPath,
+    });
+    return { action: "added" as const };
   });
 
 // Shape of a user's full preference/dislike/people profile. The canonical
@@ -764,29 +548,18 @@ export const getAllUserContent = createServerFn().handler(async () => {
 export const getUserWatchlistItems = createServerFn({
   method: "GET",
 }).handler(async (): Promise<{ watchlistIds: number[] }> => {
-  try {
-    const session = await auth.api.getSession({
-      headers: getRequest().headers,
-    });
-
-    if (!session?.user?.id) {
-      return { watchlistIds: [] };
-    }
-
-    const db = getDb();
-    const result = await getUserWatchlist(db, {
-      userId: session.user.id,
-    });
-
-    if (result.success) {
-      const watchlistIds = result.watchlist.map((w) => w.watchListId);
-      return { watchlistIds };
-    }
-
-    return { watchlistIds: [] };
-  } catch {
+  const session = await auth.api.getSession({
+    headers: getRequest().headers,
+  });
+  if (!session?.user?.id) {
     return { watchlistIds: [] };
   }
+
+  const db = getDb();
+  const result = await getUserWatchlist(db, {
+    userId: session.user.id,
+  });
+  return { watchlistIds: result.watchlist.map((w) => w.watchListId) };
 });
 
 // Fetch one page of the full watchlist rows (used by the /watchlist grid).
@@ -798,38 +571,32 @@ export const fetchUserWatchlist = createServerFn({
   .inputValidator((page: number = 1) => Math.max(1, page))
   .handler(async ({ data }) => {
     const page = data;
-    try {
-      const session = await auth.api.getSession({
-        headers: getRequest().headers,
-      });
-
-      if (!session?.user?.id) {
-        return { watchlist: [], page, totalPages: 0, totalItems: 0 };
-      }
-
-      const db = getDb();
-      const [result, totalItems] = await Promise.all([
-        getUserWatchlist(db, {
-          userId: session.user.id,
-          limit: WATCHLIST_PAGE_SIZE,
-          offset: (page - 1) * WATCHLIST_PAGE_SIZE,
-        }),
-        countUserWatchlist(db, { userId: session.user.id }),
-      ]);
-
-      const totalPages =
-        totalItems === 0 ? 0 : Math.ceil(totalItems / WATCHLIST_PAGE_SIZE);
-
-      return {
-        watchlist: result.success ? result.watchlist : [],
-        page,
-        totalPages,
-        totalItems,
-      };
-    } catch (error) {
-      console.error("Error fetching user watchlist:", error);
+    const session = await auth.api.getSession({
+      headers: getRequest().headers,
+    });
+    if (!session?.user?.id) {
       return { watchlist: [], page, totalPages: 0, totalItems: 0 };
     }
+
+    const db = getDb();
+    const [result, totalItems] = await Promise.all([
+      getUserWatchlist(db, {
+        userId: session.user.id,
+        limit: WATCHLIST_PAGE_SIZE,
+        offset: (page - 1) * WATCHLIST_PAGE_SIZE,
+      }),
+      countUserWatchlist(db, { userId: session.user.id }),
+    ]);
+
+    const totalPages =
+      totalItems === 0 ? 0 : Math.ceil(totalItems / WATCHLIST_PAGE_SIZE);
+
+    return {
+      watchlist: result.watchlist,
+      page,
+      totalPages,
+      totalItems,
+    };
   });
 
 // Toggle a watchlist entry (add if absent, remove if present). Parallel to
@@ -848,64 +615,37 @@ export const toggleWatchlistItem = createServerFn({
     }),
   )
   .handler(async ({ data }) => {
-    try {
-      const session = await auth.api.getSession({
-        headers: getRequest().headers,
-      });
+    const userId = await requireUserId();
 
-      if (!session?.user?.id) {
-        return { success: false, error: "User not authenticated" };
-      }
+    const db = getDb();
+    const { watchListId, title, year, category, genres, posterPath } = data;
 
-      const db = getDb();
-      const { watchListId, title, year, category, genres, posterPath } = data;
+    // Check if already watchlisted
+    const existingResult = await getUserWatchlist(db, {
+      userId,
+    });
 
-      // Check if already watchlisted
-      const existingResult = await getUserWatchlist(db, {
-        userId: session.user.id,
-      });
+    const existing = existingResult.watchlist.find(
+      (w) => w.watchListId === watchListId,
+    );
 
-      if (!existingResult.success) {
-        return { success: false, error: "Failed to check watchlist" };
-      }
-
-      const existing = existingResult.watchlist.find(
-        (w) => w.watchListId === watchListId,
-      );
-
-      if (existing) {
-        const result = await removeUserWatchlistByWatchListId(db, {
-          userId: session.user.id,
-          watchListId,
-        });
-        return {
-          success: result.success,
-          action: "removed" as const,
-        };
-      }
-
-      const genresString = genres?.join(", ");
-      const result = await addUserWatchlist(db, {
-        userId: session.user.id,
+    if (existing) {
+      await removeUserWatchlistByWatchListId(db, {
+        userId,
         watchListId,
-        title,
-        year,
-        category,
-        genres: genresString,
-        posterPath,
       });
-      return {
-        success: result.success,
-        action: "added" as const,
-      };
-    } catch (error) {
-      console.error("Error toggling watchlist item:", error);
-      return {
-        success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to toggle watchlist item",
-      };
+      return { action: "removed" as const };
     }
+
+    const genresString = genres?.join(", ");
+    await addUserWatchlist(db, {
+      userId,
+      watchListId,
+      title,
+      year,
+      category,
+      genres: genresString,
+      posterPath,
+    });
+    return { action: "added" as const };
   });

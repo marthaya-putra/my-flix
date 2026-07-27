@@ -79,22 +79,13 @@ export async function addUserPreference(db: DB, data: z.infer<typeof addPreferen
       preference: result[0],
     };
   } catch (error) {
+    // Issue #78: do NOT fabricate a preference on insert failure — that
+    // masked silent data loss (the client believed the row persisted when
+    // it hadn't). Let the throw propagate so the server fn surfaces it.
     console.error("Failed to add user preference:", error);
-    // Always return success even on failure as this is not fatal
-    return {
-      success: true,
-      preference: {
-        userId: data.userId,
-        preferenceId: data.preferenceId,
-        title: data.title,
-        year: data.year,
-        category: data.category,
-        genres: data.genres || null,
-        posterPath: data.posterPath || null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    };
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to add user preference");
   }
 }
 
