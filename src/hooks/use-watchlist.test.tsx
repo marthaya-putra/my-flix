@@ -30,6 +30,13 @@ vi.mock("@/lib/data/preferences", () => ({
   toggleWatchlistItem: vi.fn(),
 }));
 
+// Toast surface is a side effect, not part of the optimistic-toggle recipe —
+// mock it so we can assert it fires without coupling to sonner's internals.
+const toastError = vi.hoisted(() => vi.fn());
+vi.mock("sonner", () => ({
+  toast: { error: toastError },
+}));
+
 // Imported after the mock above so the mocked module is what the hook sees.
 import {
   getUserWatchlistItems,
@@ -194,5 +201,10 @@ describe("useWatchlist — integration via its public API", () => {
     await waitFor(() => {
       expect(result.current.isWatchlisted(42)).toBe(false);
     });
+
+    // A failed toggle surfaces a user-facing error (CODING_STANDARDS §8).
+    expect(toastError).toHaveBeenCalledWith(
+      "Couldn't save to your watchlist. Reverted.",
+    );
   });
 });

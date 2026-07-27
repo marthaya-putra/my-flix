@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { toggleWatchlistItem } from "@/lib/data/preferences";
 import {
   watchlistItemsOptions,
@@ -76,6 +77,7 @@ export function useWatchlist() {
           context.previous,
         );
       }
+      toast.error("Couldn't save to your watchlist. Reverted.");
     },
     onSettled: () => {
       void queryClient.invalidateQueries({
