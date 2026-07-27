@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   removeUserDislikeByPreferenceIdFn,
   toggleMoviePreference,
@@ -109,6 +110,7 @@ export function useLikedItems() {
           context.previousDisliked,
         );
       }
+      toast.error("Couldn't save your like. Reverted.");
     },
     onSettled: () => {
       // Refetch the canonical lists and refresh any preferences views.
