@@ -35,11 +35,12 @@ export async function loadUserContent(userId: string): Promise<UserContent> {
       getUserDislikes(db, { userId }),
     ]);
 
-  const preferences = preferencesResponse.success
-    ? preferencesResponse.preferences
-    : [];
-  const people = peopleResponse.success ? peopleResponse.people : [];
-  const dislikes = dislikesResponse.success ? dislikesResponse.dislikes : [];
+  // Issue #78: the read repos throw on DB failure, so the `.success` flag
+  // they still carry is always true here — read the arrays directly. A
+  // successful read with zero rows is a legit new-user profile, not an error.
+  const preferences = preferencesResponse.preferences;
+  const people = peopleResponse.people;
+  const dislikes = dislikesResponse.dislikes;
 
   const allGenres = preferences
     .filter((p) => p.genres)
