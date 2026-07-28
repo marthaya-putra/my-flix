@@ -568,7 +568,7 @@ export const getUserWatchlistItems = createServerFn({
 export const fetchUserWatchlist = createServerFn({
   method: "GET",
 })
-  .inputValidator((page: number = 1) => Math.max(1, page))
+  .validator(z.number().int().min(1))
   .handler(async ({ data }) => {
     const page = data;
     const session = await auth.api.getSession({

@@ -1,6 +1,23 @@
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 import { fetchFromTMDB } from "./tmdb";
 import { convertToDiscoverResult } from "../utils";
+
+// CODING_STANDARDS.md §7: inputValidator is zod-or-remove. These were
+// identity arrows that carried only a TS annotation and validated
+// nothing at runtime. Replaced with real zod schemas. Defaults that
+// lived in the old arrow signatures are re-encoded via `.default(...)`
+// so the fn-level contract (input optional) is preserved.
+const timeWindowSchema = z
+  .union([z.literal("day"), z.literal("week")])
+  .default("week");
+const popularMoviesSchema = z.number().int().min(1).default(1);
+const discoverMoviesSchema = z.object({
+  page: z.number(),
+  with_genres: z.string().optional(),
+  vote_average_gte: z.number().optional(),
+  year: z.number().optional(),
+});
 
 export const genres: Record<number, string> = {
   28: "Action",
@@ -27,7 +44,7 @@ export const genres: Record<number, string> = {
 export const fetchTrendingMovies = createServerFn({
   method: "GET",
 })
-  .inputValidator((timeWindow: "day" | "week" = "week") => timeWindow)
+  .validator(timeWindowSchema)
   .handler(async ({ data }) => {
     const result = await fetchFromTMDB(`/trending/movie/${data}`);
     return convertToDiscoverResult(result);
@@ -36,7 +53,7 @@ export const fetchTrendingMovies = createServerFn({
 export const fetchPopularMovies = createServerFn({
   method: "GET",
 })
-  .inputValidator((page: number = 1) => page)
+  .validator(popularMoviesSchema)
   .handler(async ({ data }) => {
     const result = await fetchFromTMDB(
       `/movie/popular?language=en-US&region=US&page=${String(data)}`
@@ -47,14 +64,7 @@ export const fetchPopularMovies = createServerFn({
 export const fetchDiscoverMovies = createServerFn({
   method: "GET",
 })
-  .inputValidator(
-    (params: {
-      page: number;
-      with_genres?: string;
-      vote_average_gte?: number;
-      year?: number;
-    }) => params
-  )
+  .validator(discoverMoviesSchema)
   .handler(async ({ data }) => {
     const today = new Date().toISOString().split("T")[0];
     const queryParams = new URLSearchParams();

@@ -229,10 +229,27 @@ export function convertToSearchResult(data: TMDBSearchResponse): SearchResult {
   };
 }
 
+// See movies.ts — same §7 cleanup (identity arrows → real zod schemas).
+const searchMoviesSchema = z.object({
+  query: z.string(),
+  page: z.number().optional(),
+  primaryReleaseYear: z.number().optional(),
+});
+const searchTVsSchema = z.object({
+  query: z.string(),
+  page: z.number().optional(),
+  firstAirDateYear: z.number().optional(),
+});
+const searchActorsSchema = z.object({
+  query: z.string(),
+  page: z.number().optional(),
+});
+const searchContentSchema = z.object({ query: z.string() });
+
 export const searchMovies = createServerFn({
   method: "GET",
 })
-  .inputValidator((params: { query: string; page?: number; primaryReleaseYear?: number }) => params)
+  .validator(searchMoviesSchema)
   .handler(async ({ data }) => {
     return searchMoviesAPI(data);
   });
@@ -240,7 +257,7 @@ export const searchMovies = createServerFn({
 export const searchTVs = createServerFn({
   method: "GET",
 })
-  .inputValidator((params: { query: string; page?: number; firstAirDateYear?: number }) => params)
+  .validator(searchTVsSchema)
   .handler(async ({ data }) => {
     return searchTVsAPI(data);
   });
@@ -248,7 +265,7 @@ export const searchTVs = createServerFn({
 export const searchActors = createServerFn({
   method: "GET",
 })
-  .inputValidator((params: { query: string; page?: number }) => params)
+  .validator(searchActorsSchema)
   .handler(async ({ data }) => {
     if (!data.query || data.query.trim().length < 2) {
       return {
@@ -277,7 +294,7 @@ export const searchActors = createServerFn({
 export const searchContent = createServerFn({
   method: "GET",
 })
-  .inputValidator((params: { query: string }) => params)
+  .validator(searchContentSchema)
   .handler(async ({ data }) => {
     const query = data.query;
     if (!query || query.trim().length < 2) {
