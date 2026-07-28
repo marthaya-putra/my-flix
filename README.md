@@ -61,15 +61,16 @@ A modern, full-stack movie discovery and recommendation platform built with cutt
    DATABASE_URL=postgresql://username:password@localhost:5433/myflix
 
    # TMDB API
-   TMDB_API_KEY=your_tmdb_api_key_here
-   INCLUDE_ADULT_CONTENT=false
+   TMDB_TOKEN=your_tmdb_token_here
+   INCLUDE_ADULT=false
 
    # Google AI
    GOOGLE_GENERATIVE_AI_API_KEY=your_google_ai_api_key_here
+   MISTRAL_API_KEY=your_mistral_api_key_here
 
    # Auth
-   AUTH_SECRET=your_auth_secret_here
-   AUTH_URL=http://localhost:3000
+   BETTER_AUTH_SECRET=your_better_auth_secret_here
+   BETTER_AUTH_URL=http://localhost:3000
    ```
 
 4. **Set up the database**

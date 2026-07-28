@@ -259,7 +259,7 @@ export const searchActors = createServerFn({
     }
 
     try {
-      const includeAdult = process.env.INCLUDE_ADULT_CONTENT === "true";
+      const includeAdult = process.env.INCLUDE_ADULT === "true";
       const searchPath = `/search/person?query=${encodeURIComponent(data.query)}&include_adult=${includeAdult}&page=${data.page || 1}`;
       const result = await fetchFromTMDB(searchPath);
 
@@ -291,7 +291,7 @@ export const searchContent = createServerFn({
     }
 
     try {
-      const includeAdult = process.env.INCLUDE_ADULT_CONTENT === "true";
+      const includeAdult = process.env.INCLUDE_ADULT === "true";
       const searchPath = `/search/multi?query=${encodeURIComponent(query)}&include_adult=${includeAdult}`;
       const tmdbResult = await fetchFromTMDB(searchPath);
 
@@ -314,7 +314,7 @@ export async function searchMoviesAPI(params: SearchMoviesParams) {
   }
 
   try {
-    const includeAdult = process.env.INCLUDE_ADULT_CONTENT === "true";
+    const includeAdult = process.env.INCLUDE_ADULT === "true";
     const urlParams = new URLSearchParams({
       query: params.query,
       include_adult: includeAdult.toString(),
@@ -344,7 +344,7 @@ export async function searchTVsAPI(params: SearchTVsParams) {
   }
 
   try {
-    const includeAdult = process.env.INCLUDE_ADULT_CONTENT === "true";
+    const includeAdult = process.env.INCLUDE_ADULT === "true";
     const urlParams = new URLSearchParams({
       query: params.query,
       include_adult: includeAdult.toString(),
