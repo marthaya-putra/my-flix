@@ -5,19 +5,17 @@ import { type ReactNode, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { usePreferences } from "@/hooks/use-preferences";
 import { fadeUpContainer, fadeUpItem, tapSpring } from "@/lib/motion";
 import { ContentItem, FilmInfo, Person } from "@/lib/types";
-import { UserPreferences } from "@/lib/types/preferences";
 import { cn } from "@/lib/utils";
 import { ContentSearchDialog } from "./content-search-dialog";
 import {
   PreferencesContext,
   type PreferencesContextValue,
 } from "./preferences-context";
-import { usePreferences } from "./use-preferences";
 
 type PreferencesShellProps = {
-  initialPreferences?: UserPreferences;
   children: ReactNode;
 };
 
@@ -54,11 +52,8 @@ const NAV_ITEMS = [
  * (exposed via context so every child page reads the same state). Child
  * routes render into `children` (the layout route's <Outlet />).
  */
-export function PreferencesShell({
-  initialPreferences,
-  children,
-}: PreferencesShellProps) {
-  const store = usePreferences(initialPreferences);
+export function PreferencesShell({ children }: PreferencesShellProps) {
+  const store = usePreferences();
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchType, setSearchType] = useState<"movie" | "tv" | "person">(

@@ -1,7 +1,7 @@
 import { useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
-import { usePreferences } from "@/components/preferences/use-preferences";
+import { usePreferences } from "@/hooks/use-preferences";
 import type { ContentItem } from "@/lib/types";
 import { ContentSelectionStep } from "./content-selection-step";
 import { PeopleSelectionStep } from "./people-selection-step";
@@ -66,8 +66,10 @@ export function OnboardingWizard() {
       // Navigate to recommendations to see the results
       router.navigate({ to: "/recommendations" });
     } catch (error) {
+      // addPreference surfaces its own failure toast (hook onError); here we
+      // just bail out of the loop on the first rejection. The remaining items
+      // are not saved — the user can re-run the wizard for those.
       console.error("Error saving preferences:", error);
-      toast.error("Failed to save preferences. Please try again.");
     } finally {
       setIsSaving(false);
     }
