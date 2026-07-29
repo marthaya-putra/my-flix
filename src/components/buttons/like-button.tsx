@@ -23,8 +23,7 @@ interface LikeButtonProps {
  *
  * Canonical style is the hover-overlay glass pill: `rounded-full
  * backdrop-blur-md border`, active = primary, inactive = glass pill.
- * Like↔dislike mutual exclusion lives in the hooks (see ADR
- * docs/adr/0002-reaction-mutual-exclusion-in-hooks.md), so this renders as a
+ * Like↔dislike mutual exclusion lives in the hooks, so this renders as a
  * fully independent sibling of <DislikeButton> — no coordination props.
  */
 export function LikeButton({ filmInfo, disabled }: LikeButtonProps) {

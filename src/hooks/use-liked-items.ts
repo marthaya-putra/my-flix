@@ -18,8 +18,7 @@ import type { FilmInfo } from "@/lib/types";
  * Like↔dislike mutual exclusion is owned here: turning a like **on** removes
  * an existing dislike for the same id (optimistically, then via the dislike
  * removal server fn). Callers do not orchestrate exclusion — the two caches
- * stay consistent on their own. See ADR
- * `docs/adr/0002-reaction-mutual-exclusion-in-hooks.md`.
+ * stay consistent on their own.
  */
 export function useLikedItems() {
   const queryClient = useQueryClient();

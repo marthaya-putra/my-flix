@@ -37,9 +37,8 @@ export function RecommendationCard({
   // Like/dislike/watchlist state is owned by the shared button components
   // (LikeButton / DislikeButton / WatchlistButton), which read straight from
   // the QueryClient cache (primed by the route loaders) and call the reaction
-  // hooks internally. Like↔dislike mutual exclusion lives in the hooks (see
-  // ADR docs/adr/0002-reaction-mutual-exclusion-in-hooks.md), so the buttons
-  // render as fully independent siblings — no caller-side orchestration.
+  // hooks internally. Like↔dislike mutual exclusion lives in the hooks, so the
+  // buttons render as fully independent siblings — no caller-side orchestration.
 
   const imageErrorKey = `${recommendation.title}-${recommendation.releasedYear}`;
 

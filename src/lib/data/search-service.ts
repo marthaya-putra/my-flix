@@ -1,4 +1,4 @@
-import { ContentItem, ContentType, FilmInfo, Person } from "@/lib/types";
+import { type ContentItem, type ContentType } from "@/lib/types";
 import { searchActors, searchMovies, searchTVs } from "./search";
 
 export interface SearchOptions {
@@ -72,22 +72,5 @@ export class SearchService {
       items: [...currentItems, ...result],
       totalPages,
     };
-  }
-
-  /**
-   * Perform multi-search across all content types
-   */
-  static async searchMulti(options: SearchOptions): Promise<{
-    page: number;
-    movies: FilmInfo[];
-    tvs: FilmInfo[];
-    people: Person[];
-    totalPages: number;
-  }> {
-    // This could be implemented if you want a unified search across all types
-    // For now, we'll keep the existing tabbed approach
-    throw new Error(
-      "Multi-search not implemented. Use specific type search instead.",
-    );
   }
 }
