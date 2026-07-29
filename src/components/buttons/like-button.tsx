@@ -9,7 +9,7 @@ import {
 import { useLikedItems } from "@/hooks/use-liked-items";
 import { ctaDramaSpring } from "@/lib/motion";
 import type { FilmInfo } from "@/lib/types";
-import { cn, HIT_ZONE } from "@/lib/utils";
+import { cn, REACTION_BUTTON_BASE } from "@/lib/utils";
 
 type LikeButtonProps = {
   filmInfo: FilmInfo;
@@ -49,8 +49,7 @@ export function LikeButton({ filmInfo, disabled }: LikeButtonProps) {
               toggleLike(filmInfo);
             }}
             className={cn(
-              HIT_ZONE,
-              "p-1.5 h-8 w-8 rounded-full backdrop-blur-md border transition-colors",
+              REACTION_BUTTON_BASE,
               liked
                 ? "border-primary/30 bg-primary/20"
                 : "border-white/20 bg-black/40 hover:bg-white/10",

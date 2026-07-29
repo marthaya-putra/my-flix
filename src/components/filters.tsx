@@ -1,13 +1,6 @@
 import { MOVIE_GENRES } from "@/lib/genres";
 import { RatingItems } from "@/lib/types";
-import { cn } from "@/lib/utils";
-
-/** Filter row — base hover/pad/rounded + optional selected highlight. */
-const filterRow = (selected: boolean) =>
-  cn(
-    "flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded",
-    selected && "bg-blue-50",
-  );
+import { cn, FILTER_ROW_CLASS } from "@/lib/utils";
 
 type FiltersProps = {
   selectedGenres: string[];
@@ -64,7 +57,7 @@ export function Filters({
           </label>
           <div className="space-y-2 max-h-48 overflow-y-auto">
             {Object.entries(MOVIE_GENRES).map(([id, name]) => (
-              <label key={id} className={filterRow(false)}>
+              <label key={id} className={cn(FILTER_ROW_CLASS)}>
                 <input
                   type="checkbox"
                   checked={selectedGenres.includes(id)}
@@ -83,7 +76,9 @@ export function Filters({
             Rating
           </label>
           <div className="space-y-2">
-            <label className={filterRow(!selectedRating)}>
+            <label
+              className={cn(FILTER_ROW_CLASS, !selectedRating && "bg-blue-50")}
+            >
               <input
                 type="radio"
                 name="rating"
@@ -96,7 +91,10 @@ export function Filters({
             {RatingItems.map((item) => (
               <label
                 key={item.value}
-                className={filterRow(selectedRating === String(item.value))}
+                className={cn(
+                  FILTER_ROW_CLASS,
+                  selectedRating === String(item.value) && "bg-blue-50",
+                )}
               >
                 <input
                   type="radio"
@@ -117,7 +115,9 @@ export function Filters({
             Year
           </label>
           <div className="space-y-2">
-            <label className={filterRow(!selectedYear)}>
+            <label
+              className={cn(FILTER_ROW_CLASS, !selectedYear && "bg-blue-50")}
+            >
               <input
                 type="radio"
                 name="year"
@@ -130,7 +130,10 @@ export function Filters({
             {years.map((year) => (
               <label
                 key={year}
-                className={filterRow(selectedYear === String(year))}
+                className={cn(
+                  FILTER_ROW_CLASS,
+                  selectedYear === String(year) && "bg-blue-50",
+                )}
               >
                 <input
                   type="radio"

@@ -9,7 +9,7 @@ import {
 import { useWatchlist } from "@/hooks/use-watchlist";
 import { ctaDramaSpring } from "@/lib/motion";
 import type { FilmInfo } from "@/lib/types";
-import { cn, HIT_ZONE } from "@/lib/utils";
+import { cn, REACTION_BUTTON_BASE } from "@/lib/utils";
 
 type WatchlistButtonProps = {
   filmInfo: FilmInfo;
@@ -49,8 +49,7 @@ export function WatchlistButton({ filmInfo, disabled }: WatchlistButtonProps) {
               toggleWatchlist(filmInfo);
             }}
             className={cn(
-              HIT_ZONE,
-              "p-1.5 h-8 w-8 rounded-full backdrop-blur-md border transition-colors",
+              REACTION_BUTTON_BASE,
               watchlisted
                 ? "border-violet-500/30 bg-violet-500/20"
                 : "border-white/20 bg-black/40 hover:bg-white/10",

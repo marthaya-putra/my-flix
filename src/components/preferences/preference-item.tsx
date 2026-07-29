@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/tooltip";
 import { tapSpring } from "@/lib/motion";
 import { ContentItem } from "@/lib/types";
-import { HIT_ZONE } from "@/lib/utils";
+import { cn, HIT_ZONE } from "@/lib/utils";
 
 type PreferenceItemProps = {
   item: ContentItem;
@@ -64,7 +64,10 @@ export function PreferenceItem({ item, onRemove }: PreferenceItemProps) {
         size="sm"
         variant="ghost"
         onClick={onRemove}
-        className={`${HIT_ZONE} absolute top-2 right-2 h-7 w-7 p-0 z-10 text-muted-foreground/0 group-hover:text-muted-foreground hover:text-destructive hover:bg-destructive/15 rounded-md transition-[color,background-color,opacity] duration-200`}
+        className={cn(
+          HIT_ZONE,
+          "absolute top-2 right-2 h-7 w-7 p-0 z-10 text-muted-foreground/0 group-hover:text-muted-foreground hover:text-destructive hover:bg-destructive/15 rounded-md transition-[color,background-color,opacity] duration-200",
+        )}
         aria-label={`Remove ${info.title}`}
       >
         <Trash2 className="h-3.5 w-3.5" />

@@ -9,7 +9,7 @@ import {
 import { useDislikedItems } from "@/hooks/use-disliked-items";
 import { ctaDramaSpring } from "@/lib/motion";
 import type { FilmInfo } from "@/lib/types";
-import { cn, HIT_ZONE } from "@/lib/utils";
+import { cn, REACTION_BUTTON_BASE } from "@/lib/utils";
 
 type DislikeButtonProps = {
   filmInfo: FilmInfo;
@@ -49,8 +49,7 @@ export function DislikeButton({ filmInfo, disabled }: DislikeButtonProps) {
               toggleDislike(filmInfo);
             }}
             className={cn(
-              HIT_ZONE,
-              "p-1.5 h-8 w-8 rounded-full backdrop-blur-md border transition-colors",
+              REACTION_BUTTON_BASE,
               disliked
                 ? "border-red-500/30 bg-red-500/20"
                 : "border-white/20 bg-black/40 hover:bg-white/10",
