@@ -55,10 +55,10 @@ export function MovieCard({
   };
 
   const getRatingColor = (rating: number) => {
-    if (rating >= 8) return "text-emerald-400 border-emerald-400/30";
-    if (rating >= 6.5) return "text-blue-400 border-blue-400/30";
-    if (rating >= 5) return "text-orange-400 border-orange-400/30";
-    return "text-slate-400 border-slate-400/30";
+    if (rating >= 8) return "text-chart-2 border-chart-2/30";
+    if (rating >= 6.5) return "text-chart-1 border-chart-1/30";
+    if (rating >= 5) return "text-chart-3 border-chart-3/30";
+    return "text-muted-foreground border-muted-foreground/30";
   };
 
   return (
@@ -110,7 +110,7 @@ export function MovieCard({
 
           <div className="flex items-center gap-2 mb-3 flex-wrap">
             {match && (
-              <span className="text-xs font-bold text-emerald-400">
+              <span className="text-xs font-bold text-chart-2">
                 {match} Match
               </span>
             )}

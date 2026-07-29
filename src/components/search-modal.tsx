@@ -60,8 +60,8 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl w-[90vw] h-[75vh] flex flex-col bg-black/95 border-gray-800">
-        <DialogClose className="absolute right-4 top-4 rounded-full bg-black/60 backdrop-blur-sm border border-gray-600 p-2 text-white hover:bg-black/80 transition-colors z-10">
+      <DialogContent className="max-w-4xl w-[90vw] h-[75vh] flex flex-col bg-popover border-border">
+        <DialogClose className="absolute right-4 top-4 rounded-full bg-black/60 backdrop-blur-sm border border-border p-2 text-white hover:bg-black/80 transition-colors z-10">
           <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
         </DialogClose>
@@ -72,7 +72,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
           </DialogTitle>
           <div className="flex items-center gap-4 pr-14">
             <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5 pointer-events-none" />
               <Input
                 placeholder="Search by title or person..."
                 autoFocus
@@ -82,7 +82,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
                   setSearchQuery(query);
                   debouncedSearch(query);
                 }}
-                className="pl-12 pr-4 py-3 bg-gray-900/50 border-gray-700 text-white placeholder-gray-400 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500 rounded-full h-12 text-base w-full"
+                className="pl-12 pr-4 py-3 bg-muted border-input text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring rounded-full h-12 text-base w-full"
               />
             </div>
           </div>
@@ -91,12 +91,12 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
         <div className="overflow-y-auto flex-1">
           {isLoading && (
             <div className="flex items-center justify-center h-full">
-              <div className="text-gray-400">Searching...</div>
+              <div className="text-muted-foreground">Searching...</div>
             </div>
           )}
 
           {!isLoading && !searchQuery && (
-            <div className="flex flex-col items-center justify-center h-full text-gray-400">
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
               <Search className="w-16 h-16 mb-4 opacity-50" />
               <p className="text-lg">Search by title or person</p>
             </div>
@@ -118,7 +118,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
                           title={movie.title}
                           subtitle={movie.releaseDate?.split("-")[0]}
                           badge={
-                            <div className="bg-blue-500/90 backdrop-blur-sm p-2 rounded-full">
+                            <div className="bg-chart-1/90 backdrop-blur-sm p-2 rounded-full">
                               <Film className="w-3 h-3 text-white" />
                             </div>
                           }
@@ -130,7 +130,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
                         <Link
                           to="/movies/search"
                           search={{ query: searchQuery }}
-                          className="text-sm text-blue-400 hover:text-blue-300 transition-colors font-medium"
+                          className="text-sm text-chart-1 hover:text-chart-1/80 transition-colors font-medium"
                           onClick={handleMoreClick}
                         >
                           More →
@@ -156,7 +156,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
                           title={tvShow.title}
                           subtitle={tvShow.releaseDate?.split("-")[0]}
                           badge={
-                            <div className="bg-green-500/90 backdrop-blur-sm p-2 rounded-full">
+                            <div className="bg-chart-2/90 backdrop-blur-sm p-2 rounded-full">
                               <Tv className="w-3 h-3 text-white" />
                             </div>
                           }
@@ -168,7 +168,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
                         <Link
                           to="/tvs/search"
                           search={{ query: searchQuery }}
-                          className="text-sm text-green-400 hover:text-green-300 transition-colors font-medium"
+                          className="text-sm text-chart-2 hover:text-chart-2/80 transition-colors font-medium"
                           onClick={handleMoreClick}
                         >
                           More →
@@ -189,7 +189,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
                         imageUrl={person.profileImageUrl}
                         title={person.name}
                         badge={
-                          <div className="bg-purple-500/90 backdrop-blur-sm p-2 rounded-full">
+                          <div className="bg-chart-4/90 backdrop-blur-sm p-2 rounded-full">
                             <User className="w-3 h-3 text-white" />
                           </div>
                         }
@@ -200,7 +200,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
                         <Link
                           to="/person/search"
                           search={{ query: searchQuery }}
-                          className="text-sm text-purple-400 hover:text-purple-300 transition-colors font-medium"
+                          className="text-sm text-chart-4 hover:text-chart-4/80 transition-colors font-medium"
                           onClick={handleMoreClick}
                         >
                           More →
@@ -218,7 +218,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
                   <FrostEmptyState>
                     {/* Canvas UI Frost — Issue #67: static ambient frost
                         pane behind the message. See frost-empty-state. */}
-                    <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                       <Search className="w-16 h-16 mb-4 opacity-50" />
                       <p className="text-lg">No results found</p>
                       <p className="text-sm mt-2">Try different keywords</p>

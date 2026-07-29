@@ -80,8 +80,8 @@ export function CategorySection({
 
       {/* Error card (only when no items in this category) */}
       {isError && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg max-w-sm">
-          <p className="text-sm text-red-700">
+        <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg max-w-sm">
+          <p className="text-sm text-destructive">
             {label}: {errorMessage}
           </p>
         </div>

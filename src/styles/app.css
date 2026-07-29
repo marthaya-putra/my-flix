@@ -28,6 +28,7 @@
   --color-chart-3: hsl(var(--chart-3));
   --color-chart-4: hsl(var(--chart-4));
   --color-chart-5: hsl(var(--chart-5));
+  --color-rating: hsl(var(--rating));
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -82,6 +83,9 @@
   --chart-3: 30 80% 55%;
   --chart-4: 280 65% 60%;
   --chart-5: 340 75% 55%;
+
+  /* ─── Rating — semantic star color (ADR 0004) ─── */
+  --rating: 48 96% 53%;
 
   /* ─── Radius — Apple uses larger radii ─── */
   --radius: 0.875rem;

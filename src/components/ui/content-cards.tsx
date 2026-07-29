@@ -69,7 +69,7 @@ export function MovieCard({ movie, onAdd, isAdded, isAdding }: MovieCardProps) {
             {/* Rating */}
             {movie.voteAverage && (
               <div className="flex items-center gap-1 mt-1">
-                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                <Star className="h-3 w-3 fill-rating text-rating" />
                 <span className="text-xs">{movie.voteAverage.toFixed(1)}</span>
               </div>
             )}
@@ -161,7 +161,7 @@ export function TVCard({ tvShow, onAdd, isAdded, isAdding }: TVCardProps) {
             {/* Rating */}
             {tvShow.voteAverage && (
               <div className="flex items-center gap-1 mt-1">
-                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                <Star className="h-3 w-3 fill-rating text-rating" />
                 <span className="text-xs">{tvShow.voteAverage.toFixed(1)}</span>
               </div>
             )}
