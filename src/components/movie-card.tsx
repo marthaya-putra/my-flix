@@ -14,11 +14,11 @@ import { HIT_ZONE } from "@/lib/utils";
 import { DislikeButton, LikeButton, WatchlistButton } from "./buttons";
 import { PlayLink } from "./play-link";
 
-interface MovieCardProps extends FilmInfo {
+type MovieCardProps = FilmInfo & {
   match?: string;
-}
+};
 
-export default function MovieCard({
+export function MovieCard({
   posterPath,
   title,
   voteAverage,

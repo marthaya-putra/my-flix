@@ -11,11 +11,10 @@ import { usePreferences } from "./use-preferences";
  * page consumes the same instance so an Add/Remove anywhere updates
  * everywhere, and any page can open the Add dialog with a specific type.
  */
-export interface PreferencesContextValue
-  extends ReturnType<typeof usePreferences> {
+export type PreferencesContextValue = ReturnType<typeof usePreferences> & {
   /** Open the shell's Add dialog pre-set to a content type. */
   openAdd: (type?: "movie" | "tv" | "person") => void;
-}
+};
 
 export const PreferencesContext = createContext<PreferencesContextValue | null>(
   null,

@@ -7,23 +7,23 @@ import { DislikeButton, LikeButton, WatchlistButton } from "./buttons";
 import { MoreInfoLink } from "./more-info-link";
 import { PlayLink } from "./play-link";
 
-interface Recommendation {
+type Recommendation = {
   title: string;
   category: "movie" | "tv";
   releasedYear: number;
   reason: string;
   imdbRating: number;
   tmdbData: FilmInfo | null;
-}
+};
 
-interface RecommendationCardProps {
+type RecommendationCardProps = {
   recommendation: Recommendation;
   imageErrors: Set<string>;
   onImageError: (key: string) => void;
   /** Whether this card is currently expanded (touch). */
   expanded?: boolean;
   onToggleExpand?: () => void;
-}
+};
 
 export function RecommendationCard({
   recommendation,

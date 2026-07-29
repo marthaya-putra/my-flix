@@ -11,10 +11,10 @@ import { tapSpring } from "@/lib/motion";
 import { ContentItem } from "@/lib/types";
 import { HIT_ZONE } from "@/lib/utils";
 
-interface PreferenceItemProps {
+type PreferenceItemProps = {
   item: ContentItem;
   onRemove: () => void;
-}
+};
 
 const getCategoryIcon = (category: "actor" | "director" | "other") => {
   switch (category) {

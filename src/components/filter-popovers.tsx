@@ -1,11 +1,11 @@
 import { ChevronDown, ChevronUp, Filter } from "lucide-react";
 import { ReactNode, useState } from "react";
 
-interface FilterPopoversProps {
+type FilterPopoversProps = {
   children: ReactNode;
-}
+};
 
-export default function FilterPopovers({ children }: FilterPopoversProps) {
+export function FilterPopovers({ children }: FilterPopoversProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (

@@ -1,12 +1,12 @@
 import { FilmType } from "@/lib/types";
 
-interface MoreInfoLinkProps {
+type MoreInfoLinkProps = {
   title: string;
   category: FilmType;
   releasedYear: number;
   children: React.ReactNode;
   className?: string;
-}
+};
 
 export function MoreInfoLink({
   title,

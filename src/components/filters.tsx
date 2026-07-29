@@ -1,7 +1,7 @@
 import { genres } from "@/lib/data/movies";
 import { RatingItems } from "@/lib/types";
 
-interface FiltersProps {
+type FiltersProps = {
   selectedGenres: string[];
   selectedRating: string;
   selectedYear: string;
@@ -9,9 +9,9 @@ interface FiltersProps {
   onRatingChange: (rating: string) => void;
   onYearChange: (year: string) => void;
   onClearFilters: () => void;
-}
+};
 
-export default function Filters({
+export function Filters({
   selectedGenres,
   selectedRating,
   selectedYear,

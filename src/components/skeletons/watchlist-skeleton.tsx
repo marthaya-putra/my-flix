@@ -1,4 +1,4 @@
-export default function WatchlistSkeleton() {
+export function WatchlistSkeleton() {
   return (
     <div className="container mx-auto p-4 max-w-6xl animate-pulse">
       <div className="mb-8">

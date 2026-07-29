@@ -13,15 +13,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { searchContent } from "@/lib/data/search";
 import { SearchResult } from "@/lib/types";
-import Card from "./card";
+import { Card } from "./card";
 import { PlayLink } from "./play-link";
 
-interface SearchModalProps {
+type SearchModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}
+};
 
-export default function SearchModal({ open, onOpenChange }: SearchModalProps) {
+export function SearchModal({ open, onOpenChange }: SearchModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);

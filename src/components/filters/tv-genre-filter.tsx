@@ -3,9 +3,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { genres } from "@/lib/data/tvs";
 import { Route } from "@/routes/tvs.index";
-import BaseFilter from "./base-filter";
+import { BaseFilter } from "./base-filter";
 
-export default function TvGenreFilter() {
+export function TvGenreFilter() {
   const search = useSearch({ from: Route.id });
   const navigate = useNavigate({ from: Route.id });
 

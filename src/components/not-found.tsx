@@ -4,7 +4,7 @@ import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { fadeUpContainer, fadeUpItem } from "@/lib/motion";
 
-export default function NotFound() {
+export function NotFound() {
   const navigate = useNavigate();
 
   return (

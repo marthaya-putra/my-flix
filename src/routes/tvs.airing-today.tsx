@@ -2,8 +2,8 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Suspense } from "react";
 import { z } from "zod";
-import MoviesContent from "@/components/movies-content";
-import AiringTodaySkeleton from "@/components/skeletons/airing-today-skeleton";
+import { MoviesContent } from "@/components/movies-content";
+import { AiringTodaySkeleton } from "@/components/skeletons/airing-today-skeleton";
 import { airingTodayTvsOptions } from "@/lib/queries/tvs";
 import { getUserTimezone } from "@/lib/utils/timezone";
 

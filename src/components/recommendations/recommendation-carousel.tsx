@@ -10,12 +10,12 @@ import {
 import { cn } from "@/lib/utils";
 import { CAROUSEL_BUTTON_CLASS } from "../content-row";
 
-interface RecommendationCarouselProps {
+type RecommendationCarouselProps = {
   children: React.ReactNode;
   itemCount: number;
   /** Scroll to the slide at this index (the first new card after load-more). */
   scrollToFirstNew?: number;
-}
+};
 
 export function RecommendationCarousel({
   children,
@@ -68,9 +68,9 @@ export function RecommendationCarousel({
   );
 }
 
-interface RecommendationCarouselItemProps {
+type RecommendationCarouselItemProps = {
   children: React.ReactNode;
-}
+};
 
 export function RecommendationCarouselItem({
   children,

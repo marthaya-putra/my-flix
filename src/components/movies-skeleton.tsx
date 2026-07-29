@@ -1,4 +1,4 @@
-export default function MoviesSkeleton() {
+export function MoviesSkeleton() {
   return (
     <>
       <div className="flex justify-center items-center gap-4 my-4">

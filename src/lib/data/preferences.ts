@@ -509,7 +509,7 @@ export const toggleMoviePreference = createServerFn({
 // source of truth is the server (DB) — never trust a client-supplied copy.
 // Exported so the streaming route and other server callers share one type.
 // Type-only — safe for the client to import without pulling server runtime.
-export interface UserContent {
+export type UserContent = {
   movies: Array<{ id: number; title: string; year: number }>;
   tvs: Array<{ id: number; title: string; year: number }>;
   dislikedMovies: Array<{ id: number; title: string; year: number }>;
@@ -517,7 +517,7 @@ export interface UserContent {
   actors: string[];
   directors: string[];
   genres: string[];
-}
+};
 
 export const getAllUserContent = createServerFn().handler(async () => {
   // Get the current session to retrieve authenticated user ID

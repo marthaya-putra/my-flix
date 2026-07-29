@@ -11,10 +11,10 @@ import { ctaDramaSpring } from "@/lib/motion";
 import type { FilmInfo } from "@/lib/types";
 import { HIT_ZONE } from "@/lib/utils";
 
-interface WatchlistButtonProps {
+type WatchlistButtonProps = {
   filmInfo: FilmInfo;
   disabled?: boolean;
-}
+};
 
 /**
  * Shared watchlist CTA. Owns the Button + motion.div + Tooltip + HIT_ZONE +

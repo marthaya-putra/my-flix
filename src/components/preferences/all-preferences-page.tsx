@@ -19,9 +19,9 @@ import type { FilmInfoWithDbId, PersonWithDbId } from "@/lib/types/preferences";
 import { PreferenceItem } from "./preference-item";
 import { usePreferencesContext } from "./preferences-context";
 
-interface AllPreferencesPageProps {
+type AllPreferencesPageProps = {
   category: "movies" | "tvShows" | "people";
-}
+};
 
 const ITEMS_PER_PAGE = 20;
 

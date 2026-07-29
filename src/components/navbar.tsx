@@ -25,7 +25,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { authClient } from "@/lib/auth-client";
 import { sessionQuery } from "@/lib/data/auth";
 import { cn } from "@/lib/utils";
-import SearchModal from "./search-modal";
+import { SearchModal } from "./search-modal";
 
 const NAV_LINKS = [
   { to: "/" as const, label: "Home" },
@@ -34,7 +34,7 @@ const NAV_LINKS = [
   { to: "/recommendations" as const, label: "Recommendations", icon: Sparkles },
 ] as const;
 
-export default function Navbar() {
+export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const router = useRouter();

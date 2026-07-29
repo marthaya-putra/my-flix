@@ -1,10 +1,10 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
 
-interface ClearFiltersProps {
+type ClearFiltersProps = {
   from: "/movies/" | "/tvs/" | "/tvs/airing-today" | "/movies/search";
-}
+};
 
-export default function ClearFilters({ from }: ClearFiltersProps) {
+export function ClearFilters({ from }: ClearFiltersProps) {
   const navigate = useNavigate({ from });
   const search = useSearch({ from });
 

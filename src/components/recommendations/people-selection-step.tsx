@@ -8,11 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { ContentItem } from "@/lib/types";
 
-interface PeopleSelectionStepProps {
+type PeopleSelectionStepProps = {
   selectedPeople: ContentItem[];
   onSelectionChange: (people: ContentItem[]) => void;
   onSkip: () => void;
-}
+};
 
 export function PeopleSelectionStep({
   selectedPeople,

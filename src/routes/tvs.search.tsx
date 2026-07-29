@@ -2,8 +2,8 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Suspense } from "react";
 import { z } from "zod";
-import MoviesContent from "@/components/movies-content";
-import TvsSearchSkeleton from "@/components/skeletons/tvs-search-skeleton";
+import { MoviesContent } from "@/components/movies-content";
+import { TvsSearchSkeleton } from "@/components/skeletons/tvs-search-skeleton";
 import { searchTvsOptions } from "@/lib/queries/search";
 
 export const Route = createFileRoute("/tvs/search")({

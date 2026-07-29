@@ -14,8 +14,8 @@ import type { ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { sessionQuery } from "@/lib/data/auth";
-import Navbar from "../components/navbar";
-import NotFound from "../components/not-found";
+import { Navbar } from "../components/navbar";
+import { NotFound } from "../components/not-found";
 import type { AppRouterContext } from "../router";
 import appCss from "../styles/app.css?url";
 

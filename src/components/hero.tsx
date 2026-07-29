@@ -6,7 +6,7 @@ import { FilmInfo } from "@/lib/types";
 import { getReleasedYear } from "@/lib/utils";
 import { PlayLink } from "./play-link";
 
-export default function Hero(filmInfo: FilmInfo) {
+export function Hero(filmInfo: FilmInfo) {
   return (
     <div className="relative w-full h-[50vh] min-h-[400px] overflow-hidden">
       {/* Backdrop — fade-in only, content just appears with it.

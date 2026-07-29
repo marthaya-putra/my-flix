@@ -11,10 +11,10 @@ import { ctaDramaSpring } from "@/lib/motion";
 import type { FilmInfo } from "@/lib/types";
 import { HIT_ZONE } from "@/lib/utils";
 
-interface DislikeButtonProps {
+type DislikeButtonProps = {
   filmInfo: FilmInfo;
   disabled?: boolean;
-}
+};
 
 /**
  * Shared dislike CTA. Owns the Button + motion.div + Tooltip + HIT_ZONE +

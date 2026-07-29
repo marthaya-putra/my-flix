@@ -1,11 +1,11 @@
-interface CardProps {
+type CardProps = {
   imageUrl?: string;
   badge?: React.ReactNode;
   title?: string;
   subtitle?: string;
-}
+};
 
-export default function Card({ imageUrl, badge, title, subtitle }: CardProps) {
+export function Card({ imageUrl, badge, title, subtitle }: CardProps) {
   return (
     <div className="group cursor-pointer">
       <div className="relative aspect-3/4 overflow-hidden rounded-lg bg-card">

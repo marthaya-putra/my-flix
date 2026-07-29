@@ -1,10 +1,10 @@
 import { FilmType } from "@/lib/types";
 
-interface PlayLinkProps {
+type PlayLinkProps = {
   title: string;
   category: FilmType;
   children: React.ReactNode;
-}
+};
 
 export function PlayLink({ title, category, children }: PlayLinkProps) {
   const categoryPath = category === "movie" ? "movies" : "shows";

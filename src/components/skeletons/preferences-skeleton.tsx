@@ -3,7 +3,7 @@
  * (header + segmented sub-nav) so the chrome is stable during prefetch, then
  * shows shimmering favorites grids where the content streams in.
  */
-export default function PreferencesSkeleton() {
+export function PreferencesSkeleton() {
   return (
     <div className="container mx-auto px-4 max-w-6xl">
       {/* Header */}
