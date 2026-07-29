@@ -1,7 +1,7 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { genres } from "@/lib/data/tvs";
+import { TV_GENRES } from "@/lib/genres";
 import { Route } from "@/routes/tvs.index";
 import { BaseFilter } from "./base-filter";
 
@@ -37,7 +37,7 @@ export function TvGenreFilter() {
     >
       {() => (
         <div className="space-y-2">
-          {Object.entries(genres).map(([id, name]) => (
+          {Object.entries(TV_GENRES).map(([id, name]) => (
             <Label
               htmlFor={`tv-genre-${id}`}
               key={id}

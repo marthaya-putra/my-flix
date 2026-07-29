@@ -1,7 +1,7 @@
 import { getRouteApi } from "@tanstack/react-router";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { genres as movieGenres } from "@/lib/data/movies";
+import { MOVIE_GENRES } from "@/lib/genres";
 import { BaseFilter } from "./base-filter";
 
 // Scoped, typed hooks for the /movies/ route. Avoids importing the route
@@ -40,7 +40,7 @@ export function GenreFilter() {
     >
       {() => (
         <div className="space-y-2">
-          {Object.entries(movieGenres).map(([id, name]) => (
+          {Object.entries(MOVIE_GENRES).map(([id, name]) => (
             <Label
               htmlFor={`genre-${id}`}
               key={id}
