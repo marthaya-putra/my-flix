@@ -9,7 +9,7 @@ import {
 import { useLikedItems } from "@/hooks/use-liked-items";
 import { ctaDramaSpring } from "@/lib/motion";
 import type { FilmInfo } from "@/lib/types";
-import { HIT_ZONE } from "@/lib/utils";
+import { cn, REACTION_BUTTON_BASE } from "@/lib/utils";
 
 type LikeButtonProps = {
   filmInfo: FilmInfo;
@@ -48,18 +48,20 @@ export function LikeButton({ filmInfo, disabled }: LikeButtonProps) {
               e.stopPropagation();
               toggleLike(filmInfo);
             }}
-            className={`${HIT_ZONE} p-1.5 h-8 w-8 rounded-full backdrop-blur-md border transition-colors ${
+            className={cn(
+              REACTION_BUTTON_BASE,
               liked
                 ? "border-primary/30 bg-primary/20"
-                : "border-white/20 bg-black/40 hover:bg-white/10"
-            }`}
+                : "border-white/20 bg-black/40 hover:bg-white/10",
+            )}
           >
             <ThumbsUp
-              className={`h-4 w-4 ${
+              className={cn(
+                "h-4 w-4",
                 liked
                   ? "fill-primary text-primary"
-                  : "text-muted-foreground hover:text-primary hover:fill-primary/20"
-              }`}
+                  : "text-muted-foreground hover:text-primary hover:fill-primary/20",
+              )}
             />
           </Button>
         </motion.div>

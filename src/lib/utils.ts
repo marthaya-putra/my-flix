@@ -1,7 +1,7 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { MOVIE_GENRES, genreLabels } from "./genres";
 import { TMDB_IMAGE_BASE } from "./data/tmdb";
+import { genreLabels, MOVIE_GENRES } from "./genres";
 import { DiscoverResult } from "./types";
 
 export function getContentSubtitle(type: "movie" | "tv" | "person"): string {
@@ -31,6 +31,32 @@ export function cn(...inputs: ClassValue[]) {
  */
 export const HIT_ZONE =
   "relative before:absolute before:inset-[-6px] before:content-['']";
+
+/**
+ * White pill CTA — the high-contrast "play"/"watch" button that sits on dark
+ * poster overlays (MovieCard hover, RecommendationCard hover). Forwarded last
+ * in `cn()` so a caller's `className` (size, gap, text size) still wins via
+ * tailwind-merge. Per CODING_STANDARDS §4: shared class strings live here, not
+ * re-declared per file.
+ */
+export const PILL_BUTTON_CLASS =
+  "rounded-full bg-white text-black hover:bg-white/90 shadow-lg shadow-white/10";
+
+/**
+ * Hover-overlay reaction button base — shared shape for like / dislike /
+ * watchlist on card overlays: HIT_ZONE + glass-pill geometry. Callers append
+ * the active/inactive color pair via `cn()`:
+ * `cn(REACTION_BUTTON_BASE, active ? "border-primary/30 bg-primary/20" : "...")`.
+ */
+export const REACTION_BUTTON_BASE = `${HIT_ZONE} p-1.5 h-8 w-8 rounded-full backdrop-blur-md border transition-colors`;
+
+/**
+ * Filters row base — the hover/pad/rounded layout for every checkbox/radio
+ * label in `filters.tsx`. Callers add the selected highlight via `cn()`:
+ * `cn(FILTER_ROW_CLASS, selected && "bg-blue-50")`.
+ */
+export const FILTER_ROW_CLASS =
+  "flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded";
 
 /**
  * Page size for the /watchlist grid — matches /movies and /tvs (TMDB's

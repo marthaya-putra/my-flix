@@ -53,10 +53,7 @@ export function InitialLoadComposition({
       </div>
 
       {/* Radial scrim so the stage message stays legible over the skeletons. */}
-      <div
-        className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.65)_0%,transparent_70%)]"
-        aria-hidden="true"
-      />
+      <div className="absolute inset-0 scrim-radial" aria-hidden="true" />
 
       {/* Foreground: centered stage message, overlaid on the row. */}
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">

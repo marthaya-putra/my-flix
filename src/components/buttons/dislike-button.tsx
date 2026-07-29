@@ -9,7 +9,7 @@ import {
 import { useDislikedItems } from "@/hooks/use-disliked-items";
 import { ctaDramaSpring } from "@/lib/motion";
 import type { FilmInfo } from "@/lib/types";
-import { HIT_ZONE } from "@/lib/utils";
+import { cn, REACTION_BUTTON_BASE } from "@/lib/utils";
 
 type DislikeButtonProps = {
   filmInfo: FilmInfo;
@@ -48,18 +48,20 @@ export function DislikeButton({ filmInfo, disabled }: DislikeButtonProps) {
               e.stopPropagation();
               toggleDislike(filmInfo);
             }}
-            className={`${HIT_ZONE} p-1.5 h-8 w-8 rounded-full backdrop-blur-md border transition-colors ${
+            className={cn(
+              REACTION_BUTTON_BASE,
               disliked
                 ? "border-red-500/30 bg-red-500/20"
-                : "border-white/20 bg-black/40 hover:bg-white/10"
-            }`}
+                : "border-white/20 bg-black/40 hover:bg-white/10",
+            )}
           >
             <ThumbsDown
-              className={`h-4 w-4 ${
+              className={cn(
+                "h-4 w-4",
                 disliked
                   ? "fill-red-500 text-red-500"
-                  : "text-muted-foreground hover:text-red-500 hover:fill-red-100"
-              }`}
+                  : "text-muted-foreground hover:text-red-500 hover:fill-red-100",
+              )}
             />
           </Button>
         </motion.div>

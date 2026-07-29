@@ -262,4 +262,38 @@
       box-shadow: var(--shadow-lifted);
     }
   }
+
+  /* ─── Scrim utilities (CODING_STANDARDS §4) ───
+     Standard fade gradients using --background so chrome stays legible over
+     imagery. Use these instead of hand-rolled bg-gradient-to-b /
+     bg-[radial-gradient(...)] per component. */
+
+  /* Top-down fade — navbar's at-rest legibility scrim. */
+  .scrim-top {
+    background-image: linear-gradient(
+      to bottom,
+      hsl(var(--background) / 0.85),
+      hsl(var(--background) / 0.55) 50%,
+      transparent
+    );
+  }
+
+  /* Bottom-up fade — title strip / overlay bottom legibility. */
+  .scrim-bottom {
+    background-image: linear-gradient(
+      to top,
+      hsl(var(--background)),
+      hsl(var(--background) / 0.1) 90%,
+      transparent
+    );
+  }
+
+  /* Centered radial vignette — keeps overlaid copy readable over a row. */
+  .scrim-radial {
+    background-image: radial-gradient(
+      ellipse at center,
+      rgb(0 0 0 / 0.65) 0%,
+      transparent 70%
+    );
+  }
 }
