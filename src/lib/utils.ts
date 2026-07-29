@@ -1,7 +1,7 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { MOVIE_GENRES, genreLabels } from "./genres";
 import { TMDB_IMAGE_BASE } from "./data/tmdb";
+import { genreLabels, MOVIE_GENRES } from "./genres";
 import { DiscoverResult } from "./types";
 
 export function getContentSubtitle(type: "movie" | "tv" | "person"): string {
@@ -31,6 +31,16 @@ export function cn(...inputs: ClassValue[]) {
  */
 export const HIT_ZONE =
   "relative before:absolute before:inset-[-6px] before:content-['']";
+
+/**
+ * White pill CTA — the high-contrast "play"/"watch" button that sits on dark
+ * poster overlays (MovieCard hover, RecommendationCard hover). Forwarded last
+ * in `cn()` so a caller's `className` (size, gap, text size) still wins via
+ * tailwind-merge. Per CODING_STANDARDS §4: shared class strings live here, not
+ * re-declared per file.
+ */
+export const PILL_BUTTON_CLASS =
+  "rounded-full bg-white text-black hover:bg-white/90 shadow-lg shadow-white/10";
 
 /**
  * Page size for the /watchlist grid — matches /movies and /tvs (TMDB's

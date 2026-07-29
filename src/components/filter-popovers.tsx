@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronUp, Filter } from "lucide-react";
 import { ReactNode, useState } from "react";
+import { cn } from "@/lib/utils";
 
 type FilterPopoversProps = {
   children: ReactNode;
@@ -30,9 +31,10 @@ export function FilterPopovers({ children }: FilterPopoversProps) {
       </div>
 
       <div
-        className={`transition-[max-height,opacity] duration-300 ease-in-out ${
-          isCollapsed ? "max-h-0 opacity-0" : "max-h-96 opacity-100"
-        }`}
+        className={cn(
+          "transition-[max-height,opacity] duration-300 ease-in-out",
+          isCollapsed ? "max-h-0 opacity-0" : "max-h-96 opacity-100",
+        )}
       >
         <div className="p-6">{children}</div>
       </div>

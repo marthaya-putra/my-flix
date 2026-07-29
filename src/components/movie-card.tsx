@@ -10,7 +10,7 @@ import {
 import { authClient } from "@/lib/auth-client";
 import { ctaDramaSpring } from "@/lib/motion";
 import { FilmInfo } from "@/lib/types";
-import { HIT_ZONE } from "@/lib/utils";
+import { cn, HIT_ZONE, PILL_BUTTON_CLASS } from "@/lib/utils";
 import { DislikeButton, LikeButton, WatchlistButton } from "./buttons";
 import { PlayLink } from "./play-link";
 
@@ -68,7 +68,10 @@ export function MovieCard({
       {voteAverage > 0 && (
         <div className="absolute top-2.5 right-2.5 z-10">
           <div
-            className={`flex items-center gap-1 px-2 py-0.5 rounded-full border backdrop-blur-md bg-black/50 ${getRatingColor(voteAverage)}`}
+            className={cn(
+              "flex items-center gap-1 px-2 py-0.5 rounded-full border backdrop-blur-md bg-black/50",
+              getRatingColor(voteAverage),
+            )}
           >
             <Star className="w-3 h-3 fill-current" />
             <span className="text-xs font-bold">{voteAverage.toFixed(1)}</span>
@@ -88,7 +91,10 @@ export function MovieCard({
 
       {/* Title Overlay — shown on error or as rest-state baseline */}
       <div
-        className={`absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent ${hasError ? "opacity-100" : "opacity-0"} transition-opacity duration-300 flex flex-col justify-center p-4`}
+        className={cn(
+          "absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent transition-opacity duration-300 flex flex-col justify-center p-4",
+          hasError ? "opacity-100" : "opacity-0",
+        )}
       >
         <h3 className="font-display font-bold text-white text-lg text-center">
           {title}
@@ -126,7 +132,7 @@ export function MovieCard({
                       <Button
                         size="icon"
                         aria-label={`Play ${title}`}
-                        className={`${HIT_ZONE} w-8 h-8 rounded-full bg-white text-black hover:bg-white/90 shadow-lg shadow-white/10`}
+                        className={cn(HIT_ZONE, "w-8 h-8", PILL_BUTTON_CLASS)}
                       >
                         <Play className="w-4 h-4 fill-current ml-0.5" />
                       </Button>

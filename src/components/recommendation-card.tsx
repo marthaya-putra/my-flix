@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { ctaDramaSpring, overlayTransition } from "@/lib/motion";
 import { FilmInfo } from "@/lib/types";
+import { cn, PILL_BUTTON_CLASS } from "@/lib/utils";
 import { DislikeButton, LikeButton, WatchlistButton } from "./buttons";
 import { MoreInfoLink } from "./more-info-link";
 import { PlayLink } from "./play-link";
@@ -96,9 +97,10 @@ export function RecommendationCard({
 
       {/* Hover overlay — CSS group-hover for desktop */}
       <div
-        className={`absolute inset-0 z-20 bg-black/90 backdrop-blur-sm flex flex-col justify-between pt-2 px-4 pb-4 opacity-0 pointer-events-none group-hover/card:opacity-100 group-hover/card:pointer-events-auto ${
-          showOverlay ? "!opacity-0 !pointer-events-none" : ""
-        }`}
+        className={cn(
+          "absolute inset-0 z-20 bg-black/90 backdrop-blur-sm flex flex-col justify-between pt-2 px-4 pb-4 opacity-0 pointer-events-none group-hover/card:opacity-100 group-hover/card:pointer-events-auto",
+          showOverlay && "!opacity-0 !pointer-events-none",
+        )}
         style={{ transition: "opacity 200ms ease-out" }}
       >
         <div className="space-y-1.5 shrink-0">
@@ -141,7 +143,7 @@ export function RecommendationCard({
               <Button
                 variant="default"
                 size="sm"
-                className="gap-1.5 text-xs h-8 rounded-full px-4 bg-white text-black hover:bg-white/90 shadow-lg shadow-white/10"
+                className={cn("gap-1.5 text-xs h-8 px-4", PILL_BUTTON_CLASS)}
               >
                 <Play className="h-3.5 w-3.5 fill-current" />
                 Watch
