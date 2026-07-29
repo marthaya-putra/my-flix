@@ -125,6 +125,7 @@ export default function MovieCard({
                     <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
                       <Button
                         size="icon"
+                        aria-label={`Play ${title}`}
                         className={`${HIT_ZONE} w-8 h-8 rounded-full bg-white text-black hover:bg-white/90 shadow-lg shadow-white/10`}
                       >
                         <Play className="w-4 h-4 fill-current ml-0.5" />
