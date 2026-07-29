@@ -96,7 +96,7 @@ export function AllPreferencesPage({ category }: AllPreferencesPageProps) {
         </CardHeader>
         <CardContent>
           {items.length === 0 ? (
-            <EmptyState title={title} onAdd={handleAdd} type={type} />
+            <EmptyState onAdd={handleAdd} type={type} />
           ) : (
             <>
               <motion.div
@@ -191,11 +191,9 @@ export function AllPreferencesPage({ category }: AllPreferencesPageProps) {
 }
 
 function EmptyState({
-  title,
   type,
   onAdd,
 }: {
-  title: string;
   type: "movie" | "tv" | "person";
   onAdd: () => void;
 }) {

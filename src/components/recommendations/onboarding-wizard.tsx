@@ -1,8 +1,8 @@
 import { useRouter } from "@tanstack/react-router";
-import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { usePreferences } from "@/components/preferences/use-preferences";
+import type { ContentItem } from "@/lib/types";
 import { ContentSelectionStep } from "./content-selection-step";
 import { PeopleSelectionStep } from "./people-selection-step";
 import { WelcomeStep } from "./welcome-step";
@@ -14,9 +14,9 @@ const MIN_TV_SHOWS = 3;
 
 export function OnboardingWizard() {
   const [currentStep, setCurrentStep] = useState(0);
-  const [selectedMovies, setSelectedMovies] = useState<any[]>([]);
-  const [selectedTvShows, setSelectedTvShows] = useState<any[]>([]);
-  const [selectedPeople, setSelectedPeople] = useState<any[]>([]);
+  const [selectedMovies, setSelectedMovies] = useState<ContentItem[]>([]);
+  const [selectedTvShows, setSelectedTvShows] = useState<ContentItem[]>([]);
+  const [selectedPeople, setSelectedPeople] = useState<ContentItem[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
   const { addPreference } = usePreferences();
@@ -48,12 +48,12 @@ export function OnboardingWizard() {
     try {
       // Save all movies
       for (const movie of selectedMovies) {
-        await addPreference({ ...movie, category: "movie" });
+        await addPreference(movie);
       }
 
       // Save all TV shows
       for (const tv of selectedTvShows) {
-        await addPreference({ ...tv, category: "tv" });
+        await addPreference(tv);
       }
 
       // Save all people (don't override category - it should be "actor", "director", or "other")
@@ -87,7 +87,7 @@ export function OnboardingWizard() {
   const renderStep = () => {
     switch (steps[currentStep].component) {
       case "welcome":
-        return <WelcomeStep onNext={handleNext} />;
+        return <WelcomeStep />;
 
       case "movies":
         return (

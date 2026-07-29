@@ -1,4 +1,4 @@
-import { Film, Plus, Tv, X } from "lucide-react";
+import { Film, Plus, Tv } from "lucide-react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { ContentSearchDialog } from "@/components/preferences/content-search-dialog";
@@ -6,13 +6,14 @@ import { PreferenceItem } from "@/components/preferences/preference-item";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import type { ContentItem } from "@/lib/types";
 
 interface ContentSelectionStepProps {
   type: "movie" | "tv";
   title: string;
   description: string;
-  selectedItems: any[];
-  onSelectionChange: (items: any[]) => void;
+  selectedItems: ContentItem[];
+  onSelectionChange: (items: ContentItem[]) => void;
   minRequired: number;
 }
 
@@ -25,11 +26,12 @@ export function ContentSelectionStep({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const handleContentSelected = useCallback(
-    (content: any) => {
+    (content: ContentItem) => {
       const exists = selectedItems.some((item) => item.id === content.id);
       if (!exists) {
         onSelectionChange([...selectedItems, content]);
-        toast.success(`${content.title || content.name} has been added.`);
+        const label = "title" in content ? content.title : content.name;
+        toast.success(`${label} has been added.`);
       } else {
         toast.info("Already in your selections.");
       }

@@ -1,6 +1,6 @@
 import { and, desc, eq, ilike } from "drizzle-orm";
 import { z } from "zod";
-import { DB, NewUserDislike, UserDislike, userDislikes } from "@/lib/db";
+import { DB, NewUserDislike, userDislikes } from "@/lib/db";
 
 // Input validation schemas
 const addDislikeSchema = z.object({

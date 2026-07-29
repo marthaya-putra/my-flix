@@ -1,5 +1,3 @@
-import { ChevronRight } from "lucide-react";
-
 interface ContentRowSkeletonProps {
   title?: string;
   itemCount?: number;

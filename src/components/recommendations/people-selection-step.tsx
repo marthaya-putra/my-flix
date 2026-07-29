@@ -6,10 +6,11 @@ import { PreferenceItem } from "@/components/preferences/preference-item";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import type { ContentItem } from "@/lib/types";
 
 interface PeopleSelectionStepProps {
-  selectedPeople: any[];
-  onSelectionChange: (people: any[]) => void;
+  selectedPeople: ContentItem[];
+  onSelectionChange: (people: ContentItem[]) => void;
   onSkip: () => void;
 }
 
@@ -21,11 +22,12 @@ export function PeopleSelectionStep({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const handlePersonSelected = useCallback(
-    (person: any) => {
+    (person: ContentItem) => {
       const exists = selectedPeople.some((item) => item.id === person.id);
       if (!exists) {
         onSelectionChange([...selectedPeople, person]);
-        toast.success(`${person.name} has been added.`);
+        const name = "name" in person ? person.name : person.title;
+        toast.success(`${name} has been added.`);
       } else {
         toast.info("Already in your selections.");
       }

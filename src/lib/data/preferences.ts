@@ -111,7 +111,7 @@ export const removeMoviePreference = createServerFn({
   .inputValidator(RemovePreferenceInput)
   .handler(async ({ data }) => {
     const db = getDb();
-    const { id, type } = data;
+    const { id } = data;
     const userId = await requireUserId();
 
     // First get the preference to find the TMDB ID
@@ -166,7 +166,7 @@ export const removePersonPreference = createServerFn({
 })
   .inputValidator(RemovePersonInput)
   .handler(async ({ data }) => {
-    const { id, personType } = data;
+    const { id } = data;
     const userId = await requireUserId();
 
     const db = getDb();

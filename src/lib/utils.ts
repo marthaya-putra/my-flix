@@ -1,6 +1,6 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { DiscoverResult, FilmType } from "./types";
+import { DiscoverResult } from "./types";
 
 export function getContentSubtitle(type: "movie" | "tv" | "person"): string {
   switch (type) {
@@ -54,7 +54,9 @@ export function convertToDiscoverResult(data: any): DiscoverResult {
       releaseDate: res.release_date || res.first_air_date,
       category: res.first_air_date ? "tv" : "movie",
       genres: Array.isArray(res.genre_ids)
-        ? res.genre_ids.map((g: number) => genres[g]).filter((g) => g!!)
+        ? res.genre_ids
+            .map((g: number) => genres[g])
+            .filter((g: string): g is string => !!g)
         : [],
     })),
     totalPages: data.total_pages,
