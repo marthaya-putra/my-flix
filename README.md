@@ -36,7 +36,7 @@ A modern, full-stack movie discovery and recommendation platform built with cutt
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js 18+
+- Node.js 20+
 - PostgreSQL database
 - TMDB API key
 - Google AI API key
