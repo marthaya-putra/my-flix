@@ -4,37 +4,36 @@
 // roll back via the optimistic hooks' onError. Callers that recover
 // locally wrap the call in try/catch.
 import { createServerFn } from "@tanstack/react-start";
-import { z } from "zod";
 import { getRequest } from "@tanstack/react-start/server";
-
-import {
-  addUserPreference,
-  getUserPreferences,
-  removeUserPreferenceByPreferenceId as removeUserPreferenceByPreferenceIdRepo,
-  schemas as preferenceSchemas,
-} from "@/lib/repositories/user-preferences";
-import { getDb, userPreferences } from "@/lib/db";
 import { eq } from "drizzle-orm";
+import { z } from "zod";
+import { getDb, userPreferences } from "@/lib/db";
 import {
   addUserPerson,
   getUserPeople,
-  removeUserPerson,
   schemas as peopleSchemas,
+  removeUserPerson,
 } from "@/lib/repositories/user-people";
+import {
+  addUserPreference,
+  getUserPreferences,
+  schemas as preferenceSchemas,
+  removeUserPreferenceByPreferenceId as removeUserPreferenceByPreferenceIdRepo,
+} from "@/lib/repositories/user-preferences";
+import type { UserPreferences } from "@/lib/types/preferences";
+import { WATCHLIST_PAGE_SIZE } from "@/lib/utils";
 import { auth } from "../auth";
 import {
-  getUserDislikes,
   addUserDislike,
+  getUserDislikes,
   removeUserDislikeByPreferenceId,
 } from "../repositories/user-dislikes";
 import {
   addUserWatchlist,
-  getUserWatchlist,
   countUserWatchlist,
+  getUserWatchlist,
   removeUserWatchlistByWatchListId,
 } from "../repositories/user-watchlist";
-import type { UserPreferences } from "@/lib/types/preferences";
-import { WATCHLIST_PAGE_SIZE } from "@/lib/utils";
 
 // Input validation schemas from repositories
 const AddMoviePreferenceInput = preferenceSchemas.addPreference.omit({
@@ -290,7 +289,7 @@ export const addFilmInfoPreference = createServerFn({
         genres: z.array(z.string()),
         releaseDate: z.string().optional(),
       }),
-    })
+    }),
   )
   .handler(async ({ data }) => {
     const { filmInfo } = data;
@@ -324,7 +323,7 @@ export const addPersonInfoPreference = createServerFn({
         profilePath: z.string().optional(),
       }),
       personType: z.enum(["actor", "director", "other"]),
-    })
+    }),
   )
   .handler(async ({ data }) => {
     const { person, personType } = data;
@@ -349,7 +348,7 @@ export const addUserDislikeFn = createServerFn({
       title: z.string(),
       year: z.number(),
       category: z.enum(["movie", "tv-series"]),
-    })
+    }),
   )
   .handler(async ({ data }) => {
     const { preferenceId, title, year, category } = data;
@@ -374,7 +373,7 @@ export const removeUserDislikeByPreferenceIdFn = createServerFn({
   .inputValidator(
     z.object({
       preferenceId: z.number(),
-    })
+    }),
   )
   .handler(async ({ data }) => {
     const { preferenceId } = data;
@@ -466,7 +465,7 @@ export const toggleMoviePreference = createServerFn({
       category: z.enum(["movie", "tv-series"]),
       genres: z.array(z.string()).optional(),
       posterPath: z.string().optional(),
-    })
+    }),
   )
   .handler(async ({ data }) => {
     const userId = await requireUserId();
@@ -480,7 +479,7 @@ export const toggleMoviePreference = createServerFn({
     });
 
     const existing = existingResult.preferences.find(
-      (p) => p.preferenceId === preferenceId
+      (p) => p.preferenceId === preferenceId,
     );
 
     if (existing) {

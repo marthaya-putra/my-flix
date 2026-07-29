@@ -1,11 +1,6 @@
+import { and, desc, eq, ilike } from "drizzle-orm";
 import { z } from "zod";
-import {
-  userDislikes,
-  UserDislike,
-  NewUserDislike,
-  DB,
-} from "@/lib/db";
-import { eq, and, desc, ilike } from "drizzle-orm";
+import { DB, NewUserDislike, UserDislike, userDislikes } from "@/lib/db";
 
 // Input validation schemas
 const addDislikeSchema = z.object({
@@ -38,7 +33,10 @@ const searchUserDislikesSchema = z.object({
 });
 
 // Plain functions for user dislikes
-export async function addUserDislike(db: DB, data: z.infer<typeof addDislikeSchema>) {
+export async function addUserDislike(
+  db: DB,
+  data: z.infer<typeof addDislikeSchema>,
+) {
   try {
     // Check if dislike already exists
     const existing = await db
@@ -47,8 +45,8 @@ export async function addUserDislike(db: DB, data: z.infer<typeof addDislikeSche
       .where(
         and(
           eq(userDislikes.userId, data.userId),
-          eq(userDislikes.preferenceId, data.preferenceId)
-        )
+          eq(userDislikes.preferenceId, data.preferenceId),
+        ),
       )
       .limit(1);
 
@@ -69,10 +67,7 @@ export async function addUserDislike(db: DB, data: z.infer<typeof addDislikeSche
       category: data.category,
     };
 
-    const result = await db
-      .insert(userDislikes)
-      .values(newDislike)
-      .returning();
+    const result = await db.insert(userDislikes).values(newDislike).returning();
 
     return {
       success: true,
@@ -94,7 +89,10 @@ export async function addUserDislike(db: DB, data: z.infer<typeof addDislikeSche
   }
 }
 
-export async function getUserDislikes(db: DB, data: z.infer<typeof getUserDislikesSchema>) {
+export async function getUserDislikes(
+  db: DB,
+  data: z.infer<typeof getUserDislikesSchema>,
+) {
   try {
     const whereConditions = [eq(userDislikes.userId, data.userId)];
 
@@ -123,7 +121,10 @@ export async function getUserDislikes(db: DB, data: z.infer<typeof getUserDislik
   }
 }
 
-export async function searchUserDislikes(db: DB, data: z.infer<typeof searchUserDislikesSchema>) {
+export async function searchUserDislikes(
+  db: DB,
+  data: z.infer<typeof searchUserDislikesSchema>,
+) {
   try {
     const whereConditions = [
       eq(userDislikes.userId, data.userId),
@@ -151,7 +152,10 @@ export async function searchUserDislikes(db: DB, data: z.infer<typeof searchUser
   }
 }
 
-export async function removeUserDislikeByPreferenceId(db: DB, data: z.infer<typeof removeDislikeByTmdbIdSchema>) {
+export async function removeUserDislikeByPreferenceId(
+  db: DB,
+  data: z.infer<typeof removeDislikeByTmdbIdSchema>,
+) {
   try {
     // First, retrieve the dislike to delete
     const dislikesToDelete = await db
@@ -160,8 +164,8 @@ export async function removeUserDislikeByPreferenceId(db: DB, data: z.infer<type
       .where(
         and(
           eq(userDislikes.userId, data.userId),
-          eq(userDislikes.preferenceId, data.preferenceId)
-        )
+          eq(userDislikes.preferenceId, data.preferenceId),
+        ),
       )
       .limit(1);
 
@@ -182,8 +186,8 @@ export async function removeUserDislikeByPreferenceId(db: DB, data: z.infer<type
       .where(
         and(
           eq(userDislikes.userId, data.userId),
-          eq(userDislikes.preferenceId, data.preferenceId)
-        )
+          eq(userDislikes.preferenceId, data.preferenceId),
+        ),
       )
       .returning();
 

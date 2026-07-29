@@ -1,11 +1,11 @@
 import { useEffect, useRef } from "react";
 import {
   Carousel,
+  type CarouselApi,
   CarouselContent,
   CarouselItem,
   CarouselNext,
   CarouselPrevious,
-  type CarouselApi,
 } from "@/components/ui/carousel";
 import { cn } from "@/lib/utils";
 import { CAROUSEL_BUTTON_CLASS } from "../content-row";
@@ -49,9 +49,7 @@ export function RecommendationCarousel({
       setApi={setApi}
       className="w-full group"
     >
-      <CarouselContent className="-ml-4">
-        {children}
-      </CarouselContent>
+      <CarouselContent className="-ml-4">{children}</CarouselContent>
       <CarouselPrevious
         className={cn(
           "left-0 -translate-x-1/2 top-1/2 -translate-y-1/2",

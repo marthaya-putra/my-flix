@@ -1,16 +1,17 @@
 // src/router.tsx
-import { createRouter } from "@tanstack/react-router";
+
 import {
-  QueryClient,
+  type DehydratedState,
   dehydrate,
   hydrate,
-  type DehydratedState,
+  QueryClient,
 } from "@tanstack/react-query";
+import { createRouter } from "@tanstack/react-router";
 import type { TsrSerializable } from "@tanstack/router-core";
-import { routeTree } from "./routeTree.gen";
-import { DefaultPendingComponent } from "./components/default-pending";
 import { DefaultErrorComponent } from "./components/default-error";
+import { DefaultPendingComponent } from "./components/default-pending";
 import { auth } from "./lib/auth";
+import { routeTree } from "./routeTree.gen";
 
 /**
  * Session resolved per-navigation in the root `beforeLoad`. Mirrors
@@ -76,9 +77,8 @@ export function getRouter() {
     hydrate: (dehydrated) => {
       hydrate(
         queryClient,
-        (
-          dehydrated as unknown as { queryClientState: DehydratedState }
-        ).queryClientState,
+        (dehydrated as unknown as { queryClientState: DehydratedState })
+          .queryClientState,
       );
     },
   });

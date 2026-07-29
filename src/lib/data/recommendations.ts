@@ -1,21 +1,27 @@
-import { searchMoviesAPI, searchTVsAPI } from "./search";
-import { getAIRecommendations } from "../ai/recommendations";
-import { z } from "zod";
-import { FilmInfo } from "../types";
-import { googleModel, mistralModel } from "../ai/models";
 import { LanguageModelV2 } from "@ai-sdk/provider";
+import { z } from "zod";
+import { googleModel, mistralModel } from "../ai/models";
+import { getAIRecommendations } from "../ai/recommendations";
+import { FilmInfo } from "../types";
 import type { UserContent } from "./preferences";
+import { searchMoviesAPI, searchTVsAPI } from "./search";
 
 // Re-export the wire types from the isolated module so server callers have
 // one import path. The client imports directly from ./stream-events to
 // avoid pulling server runtime code into the browser bundle.
 export type {
-  StreamEvent,
   StreamCategory,
-  StreamStatus,
+  StreamEvent,
   StreamStage,
+  StreamStatus,
 } from "./stream-events";
-import type { StreamEvent, StreamCategory, StreamStatus, StreamStage } from "./stream-events";
+
+import type {
+  StreamCategory,
+  StreamEvent,
+  StreamStage,
+  StreamStatus,
+} from "./stream-events";
 
 // ---- Spec 0004 tuning constants (server-side deficit loop) ----
 // Per-category target + over-ask buffer. Worst case = 2 sides × MAX_ROUNDS.
@@ -58,8 +64,7 @@ const categorySearch: Record<
 > = {
   movie: (query, year) =>
     searchMoviesAPI({ query, primaryReleaseYear: year, page: 1 }),
-  tv: (query, year) =>
-    searchTVsAPI({ query, firstAirDateYear: year, page: 1 }),
+  tv: (query, year) => searchTVsAPI({ query, firstAirDateYear: year, page: 1 }),
 };
 
 // Search TMDB for a title+year. The LLM's year is often off-by-one
@@ -70,7 +75,7 @@ const categorySearch: Record<
 async function searchTitleWithYearFallback(
   title: string,
   category: Category,
-  requestedYear: number
+  requestedYear: number,
 ): Promise<FilmInfo | null> {
   const exact = await categorySearch[category](title, requestedYear);
   if (exact.results.length > 0) return exact.results[0];
@@ -98,7 +103,7 @@ async function enrichOne(rec: RawRec): Promise<EnrichedRec> {
     const tmdbData = await searchTitleWithYearFallback(
       rec.title,
       rec.category,
-      rec.releasedYear
+      rec.releasedYear,
     );
     return { ...rec, tmdbData };
   } catch (error) {
@@ -116,27 +121,27 @@ async function fetchWithModelFallback(
   args: Parameters<typeof getAIRecommendations>[0],
   models: ModelEntry[],
   category: Category,
-  round: number
+  round: number,
 ): Promise<{ raw: RawRec[]; threw: boolean }> {
   for (let i = 0; i < models.length; i++) {
     const { label, model } = models[i];
     console.log(
-      `[recommendations:${category}] round ${round} model ${i + 1}/${models.length}: ${label}`
+      `[recommendations:${category}] round ${round} model ${i + 1}/${models.length}: ${label}`,
     );
     const res = await getAIRecommendations(args, model);
     if (res.success && res.data) {
       // LLM may still emit the other category despite the prompt —
       // filter to this side only.
       const raw = res.data.recommendations.filter(
-        (r): r is RawRec => r.category === category
+        (r): r is RawRec => r.category === category,
       );
       console.log(
-        `[recommendations:${category}] round ${round} ${label} ok, raw=${raw.length}`
+        `[recommendations:${category}] round ${round} ${label} ok, raw=${raw.length}`,
       );
       return { raw, threw: false };
     }
     console.warn(
-      `[recommendations:${category}] round ${round} ${label} failed`
+      `[recommendations:${category}] round ${round} ${label} failed`,
     );
   }
   return { raw: [], threw: true };
@@ -185,7 +190,7 @@ async function* backfillCategory(
   category: Category,
   loadPrefs: () => Promise<UserContent>,
   previousRecommendations: CategoryArgs["previousRecommendations"],
-  models: ModelEntry[]
+  models: ModelEntry[],
 ): AsyncGenerator<StreamEvent> {
   let totalSurvivors = 0;
   let totalRawProduced = 0;
@@ -233,7 +238,9 @@ async function* backfillCategory(
       ...userPrefs.tvs.map((t) => t.id),
       ...userPrefs.dislikedMovies.map((m) => m.id),
       ...userPrefs.dislikedTvs.map((t) => t.id),
-      ...previousRecommendations.map((r) => r.id).filter((id): id is number => typeof id === "number"),
+      ...previousRecommendations
+        .map((r) => r.id)
+        .filter((id): id is number => typeof id === "number"),
     ]);
 
     const localPrevRecs = [...previousRecommendations];
@@ -244,7 +251,7 @@ async function* backfillCategory(
 
       const ask = deficit + OVERASK_BUFFER;
       console.log(
-        `[recommendations:${category}] round ${round} deficit=${deficit} ask=${ask} telling LLM to avoid ${localPrevRecs.length} titles: [${localPrevRecs.map((r) => r.title).join(", ")}]`
+        `[recommendations:${category}] round ${round} deficit=${deficit} ask=${ask} telling LLM to avoid ${localPrevRecs.length} titles: [${localPrevRecs.map((r) => r.title).join(", ")}]`,
       );
 
       yield progress("finding_titles", round);
@@ -259,7 +266,7 @@ async function* backfillCategory(
         },
         models,
         category,
-        round
+        round,
       );
       if (!roundThrew) allRoundsThrew = false;
 
@@ -328,7 +335,7 @@ async function* backfillCategory(
         yield progress("looking_up_posters", round);
       }
       console.log(
-        `[recommendations:${category}] round ${round} reject breakdown: excluded=${roundExcluded} enrichFail=${roundEnrichFail} capped=${roundCapped} survivors_this_round_ended_at=${totalSurvivors} prevRecsFedToLLM=${localPrevRecs.length}`
+        `[recommendations:${category}] round ${round} reject breakdown: excluded=${roundExcluded} enrichFail=${roundEnrichFail} capped=${roundCapped} survivors_this_round_ended_at=${totalSurvivors} prevRecsFedToLLM=${localPrevRecs.length}`,
       );
     }
 
@@ -342,7 +349,7 @@ async function* backfillCategory(
       enrichFailures: totalEnrichFailures,
     });
     console.log(
-      `[recommendations:${category}] groupEnd status=${status} survivors=${totalSurvivors} raw=${totalRawProduced} enrichFail=${totalEnrichFailures}`
+      `[recommendations:${category}] groupEnd status=${status} survivors=${totalSurvivors} raw=${totalRawProduced} enrichFail=${totalEnrichFailures}`,
     );
     yield { type: "groupEnd", category, status };
   } catch (error: any) {
@@ -366,7 +373,7 @@ async function* backfillCategory(
 // generator guarantees it, even on throw).
 async function* raceMerge(
   generators: { category: Category; gen: AsyncGenerator<StreamEvent> }[],
-  target: number
+  target: number,
 ): AsyncGenerator<StreamEvent> {
   if (generators.length === 0) return;
 
@@ -378,7 +385,7 @@ async function* raceMerge(
   type Tagged = { cat: Category; result: IteratorResult<StreamEvent> };
   const nextTagged = (
     cat: Category,
-    gen: AsyncGenerator<StreamEvent>
+    gen: AsyncGenerator<StreamEvent>,
   ): Promise<Tagged> => gen.next().then((result) => ({ cat, result }));
 
   // Track in-flight promises. Nulling a promise and decrementing remaining
@@ -421,7 +428,7 @@ export const streamRequestSchema = z.object({
       title: z.string(),
       year: z.number(),
       category: z.enum(["movie", "tv"]),
-    })
+    }),
   ),
 });
 export type StreamRequest = z.infer<typeof streamRequestSchema>;
@@ -431,12 +438,8 @@ export type StreamRequest = z.infer<typeof streamRequestSchema>;
 // pipeline twice. Exported so the route error handler can reuse the same
 // resolution without re-deriving it.
 const ALL_CATEGORIES: Category[] = ["movie", "tv"];
-export function resolveCategories(
-  raw?: Category[]
-): Category[] {
-  return !raw || raw.length === 0
-    ? ALL_CATEGORIES
-    : [...new Set(raw)];
+export function resolveCategories(raw?: Category[]): Category[] {
+  return !raw || raw.length === 0 ? ALL_CATEGORIES : [...new Set(raw)];
 }
 
 // Pipeline entry point (Spec 0006 + 0011). Takes a lazy loadPrefs thunk
@@ -449,7 +452,11 @@ export async function* runPipelines(input: {
   previousRecommendations: StreamRequest["previousRecommendations"];
   categories?: Category[];
 }): AsyncGenerator<StreamEvent> {
-  const { loadPrefs, previousRecommendations, categories: rawCategories } = input;
+  const {
+    loadPrefs,
+    previousRecommendations,
+    categories: rawCategories,
+  } = input;
 
   const requested = resolveCategories(rawCategories);
 
@@ -471,7 +478,12 @@ export async function* runPipelines(input: {
   // lazy — they only progress as raceMerge drains them.
   const generators = requested.map((category) => ({
     category,
-    gen: backfillCategory(category, memoizedLoadPrefs, previousRecommendations, models),
+    gen: backfillCategory(
+      category,
+      memoizedLoadPrefs,
+      previousRecommendations,
+      models,
+    ),
   }));
 
   yield* raceMerge(generators, TARGET_PER_CATEGORY);

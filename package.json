@@ -10,6 +10,10 @@
     "dev:force": "vite dev",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
+    "lint": "biome lint --write",
+    "lint:check": "biome lint",
+    "format": "biome format --write",
+    "format:check": "biome format",
     "preview": "npm run build && vite preview --port 3000",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -87,6 +91,7 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.5.6",
     "@playwright/test": "^1.62.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

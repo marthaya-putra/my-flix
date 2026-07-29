@@ -1,6 +1,5 @@
-import { searchMovies, searchTVs, searchActors } from "./search";
-import { FilmInfo, Person, ContentItem } from "@/lib/types";
-import { ContentType } from "@/lib/types";
+import { ContentItem, ContentType, FilmInfo, Person } from "@/lib/types";
+import { searchActors, searchMovies, searchTVs } from "./search";
 
 export interface SearchOptions {
   query: string;
@@ -17,7 +16,7 @@ export class SearchService {
   static async search(
     type: ContentType,
     options: SearchOptions,
-    currentItems: ContentItem[] | null = null
+    currentItems: ContentItem[] | null = null,
   ): Promise<{
     items: ContentItem[];
     totalPages: number;
@@ -26,23 +25,32 @@ export class SearchService {
 
     let result: ContentItem[], totalPages;
     switch (type) {
-      case 'movie': {
+      case "movie": {
         const movieResult = await searchMovies({ data: { query, page } });
-        result = (movieResult.results || []).map(movie => ({ ...movie, contentType: 'movie' as const }));
+        result = (movieResult.results || []).map((movie) => ({
+          ...movie,
+          contentType: "movie" as const,
+        }));
         totalPages = movieResult.totalPages || 0;
         break;
       }
 
-      case 'tv': {
+      case "tv": {
         const tvResult = await searchTVs({ data: { query, page } });
-        result = (tvResult.results || []).map(tv => ({ ...tv, contentType: 'tv' as const }));
+        result = (tvResult.results || []).map((tv) => ({
+          ...tv,
+          contentType: "tv" as const,
+        }));
         totalPages = tvResult.totalPages || 0;
         break;
       }
 
-      case 'person': {
+      case "person": {
         const personResult = await searchActors({ data: { query, page } });
-        result = (personResult.people || []).map(person => ({ ...person, contentType: 'person' as const }));
+        result = (personResult.people || []).map((person) => ({
+          ...person,
+          contentType: "person" as const,
+        }));
         totalPages = personResult.totalPages || 0;
         break;
       }
@@ -78,6 +86,8 @@ export class SearchService {
   }> {
     // This could be implemented if you want a unified search across all types
     // For now, we'll keep the existing tabbed approach
-    throw new Error("Multi-search not implemented. Use specific type search instead.");
+    throw new Error(
+      "Multi-search not implemented. Use specific type search instead.",
+    );
   }
 }

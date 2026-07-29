@@ -1,6 +1,5 @@
-import { ChevronRight } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import MovieCard from "./movie-card";
+import { ChevronRight } from "lucide-react";
 import {
   Carousel,
   CarouselContent,
@@ -10,6 +9,7 @@ import {
 } from "@/components/ui/carousel";
 import { FilmInfo } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import MovieCard from "./movie-card";
 
 /** Shared glass carousel button class — used by ContentRow and RecommendationCarousel */
 export const CAROUSEL_BUTTON_CLASS =
@@ -73,14 +73,14 @@ export default function ContentRow({
           <CarouselPrevious
             className={cn(
               "left-0 -translate-x-1/2 top-1/2 -translate-y-1/2",
-              CAROUSEL_BUTTON_CLASS
+              CAROUSEL_BUTTON_CLASS,
             )}
             style={{ "--slide-animation-from": "5px" } as React.CSSProperties}
           />
           <CarouselNext
             className={cn(
               "right-0 translate-x-1/2 top-1/2 -translate-y-1/2",
-              CAROUSEL_BUTTON_CLASS
+              CAROUSEL_BUTTON_CLASS,
             )}
             style={{ "--slide-animation-from": "-5px" } as React.CSSProperties}
           />

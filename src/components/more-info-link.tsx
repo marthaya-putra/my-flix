@@ -8,7 +8,13 @@ interface MoreInfoLinkProps {
   className?: string;
 }
 
-export function MoreInfoLink({ title, category, releasedYear, children, className }: MoreInfoLinkProps) {
+export function MoreInfoLink({
+  title,
+  category,
+  releasedYear,
+  children,
+  className,
+}: MoreInfoLinkProps) {
   const typeKeyword = category === "movie" ? "movie" : "TV series";
   const query = `${title} ${releasedYear} ${typeKeyword}`;
   return (
@@ -18,7 +24,10 @@ export function MoreInfoLink({ title, category, releasedYear, children, classNam
       rel="noopener noreferrer"
       onClick={(e) => e.stopPropagation()}
       title="Search for more info"
-      className={className ?? "text-white/55 hover:text-white underline-offset-2 hover:underline"}
+      className={
+        className ??
+        "text-white/55 hover:text-white underline-offset-2 hover:underline"
+      }
     >
       {children}
     </a>

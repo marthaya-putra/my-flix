@@ -1,10 +1,10 @@
 import { Play, Star } from "lucide-react";
+import { motion } from "motion/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FilmInfo } from "@/lib/types";
 import { getReleasedYear } from "@/lib/utils";
 import { PlayLink } from "./play-link";
-import { motion } from "motion/react";
 
 export default function Hero(filmInfo: FilmInfo) {
   return (

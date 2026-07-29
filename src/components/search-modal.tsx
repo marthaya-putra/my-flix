@@ -1,20 +1,20 @@
-import { Search, Film, Tv, User, X } from "lucide-react";
-import { useState, useCallback } from "react";
+import { Link } from "@tanstack/react-router";
+import { Film, Search, Tv, User, X } from "lucide-react";
+import { useCallback, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
-import { Input } from "@/components/ui/input";
+import { FrostEmptyState } from "@/components/frost-empty-state";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogClose,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { searchContent } from "@/lib/data/search";
 import { SearchResult } from "@/lib/types";
-import { Link } from "@tanstack/react-router";
 import Card from "./card";
 import { PlayLink } from "./play-link";
-import { searchContent } from "@/lib/data/search";
-import { FrostEmptyState } from "@/components/frost-empty-state";
 
 interface SearchModalProps {
   open: boolean;

@@ -1,22 +1,23 @@
 // src/routes/__root.tsx
 /// <reference types="vite/client" />
-import type { ReactNode } from "react";
+
+import { QueryClientProvider } from "@tanstack/react-query";
 import {
-  Outlet,
   createRootRouteWithContext,
   HeadContent,
+  Outlet,
   Scripts,
   useRouter,
 } from "@tanstack/react-router";
-import { QueryClientProvider } from "@tanstack/react-query";
 import { MotionConfig } from "motion/react";
+import type { ReactNode } from "react";
+import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { sessionQuery } from "@/lib/data/auth";
 import Navbar from "../components/navbar";
 import NotFound from "../components/not-found";
 import type { AppRouterContext } from "../router";
 import appCss from "../styles/app.css?url";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { Toaster } from "@/components/ui/sonner";
-import { sessionQuery } from "@/lib/data/auth";
 
 export const Route = createRootRouteWithContext<AppRouterContext>()({
   // Resolve the session per navigation so it flows into router context.

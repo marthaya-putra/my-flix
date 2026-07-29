@@ -1,9 +1,9 @@
-import { useSearch, useNavigate } from "@tanstack/react-router";
-import { genres } from "@/lib/data/tvs";
-import BaseFilter from "./base-filter";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { genres } from "@/lib/data/tvs";
 import { Route } from "@/routes/tvs.index";
+import BaseFilter from "./base-filter";
 
 export default function TvGenreFilter() {
   const search = useSearch({ from: Route.id });

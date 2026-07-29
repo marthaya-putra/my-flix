@@ -1,6 +1,6 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
+import { Camera, Film, Star, User } from "lucide-react";
 import Card from "@/components/card";
-import { User, Film, Camera, Star } from "lucide-react";
 import Pagination from "@/components/pagination";
 import { Person } from "@/lib/types";
 
@@ -12,21 +12,21 @@ interface PersonContentProps {
   };
 }
 
-const getCategoryBadge = (category: Person['category']) => {
+const getCategoryBadge = (category: Person["category"]) => {
   switch (category) {
-    case 'actor':
+    case "actor":
       return (
         <div className="rounded-full bg-blue-600 p-1">
           <Film className="h-3 w-3 text-white" />
         </div>
       );
-    case 'director':
+    case "director":
       return (
         <div className="rounded-full bg-green-600 p-1">
           <Camera className="h-3 w-3 text-white" />
         </div>
       );
-    case 'other':
+    case "other":
       return (
         <div className="rounded-full bg-gray-600 p-1">
           <Star className="h-3 w-3 text-white" />

@@ -2,8 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { toggleWatchlistItem } from "@/lib/data/preferences";
 import {
-  watchlistItemsOptions,
   preferencesKeys,
+  watchlistItemsOptions,
 } from "@/lib/queries/preferences";
 import type { FilmInfo } from "@/lib/types";
 

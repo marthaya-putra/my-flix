@@ -1,7 +1,7 @@
-import { useSearch, useNavigate } from "@tanstack/react-router";
-import BaseFilter from "./base-filter";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import BaseFilter from "./base-filter";
 
 interface YearFilterProps {
   from: "/movies/" | "/tvs/" | "/tvs/airing-today" | "/movies/search";

@@ -1,18 +1,18 @@
 import { Play, Star } from "lucide-react";
+import { motion } from "motion/react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useState } from "react";
+import { authClient } from "@/lib/auth-client";
+import { ctaDramaSpring } from "@/lib/motion";
 import { FilmInfo } from "@/lib/types";
 import { HIT_ZONE } from "@/lib/utils";
+import { DislikeButton, LikeButton, WatchlistButton } from "./buttons";
 import { PlayLink } from "./play-link";
-import { WatchlistButton, LikeButton, DislikeButton } from "./buttons";
-import { authClient } from "@/lib/auth-client";
-import { motion } from "motion/react";
-import { ctaDramaSpring } from "@/lib/motion";
 
 interface MovieCardProps extends FilmInfo {
   match?: string;
@@ -62,9 +62,7 @@ export default function MovieCard({
   };
 
   return (
-    <div
-      className="group/card relative aspect-[3/4] w-full rounded-lg overflow-hidden cursor-pointer"
-    >
+    <div className="group/card relative aspect-[3/4] w-full rounded-lg overflow-hidden cursor-pointer">
       {/* Rating badge — glass pill, top-right. Hidden when the card has no
           rating (e.g. watchlist rows, which don't store voteAverage). */}
       {voteAverage > 0 && (
@@ -98,9 +96,7 @@ export default function MovieCard({
       </div>
 
       {/* Hover Overlay — opacity/translate driven by group-hover utilities */}
-      <motion.div
-        className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover/card:opacity-100 flex flex-col justify-end p-4 pointer-events-none group-hover/card:pointer-events-auto transition-opacity duration-200"
-      >
+      <motion.div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover/card:opacity-100 flex flex-col justify-end p-4 pointer-events-none group-hover/card:pointer-events-auto transition-opacity duration-200">
         <div className="translate-y-4 group-hover/card:translate-y-0 transition-transform duration-200 ease-out">
           <h3 className="font-display font-bold text-white text-lg leading-tight mb-2">
             {title}
@@ -122,7 +118,11 @@ export default function MovieCard({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <PlayLink title={title} category={category}>
-                    <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.7 }} transition={ctaDramaSpring}>
+                    <motion.div
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.7 }}
+                      transition={ctaDramaSpring}
+                    >
                       <Button
                         size="icon"
                         aria-label={`Play ${title}`}
@@ -148,9 +148,7 @@ export default function MovieCard({
                 <DislikeButton filmInfo={filmInfo} />
               )}
 
-              {!sessionPending && session && (
-                <LikeButton filmInfo={filmInfo} />
-              )}
+              {!sessionPending && session && <LikeButton filmInfo={filmInfo} />}
             </div>
           </div>
 

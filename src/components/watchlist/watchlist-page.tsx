@@ -1,12 +1,11 @@
-import { getRouteApi } from "@tanstack/react-router";
+import { getRouteApi, Link } from "@tanstack/react-router";
 import { Bookmark, Compass } from "lucide-react";
-import { Link } from "@tanstack/react-router";
-import { Button } from "@/components/ui/button";
 import MovieCard from "@/components/movie-card";
 import CustomPagination from "@/components/pagination";
+import { Button } from "@/components/ui/button";
 import { useWatchlist } from "@/hooks/use-watchlist";
-import type { FilmInfo, FilmType } from "@/lib/types";
 import type { UserWatchlist } from "@/lib/db";
+import type { FilmInfo, FilmType } from "@/lib/types";
 
 // Scoped, typed hook for the /watchlist route. Avoids importing the route
 // value (which would create a circular import back to the route file that
@@ -40,7 +39,12 @@ function rowToFilmInfo(row: UserWatchlist): FilmInfo {
     voteAverage: 0,
     category: (row.category === "tv-series" ? "tv" : "movie") as FilmType,
     genreIds: [],
-    genres: row.genres ? row.genres.split(",").map((g) => g.trim()).filter(Boolean) : [],
+    genres: row.genres
+      ? row.genres
+          .split(",")
+          .map((g) => g.trim())
+          .filter(Boolean)
+      : [],
   };
 }
 
@@ -98,7 +102,8 @@ export function WatchlistPage({
         <div className="text-center py-12 border-2 border-dashed border-muted rounded-lg flex flex-col items-center justify-center">
           <Bookmark className="h-10 w-10 text-muted-foreground/50 mb-4" />
           <p className="text-muted-foreground mb-4">
-            Your Watchlist is empty. Browse titles and add them to your Watchlist to see them here.
+            Your Watchlist is empty. Browse titles and add them to your
+            Watchlist to see them here.
           </p>
           <Button asChild>
             <Link to="/">

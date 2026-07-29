@@ -1,18 +1,18 @@
 import { Link, useRouter } from "@tanstack/react-router";
-import { sessionQuery } from "@/lib/data/auth";
 import {
-  Search,
   Bell,
-  LogOut,
-  Settings,
-  User as UserIcon,
-  Heart,
-  Sparkles,
   Bookmark,
+  Heart,
+  LogOut,
+  Search,
+  Settings,
+  Sparkles,
+  User as UserIcon,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { motion } from "motion/react";
+import { useEffect, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,11 +21,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useEffect, useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { authClient } from "@/lib/auth-client";
+import { sessionQuery } from "@/lib/data/auth";
 import { cn } from "@/lib/utils";
 import SearchModal from "./search-modal";
-import { authClient } from "@/lib/auth-client";
-import { motion } from "motion/react";
 
 const NAV_LINKS = [
   { to: "/" as const, label: "Home" },
@@ -42,7 +42,8 @@ export default function Navbar() {
   // Session via better-auth's own hook (same one movie-card and
   // recommendations use). Single source of truth; isPending drives the
   // avatar Skeleton during the initial fetch.
-  const { data: session, isPending: isFetchingSession } = authClient.useSession();
+  const { data: session, isPending: isFetchingSession } =
+    authClient.useSession();
   const user = session?.user;
   const showSessionSkeleton = isFetchingSession && !user;
 
@@ -60,7 +61,7 @@ export default function Navbar() {
         "w-full fixed top-0 z-50 transition-[background-color,backdrop-filter,border-color] duration-300 ease-out px-4 md:px-12 py-4",
         scrolled
           ? "glass glass-edge"
-          : "bg-gradient-to-b from-background/85 via-background/55 to-background/0"
+          : "bg-gradient-to-b from-background/85 via-background/55 to-background/0",
       )}
     >
       <div className="flex items-center justify-between mx-auto">
@@ -84,7 +85,7 @@ export default function Navbar() {
                       "relative px-3 py-1.5 rounded-lg transition-colors",
                       isActive
                         ? "text-primary font-semibold"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted",
                     )}
                   >
                     {isActive && (

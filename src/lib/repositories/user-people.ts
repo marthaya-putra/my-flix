@@ -1,6 +1,6 @@
+import { and, desc, eq, ilike } from "drizzle-orm";
 import { z } from "zod";
-import { userPeople, NewUserPerson, DB } from "@/lib/db";
-import { eq, and, desc, ilike } from "drizzle-orm";
+import { DB, NewUserPerson, userPeople } from "@/lib/db";
 
 // Input validation schemas
 const addPersonSchema = z.object({
@@ -33,7 +33,10 @@ const getUserPeopleSchema = z.object({
 });
 
 // Plain functions for user people preferences (actors and directors)
-export async function addUserPerson(db: DB, data: z.infer<typeof addPersonSchema>) {
+export async function addUserPerson(
+  db: DB,
+  data: z.infer<typeof addPersonSchema>,
+) {
   try {
     // Check if person already exists for this user
     const existing = await db
@@ -42,8 +45,8 @@ export async function addUserPerson(db: DB, data: z.infer<typeof addPersonSchema
       .where(
         and(
           eq(userPeople.userId, data.userId),
-          eq(userPeople.personId, data.personId)
-        )
+          eq(userPeople.personId, data.personId),
+        ),
       )
       .limit(1);
 
@@ -75,13 +78,15 @@ export async function addUserPerson(db: DB, data: z.infer<typeof addPersonSchema
     throw new Error(
       error instanceof Error
         ? error.message
-        : "Failed to add person preference"
+        : "Failed to add person preference",
     );
   }
 }
 
-
-export async function getUserPeople(db: DB, data: z.infer<typeof getUserPeopleSchema>) {
+export async function getUserPeople(
+  db: DB,
+  data: z.infer<typeof getUserPeopleSchema>,
+) {
   try {
     let whereConditions = [eq(userPeople.userId, data.userId)];
 
@@ -117,8 +122,10 @@ export async function getUserPeople(db: DB, data: z.infer<typeof getUserPeopleSc
   }
 }
 
-
-export async function updateUserPerson(db: DB, data: z.infer<typeof updatePersonSchema>) {
+export async function updateUserPerson(
+  db: DB,
+  data: z.infer<typeof updatePersonSchema>,
+) {
   try {
     const result = await db
       .update(userPeople)
@@ -127,7 +134,7 @@ export async function updateUserPerson(db: DB, data: z.infer<typeof updatePerson
         personType: data.personType,
       })
       .where(
-        and(eq(userPeople.id, data.id), eq(userPeople.userId, data.userId))
+        and(eq(userPeople.id, data.id), eq(userPeople.userId, data.userId)),
       )
       .returning();
 
@@ -144,18 +151,20 @@ export async function updateUserPerson(db: DB, data: z.infer<typeof updatePerson
     throw new Error(
       error instanceof Error
         ? error.message
-        : "Failed to update person preference"
+        : "Failed to update person preference",
     );
   }
 }
 
-
-export async function removeUserPerson(db: DB, data: z.infer<typeof removePersonSchema>) {
+export async function removeUserPerson(
+  db: DB,
+  data: z.infer<typeof removePersonSchema>,
+) {
   try {
     const result = await db
       .delete(userPeople)
       .where(
-        and(eq(userPeople.id, data.id), eq(userPeople.userId, data.userId))
+        and(eq(userPeople.id, data.id), eq(userPeople.userId, data.userId)),
       )
       .returning();
 
@@ -169,18 +178,20 @@ export async function removeUserPerson(db: DB, data: z.infer<typeof removePerson
     throw new Error(
       error instanceof Error
         ? error.message
-        : "Failed to remove person preference"
+        : "Failed to remove person preference",
     );
   }
 }
 
-
-export async function searchUserPeople(db: DB, data: {
-  userId: string;
-  query: string;
-  personType?: "actor" | "director" | "other";
-  limit?: number;
-}) {
+export async function searchUserPeople(
+  db: DB,
+  data: {
+    userId: string;
+    query: string;
+    personType?: "actor" | "director" | "other";
+    limit?: number;
+  },
+) {
   try {
     let whereConditions = [
       eq(userPeople.userId, data.userId),
@@ -207,7 +218,6 @@ export async function searchUserPeople(db: DB, data: {
     throw new Error("Failed to search person preferences");
   }
 }
-
 
 // Export schemas for reuse
 export const schemas = {

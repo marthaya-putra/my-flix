@@ -46,10 +46,11 @@ export const Route = createFileRoute("/api/recommendations/stream")({
         // bundle (this route module is eagerly imported by routeTree).
         const { getRequest } = await import("@tanstack/react-start/server");
         const { auth } = await import("@/lib/auth");
-        const { loadUserContent } = await import("@/lib/data/preferences-server");
-        const { runPipelines, streamRequestSchema, resolveCategories } = await import(
-          "@/lib/data/recommendations"
+        const { loadUserContent } = await import(
+          "@/lib/data/preferences-server"
         );
+        const { runPipelines, streamRequestSchema, resolveCategories } =
+          await import("@/lib/data/recommendations");
 
         // Auth: same read path as getAllUserContent / other server fns.
         const session = await auth.api.getSession({
@@ -76,10 +77,10 @@ export const Route = createFileRoute("/api/recommendations/stream")({
         // Validate the wire payload (previousRecommendations only).
         const parsed = streamRequestSchema.safeParse(body);
         if (!parsed.success) {
-          return new Response(
-            JSON.stringify({ error: parsed.error.message }),
-            { status: 400, headers: { "content-type": "application/json" } }
-          );
+          return new Response(JSON.stringify({ error: parsed.error.message }), {
+            status: 400,
+            headers: { "content-type": "application/json" },
+          });
         }
 
         // Resolve requested categories once so both the success and error
@@ -137,7 +138,7 @@ export const Route = createFileRoute("/api/recommendations/stream")({
               if (clientGone) {
                 console.info(
                   "[stream] pipeline error after client disconnect, not emitting terminal groupEnds:",
-                  error
+                  error,
                 );
                 return;
               }
@@ -153,8 +154,8 @@ export const Route = createFileRoute("/api/recommendations/stream")({
                       category,
                       status: "generation_failed",
                       error: "Stream failed.",
-                    }) + "\n"
-                  )
+                    }) + "\n",
+                  ),
                 );
               }
             } finally {

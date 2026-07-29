@@ -1,20 +1,20 @@
-import { useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
+import { Film, LayoutGrid, Plus, Tv, Users } from "lucide-react";
 import { motion } from "motion/react";
+import { type ReactNode, useState } from "react";
 import { toast } from "sonner";
-import { LayoutGrid, Film, Tv, Users, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { fadeUpContainer, fadeUpItem, tapSpring } from "@/lib/motion";
+import { ContentItem, FilmInfo, Person } from "@/lib/types";
+import { UserPreferences } from "@/lib/types/preferences";
+import { cn } from "@/lib/utils";
 import { ContentSearchDialog } from "./content-search-dialog";
-import { usePreferences } from "./use-preferences";
 import {
   PreferencesContext,
   type PreferencesContextValue,
 } from "./preferences-context";
-import { fadeUpContainer, fadeUpItem, tapSpring } from "@/lib/motion";
-import { UserPreferences } from "@/lib/types/preferences";
-import { ContentItem, FilmInfo, Person } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { usePreferences } from "./use-preferences";
 
 interface PreferencesShellProps {
   initialPreferences?: UserPreferences;

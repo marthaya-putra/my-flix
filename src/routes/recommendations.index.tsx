@@ -1,16 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Recommendations as RecommendationsList } from "@/components/recommendations";
-import { UnauthenticatedPrompt } from "@/components/recommendations/unauthenticated-prompt";
+import { InitialLoadComposition } from "@/components/recommendations/initial-load-composition";
 import { OnboardingWizard } from "@/components/recommendations/onboarding-wizard";
-import { hasSufficientPreferences } from "@/lib/utils/preferences-check";
+import { UnauthenticatedPrompt } from "@/components/recommendations/unauthenticated-prompt";
 import { RecommendationsError } from "@/components/recommendations-error";
 import { getAllUserContent } from "@/lib/data/preferences";
 import {
-  likedItemsOptions,
   dislikedItemsOptions,
+  likedItemsOptions,
   watchlistItemsOptions,
 } from "@/lib/queries/preferences";
-import { InitialLoadComposition } from "@/components/recommendations/initial-load-composition";
+import { hasSufficientPreferences } from "@/lib/utils/preferences-check";
 
 export const Route = createFileRoute("/recommendations/")({
   component: Recommendations,

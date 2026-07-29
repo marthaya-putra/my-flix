@@ -1,11 +1,11 @@
-import { useState, useCallback } from "react";
-import { ContentSearchDialog } from "@/components/preferences/content-search-dialog";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { Users, Plus, SkipForward } from "lucide-react";
-import { PreferenceItem } from "@/components/preferences/preference-item";
+import { Plus, SkipForward, Users } from "lucide-react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
+import { ContentSearchDialog } from "@/components/preferences/content-search-dialog";
+import { PreferenceItem } from "@/components/preferences/preference-item";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface PeopleSelectionStepProps {
   selectedPeople: any[];
@@ -30,7 +30,7 @@ export function PeopleSelectionStep({
         toast.info("Already in your selections.");
       }
     },
-    [selectedPeople, onSelectionChange]
+    [selectedPeople, onSelectionChange],
   );
 
   const handleRemovePerson = useCallback(
@@ -38,7 +38,7 @@ export function PeopleSelectionStep({
       onSelectionChange(selectedPeople.filter((person) => person.id !== id));
       toast.info("Person has been removed.");
     },
-    [selectedPeople, onSelectionChange]
+    [selectedPeople, onSelectionChange],
   );
 
   return (

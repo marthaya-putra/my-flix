@@ -79,7 +79,9 @@ export type TMDBMultiSearchResult = {
   total_results: number;
 };
 
-export type TMDBSearchItem = (FilmInfo & { media_type: 'movie' | 'tv' }) | (Actor & { media_type: 'person' });
+export type TMDBSearchItem =
+  | (FilmInfo & { media_type: "movie" | "tv" })
+  | (Actor & { media_type: "person" });
 
 export type ActorSearchParams = {
   searchTerm?: string;
@@ -89,9 +91,9 @@ export const FILM_TYPE_QUERY_STRING = "type";
 
 // New discriminated union for all content types
 export type ContentItem =
-  | (FilmInfo & { contentType: 'movie' })
-  | (FilmInfo & { contentType: 'tv' })
-  | (Person & { contentType: 'person' });
+  | (FilmInfo & { contentType: "movie" })
+  | (FilmInfo & { contentType: "tv" })
+  | (Person & { contentType: "person" });
 
 export const RatingItems = [
   {

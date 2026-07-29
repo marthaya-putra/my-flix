@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 /** Opacity-only swap — no movement. Used for reduced-motion. */

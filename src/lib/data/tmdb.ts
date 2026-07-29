@@ -11,7 +11,7 @@ export const TMDB_IMAGE_BASE = "/api/img/t/p/w500";
 
 export async function fetchFromTMDB(
   path: URL | RequestInfo,
-  options?: RequestInit
+  options?: RequestInit,
 ): Promise<any> {
   let headers = {
     accept: "application/json",

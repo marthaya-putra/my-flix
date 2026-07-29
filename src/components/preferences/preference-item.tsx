@@ -1,15 +1,15 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { Calendar, Camera, Film, Trash2, UserIcon, Users } from "lucide-react";
+import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { motion } from "motion/react";
-import { Trash2, Calendar, Film, Users, Camera, UserIcon } from "lucide-react";
+import { tapSpring } from "@/lib/motion";
 import { ContentItem } from "@/lib/types";
 import { HIT_ZONE } from "@/lib/utils";
-import { tapSpring } from "@/lib/motion";
 
 interface PreferenceItemProps {
   item: ContentItem;

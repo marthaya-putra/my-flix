@@ -1,11 +1,11 @@
-import { Suspense } from "react";
-import { createFileRoute } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { onTheAirTvsOptions } from "@/lib/queries/tvs";
-import AiringThisWeekSkeleton from "@/components/skeletons/airing-this-week-skeleton";
-import MoviesContent from "@/components/movies-content";
-import { getUserTimezone } from "@/lib/utils/timezone";
+import { createFileRoute } from "@tanstack/react-router";
+import { Suspense } from "react";
 import { z } from "zod";
+import MoviesContent from "@/components/movies-content";
+import AiringThisWeekSkeleton from "@/components/skeletons/airing-this-week-skeleton";
+import { onTheAirTvsOptions } from "@/lib/queries/tvs";
+import { getUserTimezone } from "@/lib/utils/timezone";
 
 export const Route = createFileRoute("/tvs/airing-this-week")({
   validateSearch: z.object({

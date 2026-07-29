@@ -1,10 +1,6 @@
+import { and, count, desc, eq } from "drizzle-orm";
 import { z } from "zod";
-import {
-  userWatchlist,
-  NewUserWatchlist,
-  DB,
-} from "@/lib/db";
-import { eq, and, desc, count } from "drizzle-orm";
+import { DB, NewUserWatchlist, userWatchlist } from "@/lib/db";
 
 // Input validation schemas
 const addWatchlistSchema = z.object({

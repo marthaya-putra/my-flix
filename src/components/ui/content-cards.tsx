@@ -1,7 +1,7 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { Calendar, Check, Plus, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Star, Calendar, Plus, Check } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { FilmInfo, Person } from "@/lib/types";
 import { HIT_ZONE } from "@/lib/utils";
 
@@ -196,7 +196,12 @@ export interface PersonCardProps {
   isAdding?: boolean;
 }
 
-export function PersonCard({ person, onAdd, isAdded, isAdding }: PersonCardProps) {
+export function PersonCard({
+  person,
+  onAdd,
+  isAdded,
+  isAdding,
+}: PersonCardProps) {
   return (
     <Card
       className={`group hover:shadow-md transition-shadow relative ${isAdded ? "ring-2 ring-primary/20 bg-primary/5" : ""} ${isAdding ? "opacity-60" : ""}`}

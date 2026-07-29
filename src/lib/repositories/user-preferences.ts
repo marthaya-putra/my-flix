@@ -1,6 +1,6 @@
+import { and, desc, eq, ilike } from "drizzle-orm";
 import { z } from "zod";
-import { userPreferences, NewUserPreference, DB } from "@/lib/db";
-import { eq, and, desc, ilike } from "drizzle-orm";
+import { DB, NewUserPreference, userPreferences } from "@/lib/db";
 
 // Input validation schemas
 const addPreferenceSchema = z.object({
@@ -39,7 +39,10 @@ const getUserPreferencesSchema = z.object({
 });
 
 // Plain functions for user preferences (movies and TV shows)
-export async function addUserPreference(db: DB, data: z.infer<typeof addPreferenceSchema>) {
+export async function addUserPreference(
+  db: DB,
+  data: z.infer<typeof addPreferenceSchema>,
+) {
   try {
     // Check if preference already exists for this user
     const existing = await db
@@ -48,8 +51,8 @@ export async function addUserPreference(db: DB, data: z.infer<typeof addPreferen
       .where(
         and(
           eq(userPreferences.userId, data.userId),
-          eq(userPreferences.preferenceId, data.preferenceId)
-        )
+          eq(userPreferences.preferenceId, data.preferenceId),
+        ),
       )
       .limit(1);
 
@@ -72,7 +75,10 @@ export async function addUserPreference(db: DB, data: z.infer<typeof addPreferen
       posterPath: data.posterPath || null,
     };
 
-    const result = await db.insert(userPreferences).values(newPreference).returning();
+    const result = await db
+      .insert(userPreferences)
+      .values(newPreference)
+      .returning();
 
     return {
       success: true,
@@ -89,7 +95,10 @@ export async function addUserPreference(db: DB, data: z.infer<typeof addPreferen
   }
 }
 
-export async function getUserPreferences(db: DB, data: z.infer<typeof getUserPreferencesSchema>) {
+export async function getUserPreferences(
+  db: DB,
+  data: z.infer<typeof getUserPreferencesSchema>,
+) {
   try {
     const whereConditions = [eq(userPreferences.userId, data.userId)];
 
@@ -118,7 +127,10 @@ export async function getUserPreferences(db: DB, data: z.infer<typeof getUserPre
   }
 }
 
-export async function updateUserPreference(db: DB, data: z.infer<typeof updatePreferenceSchema>) {
+export async function updateUserPreference(
+  db: DB,
+  data: z.infer<typeof updatePreferenceSchema>,
+) {
   try {
     const result = await db
       .update(userPreferences)
@@ -131,7 +143,10 @@ export async function updateUserPreference(db: DB, data: z.infer<typeof updatePr
         updatedAt: new Date(),
       })
       .where(
-        and(eq(userPreferences.id, data.id), eq(userPreferences.userId, data.userId))
+        and(
+          eq(userPreferences.id, data.id),
+          eq(userPreferences.userId, data.userId),
+        ),
       )
       .returning();
 
@@ -149,18 +164,21 @@ export async function updateUserPreference(db: DB, data: z.infer<typeof updatePr
   }
 }
 
-export async function removeUserPreferenceByPreferenceId(db: DB, data: {
-  userId: string;
-  preferenceId: number;
-}) {
+export async function removeUserPreferenceByPreferenceId(
+  db: DB,
+  data: {
+    userId: string;
+    preferenceId: number;
+  },
+) {
   try {
     const result = await db
       .delete(userPreferences)
       .where(
         and(
           eq(userPreferences.userId, data.userId),
-          eq(userPreferences.preferenceId, data.preferenceId)
-        )
+          eq(userPreferences.preferenceId, data.preferenceId),
+        ),
       )
       .returning();
 
@@ -175,13 +193,15 @@ export async function removeUserPreferenceByPreferenceId(db: DB, data: {
   }
 }
 
-
-export async function searchUserPreferences(db: DB, data: {
-  userId: string;
-  query: string;
-  category?: "movie" | "tv-series";
-  limit?: number;
-}) {
+export async function searchUserPreferences(
+  db: DB,
+  data: {
+    userId: string;
+    query: string;
+    category?: "movie" | "tv-series";
+    limit?: number;
+  },
+) {
   try {
     const whereConditions = [
       eq(userPreferences.userId, data.userId),

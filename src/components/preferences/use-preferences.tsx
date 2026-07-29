@@ -1,15 +1,15 @@
-import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { FilmInfo, Person } from "@/lib/types";
-import { UserPreferences } from "@/lib/types/preferences";
+import { useState } from "react";
 import {
   addMoviePreference,
   addPersonPreference,
+  fetchUserPreferences,
   removeMoviePreference,
   removePersonPreference,
-  fetchUserPreferences,
 } from "@/lib/data/preferences";
 import { preferencesKeys } from "@/lib/queries/preferences";
+import { FilmInfo, Person } from "@/lib/types";
+import { UserPreferences } from "@/lib/types/preferences";
 
 // Re-export fetchUserPreferences as loadPreferences for consistency
 export const loadPreferences = fetchUserPreferences;
@@ -29,7 +29,7 @@ export function usePreferences(initialPreferences?: UserPreferences) {
         tv: true,
       },
       notes: "",
-    }
+    },
   );
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -85,7 +85,7 @@ export function usePreferences(initialPreferences?: UserPreferences) {
           data: {
             preferenceId: film.id,
             title: film.title,
-            year: parseInt(film.releaseDate.split('-')[0]) || 0,
+            year: parseInt(film.releaseDate.split("-")[0]) || 0,
             category,
             genres: genres || undefined,
             posterPath: film.posterPath,
@@ -107,9 +107,7 @@ export function usePreferences(initialPreferences?: UserPreferences) {
         }
       }
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to add preference"
-      );
+      setError(err instanceof Error ? err.message : "Failed to add preference");
       console.error("Error adding preference:", err);
     } finally {
       // Remove item from adding set
@@ -128,7 +126,7 @@ export function usePreferences(initialPreferences?: UserPreferences) {
   // recovers locally via `error` state.
   const removePreference = async (
     id: number,
-    type: "movie" | "tv" | "person"
+    type: "movie" | "tv" | "person",
   ) => {
     try {
       if (type === "person") {
@@ -186,7 +184,7 @@ export function usePreferences(initialPreferences?: UserPreferences) {
       invalidatePreferenceQueries();
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to remove preference"
+        err instanceof Error ? err.message : "Failed to remove preference",
       );
       console.error("Error removing preference:", err);
     }

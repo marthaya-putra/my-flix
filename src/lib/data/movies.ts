@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { fetchFromTMDB } from "./tmdb";
 import { convertToDiscoverResult } from "../utils";
+import { fetchFromTMDB } from "./tmdb";
 
 // CODING_STANDARDS.md §7: inputValidator is zod-or-remove. These were
 // identity arrows that carried only a TS annotation and validated
@@ -56,7 +56,7 @@ export const fetchPopularMovies = createServerFn({
   .validator(popularMoviesSchema)
   .handler(async ({ data }) => {
     const result = await fetchFromTMDB(
-      `/movie/popular?language=en-US&region=US&page=${String(data)}`
+      `/movie/popular?language=en-US&region=US&page=${String(data)}`,
     );
     return convertToDiscoverResult(result);
   });
@@ -93,6 +93,8 @@ export const fetchDiscoverMovies = createServerFn({
       queryParams.set("primary_release_date.lte", `${String(data.year)}-12-31`);
     }
 
-    const result = await fetchFromTMDB(`/discover/movie?${queryParams.toString()}`);
+    const result = await fetchFromTMDB(
+      `/discover/movie?${queryParams.toString()}`,
+    );
     return convertToDiscoverResult(result);
   });

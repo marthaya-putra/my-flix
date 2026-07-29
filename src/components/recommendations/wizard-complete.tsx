@@ -1,4 +1,4 @@
-import { CheckCircle, Film, Tv, Users, Sparkles, Loader2 } from "lucide-react";
+import { CheckCircle, Film, Loader2, Sparkles, Tv, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface WizardCompleteProps {
@@ -14,7 +14,7 @@ export function WizardComplete({
   tvCount,
   peopleCount,
   onGetRecommendations,
-  isLoading = false
+  isLoading = false,
 }: WizardCompleteProps) {
   return (
     <div className="space-y-4 max-w-md mx-auto">
@@ -68,7 +68,8 @@ export function WizardComplete({
         </Button>
 
         <p className="text-xs text-muted-foreground mt-3">
-          You can always update your preferences later by visiting your profile settings.
+          You can always update your preferences later by visiting your profile
+          settings.
         </p>
       </div>
     </div>

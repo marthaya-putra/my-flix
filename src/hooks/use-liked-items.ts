@@ -59,7 +59,9 @@ export function useLikedItems() {
     },
     onMutate: async (filmInfo) => {
       // Cancel in-flight reads so they don't clobber the optimistic update.
-      await queryClient.cancelQueries({ queryKey: preferencesKeys.likedItems() });
+      await queryClient.cancelQueries({
+        queryKey: preferencesKeys.likedItems(),
+      });
 
       const previousLiked = queryClient.getQueryData<{ likedIds: number[] }>(
         preferencesKeys.likedItems(),
