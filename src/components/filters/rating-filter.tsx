@@ -2,13 +2,13 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { RatingItems } from "@/lib/types";
-import BaseFilter from "./base-filter";
+import { BaseFilter } from "./base-filter";
 
-interface RatingFilterProps {
+type RatingFilterProps = {
   from: "/movies/" | "/tvs/" | "/tvs/airing-today" | "/movies/search";
-}
+};
 
-export default function RatingFilter({ from }: RatingFilterProps) {
+export function RatingFilter({ from }: RatingFilterProps) {
   const search = useSearch({ from });
   const navigate = useNavigate({ from });
 

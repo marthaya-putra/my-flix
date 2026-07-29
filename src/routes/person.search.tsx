@@ -2,8 +2,8 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Suspense } from "react";
 import { z } from "zod";
-import PersonContent from "@/components/person-content";
-import PersonSearchSkeleton from "@/components/skeletons/person-search-skeleton";
+import { PersonContent } from "@/components/person-content";
+import { PersonSearchSkeleton } from "@/components/skeletons/person-search-skeleton";
 import { searchPeopleOptions } from "@/lib/queries/search";
 
 export const Route = createFileRoute("/person/search")({

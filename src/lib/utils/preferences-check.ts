@@ -1,7 +1,7 @@
 import { UserPreferences } from "@/lib/types/preferences";
 
 // Type for the structure returned by getAllUserContent
-interface AllUserContent {
+type AllUserContent = {
   movies: Array<{ title: string; year: number }>;
   tvs: Array<{ title: string; year: number }>;
   dislikedMovies: Array<{ title: string; year: number }>;
@@ -9,7 +9,7 @@ interface AllUserContent {
   actors: string[];
   directors: string[];
   genres: string[];
-}
+};
 
 // Union type for both preference structures
 type AnyUserPreferences = UserPreferences | AllUserContent;

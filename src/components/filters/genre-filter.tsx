@@ -2,14 +2,14 @@ import { getRouteApi } from "@tanstack/react-router";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { genres as movieGenres } from "@/lib/data/movies";
-import BaseFilter from "./base-filter";
+import { BaseFilter } from "./base-filter";
 
 // Scoped, typed hooks for the /movies/ route. Avoids importing the route
 // value (which would create a circular import back to the route file that
 // renders this component) and avoids passing the route as a prop.
 const moviesRoute = getRouteApi("/movies/");
 
-export default function GenreFilter() {
+export function GenreFilter() {
   const navigate = moviesRoute.useNavigate();
   const search = moviesRoute.useSearch();
 

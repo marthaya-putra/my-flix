@@ -13,16 +13,16 @@ import {
 export type CategoryStatus = "pending" | "ok" | "error";
 export type Category = "movie" | "tv";
 
-export interface Recommendation {
+export type Recommendation = {
   title: string;
   category: Category;
   releasedYear: number;
   reason: string;
   imdbRating: number;
   tmdbData: FilmInfo | null;
-}
+};
 
-interface CategorySectionProps {
+type CategorySectionProps = {
   label: string;
   items: Recommendation[];
   status: CategoryStatus;
@@ -37,7 +37,7 @@ interface CategorySectionProps {
   scrollToFirstNew?: number;
   onLoadMore: () => void;
   onImageError: (key: string) => void;
-}
+};
 
 export function CategorySection({
   label,

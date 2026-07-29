@@ -1,13 +1,13 @@
 import { CheckCircle, Film, Loader2, Sparkles, Tv, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-interface WizardCompleteProps {
+type WizardCompleteProps = {
   movieCount: number;
   tvCount: number;
   peopleCount: number;
   onGetRecommendations: () => void;
   isLoading?: boolean;
-}
+};
 
 export function WizardComplete({
   movieCount,

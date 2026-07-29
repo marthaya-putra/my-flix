@@ -68,4 +68,5 @@ export function AuthBackdrop({ children }: Readonly<{ children: ReactNode }>) {
   );
 }
 
+// biome-ignore lint/style/noDefaultExport: dual-export mirrors canvasui; see issue #84 grandfather clause
 export default AuthBackdrop;

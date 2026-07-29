@@ -78,11 +78,11 @@ export function stageMessagesFor(
 export const STAGE_FALLBACK_MESSAGES = ["Finding your next favorites"];
 
 /** Bundled progress for a category stream. */
-export interface StreamProgress {
+export type StreamProgress = {
   stage?: StreamStage;
   found?: number;
   target?: number;
-}
+};
 
 /**
  * Derive display values from a raw progress triple.

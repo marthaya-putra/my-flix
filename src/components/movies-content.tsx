@@ -1,9 +1,9 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import MovieCard from "@/components/movie-card";
-import Pagination from "@/components/pagination";
+import { MovieCard } from "@/components/movie-card";
+import { CustomPagination as Pagination } from "@/components/pagination";
 import { DiscoverResult } from "@/lib/types";
 
-interface MoviesContentProps {
+type MoviesContentProps = {
   moviesData: DiscoverResult;
   from:
     | "/movies/"
@@ -12,12 +12,9 @@ interface MoviesContentProps {
     | "/tvs/airing-this-week"
     | "/movies/search"
     | "/tvs/search";
-}
+};
 
-export default function MoviesContent({
-  moviesData,
-  from,
-}: MoviesContentProps) {
+export function MoviesContent({ moviesData, from }: MoviesContentProps) {
   const navigate = useNavigate({ from });
   const search = useSearch({
     from,

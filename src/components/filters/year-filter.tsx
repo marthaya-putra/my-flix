@@ -1,13 +1,13 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import BaseFilter from "./base-filter";
+import { BaseFilter } from "./base-filter";
 
-interface YearFilterProps {
+type YearFilterProps = {
   from: "/movies/" | "/tvs/" | "/tvs/airing-today" | "/movies/search";
-}
+};
 
-export default function YearFilter({ from }: YearFilterProps) {
+export function YearFilter({ from }: YearFilterProps) {
   const search = useSearch({ from });
   const navigate = useNavigate({ from });
 

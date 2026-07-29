@@ -8,16 +8,16 @@ import {
 } from "@/components/ui/pagination";
 import { tapSpring } from "@/lib/motion";
 
-interface PaginationProps {
+type PaginationProps = {
   currentPage: number;
   totalPages: number;
   hasNextPage: boolean;
   hasPreviousPage: boolean;
   onPrevPage: () => void;
   onNextPage: () => void;
-}
+};
 
-export default function CustomPagination({
+export function CustomPagination({
   currentPage,
   totalPages,
   hasNextPage,

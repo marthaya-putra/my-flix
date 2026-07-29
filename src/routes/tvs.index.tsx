@@ -2,13 +2,13 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Suspense } from "react";
 import { z } from "zod";
-import FilterPopovers from "@/components/filter-popovers";
-import ClearFilters from "@/components/filters/clear-filters";
-import RatingFilter from "@/components/filters/rating-filter";
-import TvGenreFilter from "@/components/filters/tv-genre-filter";
-import YearFilter from "@/components/filters/year-filter";
-import MoviesContent from "@/components/movies-content";
-import DiscoverTvsSkeleton from "@/components/skeletons/discover-tvs-skeleton";
+import { FilterPopovers } from "@/components/filter-popovers";
+import { ClearFilters } from "@/components/filters/clear-filters";
+import { RatingFilter } from "@/components/filters/rating-filter";
+import { TvGenreFilter } from "@/components/filters/tv-genre-filter";
+import { YearFilter } from "@/components/filters/year-filter";
+import { MoviesContent } from "@/components/movies-content";
+import { DiscoverTvsSkeleton } from "@/components/skeletons/discover-tvs-skeleton";
 import { discoverTvsOptions } from "@/lib/queries/tvs";
 
 export const Route = createFileRoute("/tvs/")({

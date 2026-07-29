@@ -5,12 +5,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { FilmInfo, Person } from "@/lib/types";
 import { HIT_ZONE } from "@/lib/utils";
 
-export interface MovieCardProps {
+export type MovieCardProps = {
   movie: FilmInfo;
   onAdd?: (content: FilmInfo) => void;
   isAdded?: boolean;
   isAdding?: boolean;
-}
+};
 
 export function MovieCard({ movie, onAdd, isAdded, isAdding }: MovieCardProps) {
   return (
@@ -97,12 +97,12 @@ export function MovieCard({ movie, onAdd, isAdded, isAdding }: MovieCardProps) {
   );
 }
 
-export interface TVCardProps {
+export type TVCardProps = {
   tvShow: FilmInfo;
   onAdd?: (tvShow: FilmInfo) => void;
   isAdded?: boolean;
   isAdding?: boolean;
-}
+};
 
 export function TVCard({ tvShow, onAdd, isAdded, isAdding }: TVCardProps) {
   return (
@@ -189,12 +189,12 @@ export function TVCard({ tvShow, onAdd, isAdded, isAdding }: TVCardProps) {
   );
 }
 
-export interface PersonCardProps {
+export type PersonCardProps = {
   person: Person;
   onAdd?: (person: Person) => void;
   isAdded?: boolean;
   isAdding?: boolean;
-}
+};
 
 export function PersonCard({
   person,

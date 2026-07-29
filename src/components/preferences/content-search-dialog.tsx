@@ -21,14 +21,14 @@ import { SearchService } from "@/lib/data/search-service";
 import { ContentItem, ContentType } from "@/lib/types";
 import { getContentSubtitle } from "@/lib/utils";
 
-interface ContentSearchDialogProps {
+type ContentSearchDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   searchType: ContentType;
   onContentSelected: (content: ContentItem) => void;
   existingIds?: Set<number>;
   restrictedMode?: boolean;
-}
+};
 
 const tabIcons = {
   movie: <Film className="h-5 w-5" />,
@@ -234,11 +234,11 @@ export function ContentSearchDialog({
   );
 }
 
-interface ContentCardProps {
+type ContentCardProps = {
   item: ContentItem;
   onSelect: (content: ContentItem) => void;
   isAdded?: boolean;
-}
+};
 
 function ContentCard({ item, onSelect, isAdded = false }: ContentCardProps) {
   // Use pattern matching to render the appropriate card

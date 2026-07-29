@@ -11,7 +11,7 @@ export type PersonWithDbId = Person & {
 };
 
 // Unified UserPreferences type - matches fetchUserPreferences return
-export interface UserPreferences {
+export type UserPreferences = {
   movies: FilmInfoWithDbId[];
   tvShows: FilmInfoWithDbId[];
   people: PersonWithDbId[];
@@ -22,4 +22,4 @@ export interface UserPreferences {
     tv: boolean;
   };
   notes: string;
-}
+};

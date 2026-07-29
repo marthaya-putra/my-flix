@@ -9,13 +9,13 @@ import {
 } from "@/components/ui/carousel";
 import { FilmInfo } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import MovieCard from "./movie-card";
+import { MovieCard } from "./movie-card";
 
 /** Shared glass carousel button class — used by ContentRow and RecommendationCarousel */
 export const CAROUSEL_BUTTON_CLASS =
   "h-12 w-12 rounded-full backdrop-blur-md bg-black/50 border border-white/15 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-black/70 disabled:opacity-0 cursor-pointer group-hover:[&_svg]:animate-sliding group-hover:[&_svg]:delay-300";
 
-interface ContentRowProps {
+type ContentRowProps = {
   title: React.ReactNode;
   items: Array<
     FilmInfo & {
@@ -24,9 +24,9 @@ interface ContentRowProps {
   >;
   exploreAllUrl?: string;
   className?: string;
-}
+};
 
-export default function ContentRow({
+export function ContentRow({
   title,
   items,
   exploreAllUrl,

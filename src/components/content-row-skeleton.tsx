@@ -1,12 +1,10 @@
-interface ContentRowSkeletonProps {
+type ContentRowSkeletonProps = {
   title?: string;
   itemCount?: number;
   showExploreAll?: boolean;
-}
+};
 
-export default function ContentRowSkeleton({
-  itemCount = 6,
-}: ContentRowSkeletonProps) {
+export function ContentRowSkeleton({ itemCount = 6 }: ContentRowSkeletonProps) {
   return (
     <div className="px-4 md:px-8 group max-w-7xl mx-auto overflow-hidden">
       {/* Header Skeleton */}

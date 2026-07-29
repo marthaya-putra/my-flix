@@ -2,10 +2,10 @@ import { type StreamStage, stageMessagesFor } from "@/lib/data/stream-events";
 import { RecommendationCardSkeleton } from "./recommendation-card-skeleton";
 import { RotatingMessage } from "./rotating-message";
 
-interface InitialLoadCompositionProps {
+type InitialLoadCompositionProps = {
   stage?: StreamStage;
   stageRetry?: boolean;
-}
+};
 
 function TypingDots() {
   return (

@@ -1,16 +1,16 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Camera, Film, Star, User } from "lucide-react";
-import Card from "@/components/card";
-import Pagination from "@/components/pagination";
+import { Card } from "@/components/card";
+import { CustomPagination as Pagination } from "@/components/pagination";
 import { Person } from "@/lib/types";
 
-interface PersonContentProps {
+type PersonContentProps = {
   personData: {
     page: number;
     people: Array<Person>;
     totalPages: number;
   };
-}
+};
 
 const getCategoryBadge = (category: Person["category"]) => {
   switch (category) {
@@ -41,7 +41,7 @@ const getCategoryBadge = (category: Person["category"]) => {
   }
 };
 
-export default function PersonContent({ personData }: PersonContentProps) {
+export function PersonContent({ personData }: PersonContentProps) {
   const navigate = useNavigate({ from: "/person/search" });
   const { query } = useSearch({ from: "/person/search" });
 

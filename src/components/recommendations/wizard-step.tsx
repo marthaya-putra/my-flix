@@ -2,7 +2,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-interface WizardStepProps {
+type WizardStepProps = {
   title: string;
   description?: string;
   children: React.ReactNode;
@@ -14,7 +14,7 @@ interface WizardStepProps {
   canGoPrevious?: boolean;
   isLastStep?: boolean;
   isLoading?: boolean;
-}
+};
 
 export function WizardStep({
   title,

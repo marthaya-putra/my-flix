@@ -2,13 +2,13 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Suspense } from "react";
 import { z } from "zod";
-import FilterPopovers from "@/components/filter-popovers";
-import ClearFilters from "@/components/filters/clear-filters";
-import GenreFilter from "@/components/filters/genre-filter";
-import RatingFilter from "@/components/filters/rating-filter";
-import YearFilter from "@/components/filters/year-filter";
-import MoviesContent from "@/components/movies-content";
-import DiscoverMoviesSkeleton from "@/components/skeletons/discover-movies-skeleton";
+import { FilterPopovers } from "@/components/filter-popovers";
+import { ClearFilters } from "@/components/filters/clear-filters";
+import { GenreFilter } from "@/components/filters/genre-filter";
+import { RatingFilter } from "@/components/filters/rating-filter";
+import { YearFilter } from "@/components/filters/year-filter";
+import { MoviesContent } from "@/components/movies-content";
+import { DiscoverMoviesSkeleton } from "@/components/skeletons/discover-movies-skeleton";
 import { discoverMoviesOptions } from "@/lib/queries/movies";
 
 export const Route = createFileRoute("/movies/")({

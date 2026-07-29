@@ -11,10 +11,10 @@ import { ctaDramaSpring } from "@/lib/motion";
 import type { FilmInfo } from "@/lib/types";
 import { HIT_ZONE } from "@/lib/utils";
 
-interface LikeButtonProps {
+type LikeButtonProps = {
   filmInfo: FilmInfo;
   disabled?: boolean;
-}
+};
 
 /**
  * Shared like CTA. Owns the Button + motion.div + Tooltip + HIT_ZONE +

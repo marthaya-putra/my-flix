@@ -77,14 +77,14 @@ export function PreferencesPage() {
   );
 }
 
-interface FavoriteSectionProps {
+type FavoriteSectionProps = {
   title: string;
   items: ContentItem[];
   type: "movie" | "tv" | "person";
   onRemove: (id: number) => void;
   onAdd?: () => void;
   limit?: number;
-}
+};
 
 function FavoriteSection({
   title,

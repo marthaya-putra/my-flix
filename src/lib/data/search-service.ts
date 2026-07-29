@@ -1,10 +1,10 @@
 import { type ContentItem, type ContentType } from "@/lib/types";
 import { searchActors, searchMovies, searchTVs } from "./search";
 
-export interface SearchOptions {
+export type SearchOptions = {
   query: string;
   page: number;
-}
+};
 
 /**
  * Generic search service that handles all content types

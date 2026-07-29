@@ -26,10 +26,10 @@ export type Session = Awaited<ReturnType<typeof auth.api.getSession>>;
  * NOTE: keep this type as the single source of truth for what the
  * root route exposes to descendants.
  */
-export interface AppRouterContext {
+export type AppRouterContext = {
   queryClient: QueryClient;
   session: Session;
-}
+};
 
 /**
  * Fresh QueryClient per call. On the server, `getRouter` runs per
@@ -88,6 +88,7 @@ export function getRouter() {
 
 // Register so `Register['router']` reflects the context type.
 declare module "@tanstack/react-router" {
+  // biome-ignore lint/style/useConsistentTypeDefinitions: declaration merging with @tanstack/react-router's Register interface
   interface Register {
     router: ReturnType<typeof getRouter>;
   }

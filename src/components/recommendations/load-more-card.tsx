@@ -2,14 +2,14 @@ import { Plus, RotateCw } from "lucide-react";
 import { type StreamStage, stageMessagesFor } from "@/lib/data/stream-events";
 import { RotatingMessage } from "./rotating-message";
 
-interface LoadMoreCardProps {
+type LoadMoreCardProps = {
   /** Whether load-more is currently in-flight for this category. */
   loading: boolean;
   stage?: StreamStage;
   stageRetry?: boolean;
   error?: string | null;
   onClick: () => void;
-}
+};
 
 function TypingDots() {
   return (

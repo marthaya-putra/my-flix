@@ -8,14 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { ContentItem } from "@/lib/types";
 
-interface ContentSelectionStepProps {
+type ContentSelectionStepProps = {
   type: "movie" | "tv";
   title: string;
   description: string;
   selectedItems: ContentItem[];
   onSelectionChange: (items: ContentItem[]) => void;
   minRequired: number;
-}
+};
 
 export function ContentSelectionStep({
   type,

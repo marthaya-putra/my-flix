@@ -2,7 +2,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Suspense } from "react";
 import { z } from "zod";
-import WatchlistSkeleton from "@/components/skeletons/watchlist-skeleton";
+import { WatchlistSkeleton } from "@/components/skeletons/watchlist-skeleton";
 import { WatchlistPage } from "@/components/watchlist/watchlist-page";
 import { guardAuthenticated } from "@/lib/auth-guard";
 import {

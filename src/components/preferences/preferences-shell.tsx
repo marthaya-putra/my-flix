@@ -16,10 +16,10 @@ import {
 } from "./preferences-context";
 import { usePreferences } from "./use-preferences";
 
-interface PreferencesShellProps {
+type PreferencesShellProps = {
   initialPreferences?: UserPreferences;
   children: ReactNode;
-}
+};
 
 const NAV_ITEMS = [
   {

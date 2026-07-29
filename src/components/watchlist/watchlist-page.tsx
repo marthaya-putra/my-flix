@@ -1,7 +1,7 @@
 import { getRouteApi, Link } from "@tanstack/react-router";
 import { Bookmark, Compass } from "lucide-react";
-import MovieCard from "@/components/movie-card";
-import CustomPagination from "@/components/pagination";
+import { MovieCard } from "@/components/movie-card";
+import { CustomPagination } from "@/components/pagination";
 import { Button } from "@/components/ui/button";
 import { useWatchlist } from "@/hooks/use-watchlist";
 import type { UserWatchlist } from "@/lib/db";
@@ -12,12 +12,12 @@ import type { FilmInfo, FilmType } from "@/lib/types";
 // renders this component) and avoids passing the route as a prop.
 const watchlistRoute = getRouteApi("/watchlist");
 
-interface WatchlistPageProps {
+type WatchlistPageProps = {
   page: number;
   totalPages: number;
   totalItems: number;
   items: UserWatchlist[];
-}
+};
 
 /**
  * Convert a stored watchlist row into the `FilmInfo` shape `MovieCard`

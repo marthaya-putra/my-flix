@@ -20,7 +20,7 @@ type SearchTVsParams = {
 };
 
 // TMDB API response types for search
-interface TMDBMovieResult {
+type TMDBMovieResult = {
   id: number;
   poster_path?: string;
   backdrop_path?: string;
@@ -30,9 +30,9 @@ interface TMDBMovieResult {
   release_date?: string;
   genre_ids?: number[];
   media_type: "movie";
-}
+};
 
-interface TMDBTVResult {
+type TMDBTVResult = {
   id: number;
   poster_path?: string;
   backdrop_path?: string;
@@ -42,9 +42,9 @@ interface TMDBTVResult {
   first_air_date?: string;
   genre_ids?: number[];
   media_type: "tv";
-}
+};
 
-interface TMDBPersonResult {
+type TMDBPersonResult = {
   id: number;
   name: string;
   profile_path?: string;
@@ -65,23 +65,23 @@ interface TMDBPersonResult {
     genre_ids?: number[];
   }>;
   media_type: "person";
-}
+};
 
 type TMDBSearchItem = TMDBMovieResult | TMDBTVResult | TMDBPersonResult;
 
-interface TMDBSearchResponse {
+type TMDBSearchResponse = {
   page: number;
   results: TMDBSearchItem[];
   total_pages: number;
   total_results: number;
-}
+};
 
-interface TMDBPersonSearchResponse {
+type TMDBPersonSearchResponse = {
   page: number;
   results: TMDBPersonResult[];
   total_pages: number;
   total_results: number;
-}
+};
 
 export function convertPersonSearchResult(
   data: TMDBPersonSearchResponse,

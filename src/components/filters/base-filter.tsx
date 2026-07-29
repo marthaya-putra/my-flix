@@ -27,7 +27,7 @@ export type BaseFilterProps = {
   align?: "start" | "center" | "end";
 };
 
-export default function BaseFilter({
+export function BaseFilter({
   title,
   children,
   trigger,

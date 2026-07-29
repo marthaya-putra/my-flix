@@ -18,12 +18,12 @@ const ROLL = {
   transition: { duration: 0.3, ease: [0.23, 1, 0.32, 1] },
 } as const;
 
-interface RotatingMessageProps {
+type RotatingMessageProps = {
   /** Message set to cycle through. Single-element arrays render statically. */
   messages: string[];
   /** Optional typography / sizing classes for the text. */
   className?: string;
-}
+};
 
 /**
  * Dumb rotating text. Cycles `messages` every 2s, holding on the last one.

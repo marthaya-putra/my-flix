@@ -5,15 +5,15 @@
  */
 
 /** Filters shared by movie + TV discover listing routes. */
-export interface DiscoverFilters {
+export type DiscoverFilters = {
   page: number;
   genres: string;
   rating?: number;
   year?: number;
-}
+};
 
 /** Args for a paginated text search (movies / tvs / people). */
-export interface SearchArgs {
+export type SearchArgs = {
   query: string;
   page: number;
-}
+};

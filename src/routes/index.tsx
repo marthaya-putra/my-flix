@@ -6,9 +6,9 @@ import {
 import { createFileRoute } from "@tanstack/react-router";
 import { Suspense } from "react";
 import { ParticleScroll } from "@/components/canvasui/ParticleScroll";
-import ContentRow from "@/components/content-row";
-import ContentRowSkeleton from "@/components/content-row-skeleton";
-import Hero from "@/components/hero";
+import { ContentRow } from "@/components/content-row";
+import { ContentRowSkeleton } from "@/components/content-row-skeleton";
+import { Hero } from "@/components/hero";
 import {
   popularMoviesOptions,
   trendingMoviesOptions,
