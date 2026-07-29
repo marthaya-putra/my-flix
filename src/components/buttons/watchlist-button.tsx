@@ -22,9 +22,9 @@ type WatchlistButtonProps = {
  * Reads `useWatchlist()` and calls `toggleWatchlist(filmInfo)` internally.
  *
  * Canonical style is the hover-overlay glass pill: `rounded-full
- * backdrop-blur-md border`, active = violet-500, inactive = glass pill.
- * Both RecommendationCard overlays render identically; MovieCard passes its
- * own `disabled` gate.
+ * backdrop-blur-md border`, active = --primary (the brand accent), inactive
+ * = glass pill. Both RecommendationCard overlays render identically;
+ * MovieCard passes its own `disabled` gate.
  */
 export function WatchlistButton({ filmInfo, disabled }: WatchlistButtonProps) {
   const { isWatchlisted, toggleWatchlist } = useWatchlist();
@@ -51,7 +51,7 @@ export function WatchlistButton({ filmInfo, disabled }: WatchlistButtonProps) {
             className={cn(
               REACTION_BUTTON_BASE,
               watchlisted
-                ? "border-violet-500/30 bg-violet-500/20"
+                ? "border-primary/30 bg-primary/20"
                 : "border-white/20 bg-black/40 hover:bg-white/10",
             )}
           >
@@ -59,8 +59,8 @@ export function WatchlistButton({ filmInfo, disabled }: WatchlistButtonProps) {
               className={cn(
                 "h-4 w-4",
                 watchlisted
-                  ? "fill-violet-500 text-violet-500"
-                  : "text-muted-foreground hover:text-violet-500 hover:fill-violet-500/20",
+                  ? "fill-primary text-primary"
+                  : "text-muted-foreground hover:text-primary hover:fill-primary/20",
               )}
             />
           </Button>

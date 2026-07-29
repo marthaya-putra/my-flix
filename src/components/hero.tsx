@@ -35,7 +35,7 @@ export function Hero(filmInfo: FilmInfo) {
           </h1>
 
           <div className="flex flex-wrap gap-8 pt-4">
-            <div className="flex items-center gap-1 text-sm text-yellow-400">
+            <div className="flex items-center gap-1 text-sm text-rating">
               <Star className="w-5 h-5 fill-current" />
               <span className="text-white font-semibold">
                 {filmInfo.voteAverage.toFixed(1)}

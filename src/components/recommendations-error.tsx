@@ -34,14 +34,14 @@ export function RecommendationsError({ error }: ErrorComponentProps) {
       <GlitchCard>
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-600">
+            <CardTitle className="flex items-center gap-2 text-destructive">
               <AlertCircle className="h-5 w-5" />
               Service Disruption
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 {isNetworkError &&
                   "We're having trouble connecting to our recommendation service. Please check your internet connection and try again."}
                 {isServerError &&

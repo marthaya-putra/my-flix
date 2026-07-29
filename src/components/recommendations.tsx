@@ -312,8 +312,8 @@ export function Recommendations() {
 
   if (error && recommendations.length === 0) {
     return (
-      <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-        <p className="text-red-700">{error}</p>
+      <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg">
+        <p className="text-destructive">{error}</p>
       </div>
     );
   }
@@ -324,7 +324,7 @@ export function Recommendations() {
         {/* Canvas UI Frost — Issue #67: static ambient frost pane behind
             the message. See frost-empty-state. */}
         <div className="text-center py-8">
-          <p className="text-gray-500">
+          <p className="text-muted-foreground">
             No recommendations available. Try adding some movies or TV shows to
             your preferences first!
           </p>
@@ -336,8 +336,8 @@ export function Recommendations() {
   return (
     <div className="space-y-8">
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-700">{error}</p>
+        <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg">
+          <p className="text-destructive">{error}</p>
         </div>
       )}
 

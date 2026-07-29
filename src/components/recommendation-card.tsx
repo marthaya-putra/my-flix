@@ -74,7 +74,7 @@ export function RecommendationCard({
       )}
 
       {/* Rating badge — glass pill, top-left */}
-      <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-full border border-yellow-400/20 backdrop-blur-md bg-black/50 text-yellow-400 text-xs font-bold z-10">
+      <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-full border border-rating/20 backdrop-blur-md bg-black/50 text-rating text-xs font-bold z-10">
         ⭐ {recommendation.imdbRating.toFixed(1)}
       </span>
 
@@ -116,7 +116,7 @@ export function RecommendationCard({
             </MoreInfoLink>
           </h4>
           <div className="flex items-center gap-2 text-xs text-white/70">
-            <span className="px-1.5 py-0.5 bg-yellow-600/90 text-white rounded">
+            <span className="px-1.5 py-0.5 bg-rating/90 text-black rounded">
               ⭐ {recommendation.imdbRating.toFixed(1)}
             </span>
             <span>{recommendation.category === "movie" ? "Movie" : "TV"}</span>
@@ -195,7 +195,7 @@ export function RecommendationCard({
                 </MoreInfoLink>
               </h4>
               <div className="flex items-center gap-2 text-xs text-white/70">
-                <span className="px-1.5 py-0.5 bg-yellow-600/90 text-white rounded">
+                <span className="px-1.5 py-0.5 bg-rating/90 text-black rounded">
                   ⭐ {recommendation.imdbRating.toFixed(1)}
                 </span>
                 <span>
@@ -210,7 +210,7 @@ export function RecommendationCard({
                 {recommendation.reason}
               </p>
               {!recommendation.tmdbData && (
-                <p className="text-[10px] text-amber-400/80 mt-2">
+                <p className="text-[10px] text-chart-3/80 mt-2">
                   ℹ️ TMDB data not available
                 </p>
               )}

@@ -183,7 +183,7 @@ export function Navbar() {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-white/10" />
                 <DropdownMenuItem
-                  className="cursor-pointer text-red-500 focus:text-red-500 focus:bg-red-500/10"
+                  className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
                   onClick={() =>
                     authClient.signOut({
                       fetchOptions: {

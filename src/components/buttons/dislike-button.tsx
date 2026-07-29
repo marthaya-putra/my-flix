@@ -22,9 +22,10 @@ type DislikeButtonProps = {
  * Reads `useDislikedItems()` and calls `toggleDislike(filmInfo)` internally.
  *
  * Canonical style is the hover-overlay glass pill: `rounded-full
- * backdrop-blur-md border`, active = red-500, inactive = glass pill.
- * Like↔dislike mutual exclusion lives in the hooks, so this renders as a
- * fully independent sibling of <LikeButton> — no coordination props.
+ * backdrop-blur-md border`, active = --destructive (one red system), inactive
+ * = glass pill. Like↔dislike mutual exclusion lives in the hooks, so this
+ * renders as a fully independent sibling of <LikeButton> — no coordination
+ * props.
  */
 export function DislikeButton({ filmInfo, disabled }: DislikeButtonProps) {
   const { isDisliked, toggleDislike } = useDislikedItems();
@@ -51,7 +52,7 @@ export function DislikeButton({ filmInfo, disabled }: DislikeButtonProps) {
             className={cn(
               REACTION_BUTTON_BASE,
               disliked
-                ? "border-red-500/30 bg-red-500/20"
+                ? "border-destructive/30 bg-destructive/20"
                 : "border-white/20 bg-black/40 hover:bg-white/10",
             )}
           >
@@ -59,8 +60,8 @@ export function DislikeButton({ filmInfo, disabled }: DislikeButtonProps) {
               className={cn(
                 "h-4 w-4",
                 disliked
-                  ? "fill-red-500 text-red-500"
-                  : "text-muted-foreground hover:text-red-500 hover:fill-red-100",
+                  ? "fill-destructive text-destructive"
+                  : "text-muted-foreground hover:text-destructive hover:fill-destructive/20",
               )}
             />
           </Button>

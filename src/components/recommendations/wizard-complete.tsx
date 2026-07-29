@@ -20,7 +20,7 @@ export function WizardComplete({
     <div className="space-y-4 max-w-md mx-auto">
       <div className="text-center space-y-3">
         <div className="flex justify-center">
-          <CheckCircle className="h-12 w-12 text-green-500" />
+          <CheckCircle className="h-12 w-12 text-chart-2" />
         </div>
         <div>
           <h2 className="text-xl font-bold">You're All Set!</h2>

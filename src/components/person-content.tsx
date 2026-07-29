@@ -16,25 +16,25 @@ const getCategoryBadge = (category: Person["category"]) => {
   switch (category) {
     case "actor":
       return (
-        <div className="rounded-full bg-blue-600 p-1">
+        <div className="rounded-full bg-chart-1 p-1">
           <Film className="h-3 w-3 text-white" />
         </div>
       );
     case "director":
       return (
-        <div className="rounded-full bg-green-600 p-1">
+        <div className="rounded-full bg-chart-2 p-1">
           <Camera className="h-3 w-3 text-white" />
         </div>
       );
     case "other":
       return (
-        <div className="rounded-full bg-gray-600 p-1">
+        <div className="rounded-full bg-muted p-1">
           <Star className="h-3 w-3 text-white" />
         </div>
       );
     default:
       return (
-        <div className="rounded-full bg-purple-600 p-1">
+        <div className="rounded-full bg-chart-4 p-1">
           <User className="h-3 w-3 text-white" />
         </div>
       );
