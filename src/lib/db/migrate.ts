@@ -47,7 +47,6 @@ export async function runMigrations() {
  */
 export async function getMigrationStatus() {
   let client: ReturnType<typeof postgres> | undefined;
-  let db: ReturnType<typeof drizzle> | undefined;
 
   try {
     // Create a dedicated client for migration status using environment variable
@@ -61,7 +60,6 @@ export async function getMigrationStatus() {
       connect_timeout: 10,
       max: 1,
     });
-    db = drizzle(client, { schema });
 
     // __drizzle_migrations table might not be exported, so we use raw query
     const result =

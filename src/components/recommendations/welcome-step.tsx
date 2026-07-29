@@ -1,10 +1,6 @@
 import { Film, Sparkles, Tv, Users } from "lucide-react";
 
-interface WelcomeStepProps {
-  onNext: () => void;
-}
-
-export function WelcomeStep({ onNext }: WelcomeStepProps) {
+export function WelcomeStep() {
   return (
     <div className="space-y-6">
       <div className="text-center space-y-4">

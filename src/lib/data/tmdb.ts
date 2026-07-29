@@ -1,6 +1,3 @@
-import { DiscoverResult } from "../types";
-import { convertToDiscoverResult } from "../utils";
-
 const TMDB_URL = "https://api.themoviedb.org/3";
 // Same-origin proxy (src/routes/api/img/$.ts). ParticleScroll's
 // HTML-in-Canvas capture drops cross-origin images unless CORS-clean, and

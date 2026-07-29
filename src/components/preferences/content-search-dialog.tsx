@@ -18,7 +18,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SearchService } from "@/lib/data/search-service";
-import { ContentItem, ContentType, FilmInfo, Person } from "@/lib/types";
+import { ContentItem, ContentType } from "@/lib/types";
 import { getContentSubtitle } from "@/lib/utils";
 
 interface ContentSearchDialogProps {

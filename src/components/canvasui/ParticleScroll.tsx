@@ -269,7 +269,6 @@ export function createParticleScroll(
   let contentDirty = false;
   let captureFailed = false;
   let paintCount = 0;
-  let lastPaintTime = 0;
   let wake = () => {};
 
   if (htmlInCanvas) {
@@ -279,7 +278,6 @@ export function createParticleScroll(
         sourceCtx!.drawElementImage!(content, 0, 0);
         contentDirty = true;
         paintCount++;
-        lastPaintTime = performance.now();
         wake();
       } catch {
         markCaptureFailed();

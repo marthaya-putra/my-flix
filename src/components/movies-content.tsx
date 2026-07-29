@@ -23,11 +23,6 @@ export default function MoviesContent({
     from,
   });
 
-  const genres = "genres" in search ? search.genres : undefined;
-  const rating = "rating" in search ? search.rating : undefined;
-  const year = "year" in search ? search.year : undefined;
-  const query = "query" in search ? search.query : undefined;
-
   const currentPage = moviesData.page;
   const totalPages = moviesData.totalPages;
   const hasNextPage = currentPage < totalPages;

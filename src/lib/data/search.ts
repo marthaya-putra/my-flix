@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { Actor, FilmInfo, Person, SearchResult } from "../types";
+import { FilmInfo, Person, SearchResult } from "../types";
 import { convertToDiscoverResult } from "../utils";
 import { genres as movieGenres } from "./movies";
 import { fetchFromTMDB, TMDB_IMAGE_BASE } from "./tmdb";
