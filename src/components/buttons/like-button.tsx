@@ -43,6 +43,8 @@ export function LikeButton({ filmInfo, disabled }: LikeButtonProps) {
             variant="ghost"
             size="sm"
             disabled={disabled}
+            aria-pressed={liked}
+            aria-label={`Like ${filmInfo.title}`}
             onClick={(e) => {
               e.stopPropagation();
               toggleLike(filmInfo);

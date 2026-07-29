@@ -116,6 +116,7 @@ export default function Navbar() {
             variant="ghost"
             size="icon"
             onClick={() => setIsSearchOpen(true)}
+            aria-label="Search"
             className="text-foreground hover:text-primary hover:bg-transparent"
           >
             <Search className="w-5 h-5" />
@@ -123,6 +124,7 @@ export default function Navbar() {
           <Button
             variant="ghost"
             size="icon"
+            aria-label="Notifications"
             className="text-foreground hover:text-primary hover:bg-transparent"
           >
             <Bell className="w-5 h-5" />

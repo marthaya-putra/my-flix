@@ -42,6 +42,8 @@ export function WatchlistButton({ filmInfo, disabled }: WatchlistButtonProps) {
             variant="ghost"
             size="sm"
             disabled={disabled}
+            aria-pressed={watchlisted}
+            aria-label={`Add ${filmInfo.title} to Watchlist`}
             onClick={(e) => {
               e.stopPropagation();
               toggleWatchlist(filmInfo);

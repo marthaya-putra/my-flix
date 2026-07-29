@@ -43,6 +43,8 @@ export function DislikeButton({ filmInfo, disabled }: DislikeButtonProps) {
             variant="ghost"
             size="sm"
             disabled={disabled}
+            aria-pressed={disliked}
+            aria-label={`Dislike ${filmInfo.title}`}
             onClick={(e) => {
               e.stopPropagation();
               toggleDislike(filmInfo);
