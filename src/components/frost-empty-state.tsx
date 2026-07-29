@@ -1,5 +1,3 @@
-"use client";
-
 import { type ReactNode, useEffect, useState } from "react";
 import { Frost } from "@/components/canvasui/Frost";
 

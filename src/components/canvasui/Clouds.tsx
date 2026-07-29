@@ -1,5 +1,3 @@
-"use client";
-
 // Canvas UI Clouds — canonical implementation adapted from
 // https://canvasui.dev/docs/components/clouds. A three-pass WebGL2
 // pipeline: an FBM cloud field, a cursor-wind trail that parts the

@@ -1,5 +1,3 @@
-"use client";
-
 // Canvas UI Frost — canonical implementation ported from
 // https://canvasui.dev/docs/components/frost (DavidHDev/canvas-ui,
 // src/lib/Frost/FrostVanilla.ts). A multi-pass WebGL2 pipeline: an

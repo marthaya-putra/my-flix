@@ -1,5 +1,3 @@
-"use client";
-
 import { type ReactNode, useEffect, useState } from "react";
 import { Clouds } from "@/components/canvasui/Clouds";
 
