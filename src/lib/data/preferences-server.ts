@@ -1,7 +1,7 @@
 import { getDb } from "@/lib/db";
-import { getUserPreferences } from "@/lib/repositories/user-preferences";
-import { getUserPeople } from "@/lib/repositories/user-people";
 import { getUserDislikes } from "@/lib/repositories/user-dislikes";
+import { getUserPeople } from "@/lib/repositories/user-people";
+import { getUserPreferences } from "@/lib/repositories/user-preferences";
 import type { UserContent } from "./preferences";
 
 // Server-only module (Spec 0006). loadUserContent lives here — separate from

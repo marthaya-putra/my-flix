@@ -1,6 +1,7 @@
-import { generateObject } from "ai";
 import { LanguageModelV2 } from "@ai-sdk/provider";
+import { generateObject } from "ai";
 import { z } from "zod";
+
 // Plain function type
 type GetRecommendationsInput = z.infer<typeof RecommendationInput>;
 

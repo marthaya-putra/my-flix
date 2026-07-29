@@ -20,8 +20,7 @@ export const moviesKeys = {
   all: ["movies"] as const,
   discover: ({ page, genres, rating, year }: DiscoverFilters) =>
     [...moviesKeys.all, "discover", { page, genres, rating, year }] as const,
-  popular: (page: number = 1) =>
-    [...moviesKeys.all, "popular", page] as const,
+  popular: (page: number = 1) => [...moviesKeys.all, "popular", page] as const,
   trending: (timeWindow: "day" | "week" = "week") =>
     [...moviesKeys.all, "trending", timeWindow] as const,
 };
@@ -46,9 +45,7 @@ export const popularMoviesOptions = (page: number = 1) =>
     queryFn: () => fetchPopularMovies({ data: page }),
   });
 
-export const trendingMoviesOptions = (
-  timeWindow: "day" | "week" = "week",
-) =>
+export const trendingMoviesOptions = (timeWindow: "day" | "week" = "week") =>
   queryOptions<DiscoverResult>({
     queryKey: moviesKeys.trending(timeWindow),
     queryFn: () => fetchTrendingMovies({ data: timeWindow }),

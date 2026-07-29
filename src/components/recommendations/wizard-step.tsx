@@ -1,6 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface WizardStepProps {
   title: string;
@@ -33,9 +33,7 @@ export function WizardStep({
     <Card>
       <CardHeader>
         <CardTitle className="text-xl">{title}</CardTitle>
-        {description && (
-          <p className="text-muted-foreground">{description}</p>
-        )}
+        {description && <p className="text-muted-foreground">{description}</p>}
       </CardHeader>
       <CardContent className="space-y-6">
         {children}
@@ -56,7 +54,11 @@ export function WizardStep({
             disabled={!canGoNext || isLoading}
             className="gap-2"
           >
-            {isLoading ? "Saving..." : isLastStep ? "Get Recommendations" : onNextText}
+            {isLoading
+              ? "Saving..."
+              : isLastStep
+                ? "Get Recommendations"
+                : onNextText}
             {!isLoading && !isLastStep && <ChevronRight className="h-4 w-4" />}
           </Button>
         </div>

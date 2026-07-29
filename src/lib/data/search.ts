@@ -1,10 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
-import { SearchResult, FilmInfo, Actor, Person } from "../types";
-import { fetchFromTMDB, TMDB_IMAGE_BASE } from "./tmdb";
+import { z } from "zod";
+import { Actor, FilmInfo, Person, SearchResult } from "../types";
 import { convertToDiscoverResult } from "../utils";
 import { genres as movieGenres } from "./movies";
+import { fetchFromTMDB, TMDB_IMAGE_BASE } from "./tmdb";
 import { genres as tvGenres } from "./tvs";
-import { z } from "zod";
 
 // Plain function types
 type SearchMoviesParams = {
@@ -83,7 +83,9 @@ interface TMDBPersonSearchResponse {
   total_results: number;
 }
 
-export function convertPersonSearchResult(data: TMDBPersonSearchResponse): Array<Person> {
+export function convertPersonSearchResult(
+  data: TMDBPersonSearchResponse,
+): Array<Person> {
   return data.results.map((person) => {
     // Determine category based on known_for_department
     let category: "actor" | "director" | "other";
@@ -339,7 +341,10 @@ export async function searchMoviesAPI(params: SearchMoviesParams) {
     });
 
     if (params.primaryReleaseYear) {
-      urlParams.append('primary_release_year', params.primaryReleaseYear.toString());
+      urlParams.append(
+        "primary_release_year",
+        params.primaryReleaseYear.toString(),
+      );
     }
 
     const searchPath = `/search/movie?${urlParams.toString()}`;
@@ -369,7 +374,10 @@ export async function searchTVsAPI(params: SearchTVsParams) {
     });
 
     if (params.firstAirDateYear) {
-      urlParams.append('first_air_date_year', params.firstAirDateYear.toString());
+      urlParams.append(
+        "first_air_date_year",
+        params.firstAirDateYear.toString(),
+      );
     }
 
     const searchPath = `/search/tv?${urlParams.toString()}`;

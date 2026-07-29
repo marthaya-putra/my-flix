@@ -1,13 +1,13 @@
+import { useRouter } from "@tanstack/react-router";
+import { Loader2 } from "lucide-react";
 import { useState } from "react";
-import { WizardStep } from "./wizard-step";
-import { WelcomeStep } from "./welcome-step";
+import { toast } from "sonner";
+import { usePreferences } from "@/components/preferences/use-preferences";
 import { ContentSelectionStep } from "./content-selection-step";
 import { PeopleSelectionStep } from "./people-selection-step";
+import { WelcomeStep } from "./welcome-step";
 import { WizardComplete } from "./wizard-complete";
-import { usePreferences } from "@/components/preferences/use-preferences";
-import { useRouter } from "@tanstack/react-router";
-import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { WizardStep } from "./wizard-step";
 
 const MIN_MOVIES = 3;
 const MIN_TV_SHOWS = 3;

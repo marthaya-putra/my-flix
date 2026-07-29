@@ -39,4 +39,3 @@ export const sessionQuery = queryOptions({
   staleTime: Infinity,
   gcTime: Infinity,
 });
-

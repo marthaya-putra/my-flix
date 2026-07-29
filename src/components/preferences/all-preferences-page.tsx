@@ -1,24 +1,23 @@
-import { useState } from "react";
+import { Plus } from "lucide-react";
 import { motion } from "motion/react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Pagination,
   PaginationContent,
+  PaginationEllipsis,
   PaginationItem,
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-  PaginationEllipsis,
 } from "@/components/ui/pagination";
-import { Plus } from "lucide-react";
-
+import { fadeUpContainer, fadeUpItem } from "@/lib/motion";
+import type { ContentItem } from "@/lib/types";
+import type { FilmInfoWithDbId, PersonWithDbId } from "@/lib/types/preferences";
 import { PreferenceItem } from "./preference-item";
 import { usePreferencesContext } from "./preferences-context";
-import { fadeUpContainer, fadeUpItem } from "@/lib/motion";
-import type { FilmInfoWithDbId, PersonWithDbId } from "@/lib/types/preferences";
-import type { ContentItem } from "@/lib/types";
 
 interface AllPreferencesPageProps {
   category: "movies" | "tvShows" | "people";

@@ -1,6 +1,5 @@
-import { useState } from "react";
 import { ChevronDown, ChevronUp, Filter } from "lucide-react";
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 
 interface FilterPopoversProps {
   children: ReactNode;
@@ -35,9 +34,7 @@ export default function FilterPopovers({ children }: FilterPopoversProps) {
           isCollapsed ? "max-h-0 opacity-0" : "max-h-96 opacity-100"
         }`}
       >
-        <div className="p-6">
-          {children}
-        </div>
+        <div className="p-6">{children}</div>
       </div>
     </div>
   );

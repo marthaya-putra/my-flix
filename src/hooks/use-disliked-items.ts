@@ -65,9 +65,9 @@ export function useDislikedItems() {
         queryKey: preferencesKeys.dislikedItems(),
       });
 
-      const previousDisliked = queryClient.getQueryData<{ dislikedIds: number[] }>(
-        preferencesKeys.dislikedItems(),
-      );
+      const previousDisliked = queryClient.getQueryData<{
+        dislikedIds: number[];
+      }>(preferencesKeys.dislikedItems());
 
       const prevSet = new Set(previousDisliked?.dislikedIds ?? []);
       const nextSet = new Set(prevSet);

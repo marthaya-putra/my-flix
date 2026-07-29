@@ -1,11 +1,14 @@
-import { Suspense } from "react";
-import { createFileRoute } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { Suspense } from "react";
 import { z } from "zod";
-import { WatchlistPage } from "@/components/watchlist/watchlist-page";
 import WatchlistSkeleton from "@/components/skeletons/watchlist-skeleton";
+import { WatchlistPage } from "@/components/watchlist/watchlist-page";
 import { guardAuthenticated } from "@/lib/auth-guard";
-import { userWatchlistOptions, watchlistItemsOptions } from "@/lib/queries/preferences";
+import {
+  userWatchlistOptions,
+  watchlistItemsOptions,
+} from "@/lib/queries/preferences";
 
 export const Route = createFileRoute("/watchlist")({
   // `?page=` mirrors /movies and /tvs — TanStack Router owns the page number

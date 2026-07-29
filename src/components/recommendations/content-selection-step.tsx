@@ -1,11 +1,11 @@
-import { useState, useCallback } from "react";
-import { ContentSearchDialog } from "@/components/preferences/content-search-dialog";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { X, Plus, Film, Tv } from "lucide-react";
-import { PreferenceItem } from "@/components/preferences/preference-item";
+import { Film, Plus, Tv, X } from "lucide-react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
+import { ContentSearchDialog } from "@/components/preferences/content-search-dialog";
+import { PreferenceItem } from "@/components/preferences/preference-item";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface ContentSelectionStepProps {
   type: "movie" | "tv";
@@ -34,7 +34,7 @@ export function ContentSelectionStep({
         toast.info("Already in your selections.");
       }
     },
-    [selectedItems, onSelectionChange]
+    [selectedItems, onSelectionChange],
   );
 
   const handleRemoveItem = useCallback(
@@ -42,7 +42,7 @@ export function ContentSelectionStep({
       onSelectionChange(selectedItems.filter((item) => item.id !== id));
       toast.info("Item has been removed.");
     },
-    [selectedItems, onSelectionChange]
+    [selectedItems, onSelectionChange],
   );
 
   const hasMinimum = selectedItems.length >= minRequired;

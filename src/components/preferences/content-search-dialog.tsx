@@ -1,6 +1,10 @@
+import { Film, Loader2, Search, Tv, Users } from "lucide-react";
 import { useState } from "react";
-import { useDebouncedCallback } from "use-debounce";
 import { match } from "ts-pattern";
+import { useDebouncedCallback } from "use-debounce";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { MovieCard, PersonCard, TVCard } from "@/components/ui/content-cards";
 import {
   Dialog,
   DialogContent,
@@ -9,18 +13,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
-import { Search, Film, Tv, Users, Loader2 } from "lucide-react";
-import { FilmInfo, Person, ContentItem } from "@/lib/types";
-import { ContentType } from "@/lib/types";
-import { getContentSubtitle } from "@/lib/utils";
 import { SearchService } from "@/lib/data/search-service";
-import { MovieCard, TVCard, PersonCard } from "@/components/ui/content-cards";
+import { ContentItem, ContentType, FilmInfo, Person } from "@/lib/types";
+import { getContentSubtitle } from "@/lib/utils";
 
 interface ContentSearchDialogProps {
   open: boolean;
@@ -47,7 +46,7 @@ export function ContentSearchDialog({
 }: ContentSearchDialogProps) {
   const [query, setQuery] = useState("");
   const [searchResponse, setSearchResponse] = useState<ContentItem[] | null>(
-    null
+    null,
   );
   const [isLoading, setIsLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -64,7 +63,7 @@ export function ContentSearchDialog({
       const { items, totalPages } = await SearchService.search(
         activeTab,
         { query, page },
-        searchResponse
+        searchResponse,
       );
 
       setSearchResponse(items);
@@ -144,7 +143,10 @@ export function ContentSearchDialog({
                 }}
               >
                 <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="movie" className="flex items-center gap-2">
+                  <TabsTrigger
+                    value="movie"
+                    className="flex items-center gap-2"
+                  >
                     <Film className="h-4 w-4" />
                     Movies
                   </TabsTrigger>
@@ -152,7 +154,10 @@ export function ContentSearchDialog({
                     <Tv className="h-4 w-4" />
                     TV Shows
                   </TabsTrigger>
-                  <TabsTrigger value="person" className="flex items-center gap-2">
+                  <TabsTrigger
+                    value="person"
+                    className="flex items-center gap-2"
+                  >
                     <Users className="h-4 w-4" />
                     People
                   </TabsTrigger>

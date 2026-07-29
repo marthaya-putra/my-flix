@@ -1,11 +1,11 @@
-import { migrate } from 'drizzle-orm/postgres-js/migrator';
-import { drizzle } from 'drizzle-orm/postgres-js';
-import { config } from 'dotenv';
-import postgres from 'postgres';
-import * as schema from './schema';
+import { config } from "dotenv";
+import { drizzle } from "drizzle-orm/postgres-js";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
+import postgres from "postgres";
+import * as schema from "./schema";
 
 // Load environment variables
-config({ path: '.env' });
+config({ path: ".env" });
 
 /**
  * Run database migrations
@@ -18,7 +18,9 @@ export async function runMigrations() {
 
   try {
     // Create a dedicated client for migrations using environment variable
-    const connectionString = process.env.DATABASE_URL || "postgresql://postgres:password@localhost:5433/myflix";
+    const connectionString =
+      process.env.DATABASE_URL ||
+      "postgresql://postgres:password@localhost:5433/myflix";
 
     client = postgres(connectionString, {
       prepare: false,
@@ -28,9 +30,9 @@ export async function runMigrations() {
     });
     db = drizzle(client, { schema });
 
-    await migrate(db, { migrationsFolder: './src/lib/db/migrations' });
+    await migrate(db, { migrationsFolder: "./src/lib/db/migrations" });
   } catch (error) {
-    console.error('❌ Migration failed:', error);
+    console.error("❌ Migration failed:", error);
     throw error;
   } finally {
     // Clean up migration connection
@@ -49,7 +51,9 @@ export async function getMigrationStatus() {
 
   try {
     // Create a dedicated client for migration status using environment variable
-    const connectionString = process.env.DATABASE_URL || "postgresql://postgres:password@localhost:5433/myflix";
+    const connectionString =
+      process.env.DATABASE_URL ||
+      "postgresql://postgres:password@localhost:5433/myflix";
 
     client = postgres(connectionString, {
       prepare: false,
@@ -60,10 +64,11 @@ export async function getMigrationStatus() {
     db = drizzle(client, { schema });
 
     // __drizzle_migrations table might not be exported, so we use raw query
-    const result = await client`SELECT * FROM __drizzle_migrations ORDER BY id DESC`;
+    const result =
+      await client`SELECT * FROM __drizzle_migrations ORDER BY id DESC`;
     return result;
   } catch (error) {
-    console.error('Failed to get migration status:', error);
+    console.error("Failed to get migration status:", error);
     return [];
   } finally {
     // Clean up connection

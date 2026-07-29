@@ -1,7 +1,7 @@
-import { Button } from "@/components/ui/button";
-import { Home, Search } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
+import { Home, Search } from "lucide-react";
 import { motion } from "motion/react";
+import { Button } from "@/components/ui/button";
 import { fadeUpContainer, fadeUpItem } from "@/lib/motion";
 
 export default function NotFound() {

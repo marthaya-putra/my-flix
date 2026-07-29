@@ -1,13 +1,19 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { Loader2 } from "lucide-react";
 import { useState } from "react";
-import { authClient } from "@/lib/auth-client";
+import { AuthBackdrop } from "@/components/auth-backdrop";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2 } from "lucide-react";
-import { AuthBackdrop } from "@/components/auth-backdrop";
+import { authClient } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/sign-up")({
   component: SignUpComponent,
@@ -52,7 +58,8 @@ function SignUpComponent() {
           <CardHeader>
             <CardTitle>Check your email</CardTitle>
             <CardDescription>
-              We've sent you a verification link. Please check your email to verify your account.
+              We've sent you a verification link. Please check your email to
+              verify your account.
             </CardDescription>
           </CardHeader>
           <CardContent>

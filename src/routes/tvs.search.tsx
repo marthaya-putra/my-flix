@@ -1,10 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
 import { Suspense } from "react";
-import { searchTvsOptions } from "@/lib/queries/search";
+import { z } from "zod";
 import MoviesContent from "@/components/movies-content";
 import TvsSearchSkeleton from "@/components/skeletons/tvs-search-skeleton";
-import { z } from "zod";
+import { searchTvsOptions } from "@/lib/queries/search";
 
 export const Route = createFileRoute("/tvs/search")({
   validateSearch: z.object({
@@ -26,9 +26,7 @@ export const Route = createFileRoute("/tvs/search")({
 
 function TvsSearchPage() {
   const { query, page } = Route.useLoaderDeps();
-  const { data: tvsData } = useSuspenseQuery(
-    searchTvsOptions({ query, page }),
-  );
+  const { data: tvsData } = useSuspenseQuery(searchTvsOptions({ query, page }));
 
   return (
     <Suspense fallback={<TvsSearchSkeleton />}>

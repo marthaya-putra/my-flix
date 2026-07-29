@@ -7,9 +7,7 @@ interface CardProps {
 
 export default function Card({ imageUrl, badge, title, subtitle }: CardProps) {
   return (
-    <div
-      className="group cursor-pointer"
-    >
+    <div className="group cursor-pointer">
       <div className="relative aspect-3/4 overflow-hidden rounded-lg bg-card">
         {imageUrl ? (
           <img

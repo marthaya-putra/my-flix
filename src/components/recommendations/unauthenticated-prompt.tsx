@@ -1,3 +1,6 @@
+import { useRouter } from "@tanstack/react-router";
+import { ArrowRight, Film, Sparkles, Tv } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -5,9 +8,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { useRouter } from "@tanstack/react-router";
-import { Film, Tv, Sparkles, ArrowRight } from "lucide-react";
 
 export function UnauthenticatedPrompt() {
   const router = useRouter();

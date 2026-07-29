@@ -1,6 +1,6 @@
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { Suspense } from "react";
-import { useSuspenseQuery } from "@tanstack/react-query";
 import { PreferencesShell } from "@/components/preferences/preferences-shell";
 import PreferencesSkeleton from "@/components/skeletons/preferences-skeleton";
 import { guardAuthenticated } from "@/lib/auth-guard";

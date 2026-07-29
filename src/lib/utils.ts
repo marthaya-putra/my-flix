@@ -2,7 +2,7 @@ import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { DiscoverResult, FilmType } from "./types";
 
-export function getContentSubtitle(type: 'movie' | 'tv' | 'person'): string {
+export function getContentSubtitle(type: "movie" | "tv" | "person"): string {
   switch (type) {
     case "movie":
       return "Movie";
@@ -14,6 +14,7 @@ export function getContentSubtitle(type: 'movie' | 'tv' | 'person'): string {
       return "Content";
   }
 }
+
 import { genres } from "./data/movies";
 import { TMDB_IMAGE_BASE } from "./data/tmdb";
 
@@ -65,28 +66,28 @@ export function getReleasedYear(releaseDate: string) {
 }
 
 // Utility functions for preferences
-export function getPreferenceIcon(type: 'movie' | 'tv' | 'person') {
+export function getPreferenceIcon(type: "movie" | "tv" | "person") {
   switch (type) {
-    case 'movie':
-      return '🎬';
-    case 'tv':
-      return '📺';
-    case 'person':
-      return '🎭';
+    case "movie":
+      return "🎬";
+    case "tv":
+      return "📺";
+    case "person":
+      return "🎭";
     default:
-      return '⭐';
+      return "⭐";
   }
 }
 
-export function formatPreferenceLabel(type: 'movie' | 'tv' | 'person') {
+export function formatPreferenceLabel(type: "movie" | "tv" | "person") {
   switch (type) {
-    case 'movie':
-      return 'Movie';
-    case 'tv':
-      return 'TV Show';
-    case 'person':
-      return 'Actor';
+    case "movie":
+      return "Movie";
+    case "tv":
+      return "TV Show";
+    case "person":
+      return "Actor";
     default:
-      return 'Content';
+      return "Content";
   }
 }

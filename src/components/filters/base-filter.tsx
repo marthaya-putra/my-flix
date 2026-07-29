@@ -1,6 +1,10 @@
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
 import { ReactNode, useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 export type FilterOption<T = string | number> = {
   value: T;
@@ -9,12 +13,16 @@ export type FilterOption<T = string | number> = {
 
 export type BaseFilterProps = {
   title: string;
-  children: ReactNode | ((props: {
-    close: () => void;
-  }) => ReactNode);
+  children: ReactNode | ((props: { close: () => void }) => ReactNode);
   trigger?: (props: { isOpen: boolean }) => ReactNode;
   triggerText?: string;
-  variant?: "default" | "secondary" | "destructive" | "outline" | "ghost" | "link";
+  variant?:
+    | "default"
+    | "secondary"
+    | "destructive"
+    | "outline"
+    | "ghost"
+    | "link";
   contentClassName?: string;
   align?: "start" | "center" | "end";
 };
@@ -50,7 +58,7 @@ export default function BaseFilter({
           <h3 className="font-semibold text-foreground">{title}</h3>
         </div>
         <div className="p-4 max-h-64 overflow-y-auto">
-          {typeof children === 'function' ? children({ close }) : children}
+          {typeof children === "function" ? children({ close }) : children}
         </div>
       </PopoverContent>
     </Popover>

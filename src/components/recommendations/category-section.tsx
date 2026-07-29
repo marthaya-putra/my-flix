@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { RecommendationCard } from "@/components/recommendation-card";
+import type { StreamStage } from "@/lib/data/stream-events";
+import type { FilmInfo } from "@/lib/types";
 import { InitialLoadComposition } from "./initial-load-composition";
 import { LoadMoreCard } from "./load-more-card";
 import { RecommendationCardSkeleton } from "./recommendation-card-skeleton";
@@ -7,8 +9,6 @@ import {
   RecommendationCarousel,
   RecommendationCarouselItem,
 } from "./recommendation-carousel";
-import type { StreamStage } from "@/lib/data/stream-events";
-import type { FilmInfo } from "@/lib/types";
 
 export type CategoryStatus = "pending" | "ok" | "error";
 export type Category = "movie" | "tv";
@@ -109,9 +109,7 @@ export function CategorySection({
                   onImageError={onImageError}
                   expanded={expandedIndex === index}
                   onToggleExpand={() =>
-                    setExpandedIndex((prev) =>
-                      prev === index ? null : index,
-                    )
+                    setExpandedIndex((prev) => (prev === index ? null : index))
                   }
                 />
               </RecommendationCarouselItem>

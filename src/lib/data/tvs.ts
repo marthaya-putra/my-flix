@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { fetchFromTMDB } from "./tmdb";
 import { convertToDiscoverResult } from "../utils";
+import { fetchFromTMDB } from "./tmdb";
 
 // See movies.ts — same §7 cleanup. Defaults from the old arrow
 // signatures are re-encoded via `.default(...)` to keep the fn-level
@@ -59,7 +59,7 @@ export const fetchAiringTodayTvs = createServerFn({
     }
 
     const result = await fetchFromTMDB(
-      `/tv/airing_today?${queryParams.toString()}`
+      `/tv/airing_today?${queryParams.toString()}`,
     );
     return convertToDiscoverResult(result);
   });
@@ -75,7 +75,7 @@ export const fetchOnTheAirTvs = createServerFn({
       queryParams.set("timezone", data.timezone);
     }
     const result = await fetchFromTMDB(
-      `/tv/on_the_air?${queryParams.toString()}`
+      `/tv/on_the_air?${queryParams.toString()}`,
     );
     return convertToDiscoverResult(result);
   });
@@ -112,7 +112,7 @@ export const fetchDiscoverTvs = createServerFn({
     }
 
     const result = await fetchFromTMDB(
-      `/discover/tv?${queryParams.toString()}`
+      `/discover/tv?${queryParams.toString()}`,
     );
     return convertToDiscoverResult(result);
   });

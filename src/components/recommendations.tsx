@@ -1,14 +1,14 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { FrostEmptyState } from "@/components/frost-empty-state";
 import { authClient } from "@/lib/auth-client";
 import { type StreamEvent, type StreamStage } from "@/lib/data/stream-events";
 import {
+  type Category,
   CategorySection,
   type CategoryStatus,
-  type Category,
   type Recommendation,
 } from "./recommendations/category-section";
 import { InitialLoadComposition } from "./recommendations/initial-load-composition";
-import { FrostEmptyState } from "@/components/frost-empty-state";
 
 // Spec 0006: manual NDJSON transport.
 const STREAM_ROUTE = "/api/recommendations/stream";
@@ -115,9 +115,15 @@ export function Recommendations() {
         if (evt.type === "groupStart") {
           // During load-more, do NOT flip status to pending.
           if (!isLoadMore) {
-            setCategoryStatus((prev) => ({ ...prev, [evt.category]: "pending" }));
+            setCategoryStatus((prev) => ({
+              ...prev,
+              [evt.category]: "pending",
+            }));
           }
-          setCategoryTarget((prev) => ({ ...prev, [evt.category]: evt.target }));
+          setCategoryTarget((prev) => ({
+            ...prev,
+            [evt.category]: evt.target,
+          }));
           setCategoryStage((prev) => ({ ...prev, [evt.category]: {} }));
         } else if (evt.type === "item") {
           local.push(evt.rec as Recommendation);
@@ -141,8 +147,7 @@ export function Recommendations() {
             }));
           }
           if (isError) {
-            const msg =
-              evt.error ?? STATUS_MESSAGES[evt.status] ?? "Failed.";
+            const msg = evt.error ?? STATUS_MESSAGES[evt.status] ?? "Failed.";
             runError[evt.category] = msg;
             setCategoryError((prev) => ({
               ...prev,
@@ -168,7 +173,7 @@ export function Recommendations() {
         if (!response.ok || !response.body) {
           const text = await response.text().catch(() => "");
           throw new Error(
-            `Stream request failed (${response.status}) ${text}`.trim()
+            `Stream request failed (${response.status}) ${text}`.trim(),
           );
         }
 
@@ -215,7 +220,7 @@ export function Recommendations() {
         console.error("Stream error:", err);
       }
       const firstCat = cats[0];
-      const terminalError = firstCat ? runError[firstCat] ?? null : null;
+      const terminalError = firstCat ? (runError[firstCat] ?? null) : null;
       return { items: local, error: terminalError };
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps

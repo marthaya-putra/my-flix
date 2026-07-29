@@ -1,21 +1,24 @@
-import { Suspense } from "react";
-import { createFileRoute } from "@tanstack/react-router";
 import {
-  useSuspenseQuery,
-  useQuery,
   type UseQueryOptions,
+  useQuery,
+  useSuspenseQuery,
 } from "@tanstack/react-query";
-import type { DiscoverResult } from "@/lib/types";
-import ContentRow from "@/components/content-row";
+import { createFileRoute } from "@tanstack/react-router";
+import { Suspense } from "react";
 import { ParticleScroll } from "@/components/canvasui/ParticleScroll";
-import Hero from "@/components/hero";
+import ContentRow from "@/components/content-row";
 import ContentRowSkeleton from "@/components/content-row-skeleton";
-import { popularMoviesOptions, trendingMoviesOptions } from "@/lib/queries/movies";
+import Hero from "@/components/hero";
+import {
+  popularMoviesOptions,
+  trendingMoviesOptions,
+} from "@/lib/queries/movies";
 import {
   airingTodayTvsOptions,
   onTheAirTvsOptions,
   trendingTvsOptions,
 } from "@/lib/queries/tvs";
+import type { DiscoverResult } from "@/lib/types";
 import { getUserTimezone } from "@/lib/utils/timezone";
 
 export const Route = createFileRoute("/")({

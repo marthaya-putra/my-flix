@@ -1,15 +1,15 @@
+import { ThumbsDown } from "lucide-react";
+import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ThumbsDown } from "lucide-react";
-import { motion } from "motion/react";
-import { HIT_ZONE } from "@/lib/utils";
-import { ctaDramaSpring } from "@/lib/motion";
 import { useDislikedItems } from "@/hooks/use-disliked-items";
+import { ctaDramaSpring } from "@/lib/motion";
 import type { FilmInfo } from "@/lib/types";
+import { HIT_ZONE } from "@/lib/utils";
 
 interface DislikeButtonProps {
   filmInfo: FilmInfo;

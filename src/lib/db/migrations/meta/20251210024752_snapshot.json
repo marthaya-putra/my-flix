@@ -407,19 +407,12 @@
     "public.category": {
       "name": "category",
       "schema": "public",
-      "values": [
-        "movie",
-        "tv-series"
-      ]
+      "values": ["movie", "tv-series"]
     },
     "public.person_type": {
       "name": "person_type",
       "schema": "public",
-      "values": [
-        "actor",
-        "director",
-        "other"
-      ]
+      "values": ["actor", "director", "other"]
     }
   },
   "schemas": {},

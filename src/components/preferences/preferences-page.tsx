@@ -1,14 +1,13 @@
 import { Link } from "@tanstack/react-router";
+import { ArrowRight, Heart, Plus } from "lucide-react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Plus, Heart, ArrowRight } from "lucide-react";
-
+import { fadeUpContainer, fadeUpItem } from "@/lib/motion";
+import { ContentItem } from "@/lib/types";
+import { FilmInfoWithDbId, PersonWithDbId } from "@/lib/types/preferences";
 import { PreferenceItem } from "./preference-item";
 import { usePreferencesContext } from "./preferences-context";
-import { fadeUpContainer, fadeUpItem } from "@/lib/motion";
-import { FilmInfoWithDbId, PersonWithDbId } from "@/lib/types/preferences";
-import { ContentItem } from "@/lib/types";
 
 export function PreferencesPage() {
   const { preferences, removePreference, openAdd } = usePreferencesContext();

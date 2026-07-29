@@ -1,8 +1,8 @@
-import { useSearch, useNavigate } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { RatingItems } from "@/lib/types";
 import BaseFilter from "./base-filter";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
 
 interface RatingFilterProps {
   from: "/movies/" | "/tvs/" | "/tvs/airing-today" | "/movies/search";

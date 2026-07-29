@@ -1,14 +1,14 @@
 import { relations } from "drizzle-orm";
 import {
+  boolean,
+  index,
+  integer,
+  pgEnum,
   pgTable,
   serial,
   text,
   timestamp,
   uniqueIndex,
-  index,
-  integer,
-  pgEnum,
-  boolean,
 } from "drizzle-orm/pg-core";
 
 // Enum definitions
@@ -24,7 +24,9 @@ export const userPreferences = pgTable(
   "user_preferences",
   {
     id: serial("id").primaryKey(),
-    userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
     preferenceId: integer("preference_id").notNull(), // TMDB ID
     title: text("title").notNull(),
     year: integer("year").notNull(), // Release year
@@ -40,9 +42,9 @@ export const userPreferences = pgTable(
     index("user_preferences_category_idx").on(table.category),
     uniqueIndex("user_preferences_user_id_preference_id_unique").on(
       table.userId,
-      table.preferenceId
+      table.preferenceId,
     ),
-  ]
+  ],
 );
 
 // User dislikes for movies and TV series
@@ -50,7 +52,9 @@ export const userDislikes = pgTable(
   "user_dislikes",
   {
     id: serial("id").primaryKey(),
-    userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
     preferenceId: integer("preference_id").notNull(), // TMDB ID
     title: text("title").notNull(),
     year: integer("year").notNull(), // Release year
@@ -64,9 +68,9 @@ export const userDislikes = pgTable(
     index("user_dislikes_category_idx").on(table.category),
     uniqueIndex("user_dislikes_user_id_preference_id_unique").on(
       table.userId,
-      table.preferenceId
+      table.preferenceId,
     ),
-  ]
+  ],
 );
 
 // User watchlist — titles saved to watch later. Orthogonal to likes/dislikes
@@ -77,7 +81,9 @@ export const userWatchlist = pgTable(
   "user_watchlist",
   {
     id: serial("id").primaryKey(),
-    userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
     watchListId: integer("watch_list_id").notNull(), // TMDB ID
     title: text("title").notNull(),
     year: integer("year").notNull(), // Release year
@@ -93,9 +99,9 @@ export const userWatchlist = pgTable(
     index("user_watchlist_category_idx").on(table.category),
     uniqueIndex("user_watchlist_user_id_watch_list_id_unique").on(
       table.userId,
-      table.watchListId
+      table.watchListId,
     ),
-  ]
+  ],
 );
 
 // User preferences for actors and directors
@@ -103,7 +109,9 @@ export const userPeople = pgTable(
   "user_people",
   {
     id: serial("id").primaryKey(),
-    userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
     personId: integer("person_id").notNull(), // TMDB ID
     personName: text("person_name").notNull(),
     personType: personTypeEnum("person_type").notNull(), // 'actor' | 'director' | 'other'
@@ -116,9 +124,9 @@ export const userPeople = pgTable(
     index("user_people_type_idx").on(table.personType),
     uniqueIndex("user_people_user_id_person_id_unique").on(
       table.userId,
-      table.personId
+      table.personId,
     ),
-  ]
+  ],
 );
 
 // Export types for TypeScript
@@ -162,7 +170,7 @@ export const session = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
   },
-  (table) => [index("session_userId_idx").on(table.userId)]
+  (table) => [index("session_userId_idx").on(table.userId)],
 );
 
 export const account = pgTable(
@@ -186,7 +194,7 @@ export const account = pgTable(
       .$onUpdate(() => /* @__PURE__ */ new Date())
       .notNull(),
   },
-  (table) => [index("account_userId_idx").on(table.userId)]
+  (table) => [index("account_userId_idx").on(table.userId)],
 );
 
 export const verification = pgTable(
@@ -202,7 +210,7 @@ export const verification = pgTable(
       .$onUpdate(() => /* @__PURE__ */ new Date())
       .notNull(),
   },
-  (table) => [index("verification_identifier_idx").on(table.identifier)]
+  (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
 
 export const userRelations = relations(user, ({ many }) => ({
@@ -228,12 +236,15 @@ export const accountRelations = relations(account, ({ one }) => ({
   }),
 }));
 
-export const userPreferencesRelations = relations(userPreferences, ({ one }) => ({
-  user: one(user, {
-    fields: [userPreferences.userId],
-    references: [user.id],
+export const userPreferencesRelations = relations(
+  userPreferences,
+  ({ one }) => ({
+    user: one(user, {
+      fields: [userPreferences.userId],
+      references: [user.id],
+    }),
   }),
-}));
+);
 
 export const userDislikesRelations = relations(userDislikes, ({ one }) => ({
   user: one(user, {

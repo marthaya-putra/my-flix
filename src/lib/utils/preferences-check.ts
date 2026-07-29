@@ -16,11 +16,11 @@ type AnyUserPreferences = UserPreferences | AllUserContent;
 
 // Helper function to check if the object has tvShows property (UserPreferences)
 function isUnifiedPreferences(pref: any): pref is UserPreferences {
-  return 'tvShows' in pref;
+  return "tvShows" in pref;
 }
 
 export function hasSufficientPreferences(
-  preferences: AnyUserPreferences
+  preferences: AnyUserPreferences,
 ): boolean {
   if (isUnifiedPreferences(preferences)) {
     // Unified UserPreferences structure

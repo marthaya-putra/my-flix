@@ -26,12 +26,13 @@ export default function Filters({
 
   const handleGenreChange = (genreId: string) => {
     const newGenres = selectedGenres.includes(genreId)
-      ? selectedGenres.filter(g => g !== genreId)
+      ? selectedGenres.filter((g) => g !== genreId)
       : [...selectedGenres, genreId];
     onGenresChange(newGenres);
   };
 
-  const hasActiveFilters = selectedGenres.length > 0 || selectedRating || selectedYear;
+  const hasActiveFilters =
+    selectedGenres.length > 0 || selectedRating || selectedYear;
 
   return (
     <div className="bg-white rounded-lg border p-6 mb-8">
@@ -79,14 +80,14 @@ export default function Filters({
           <div className="space-y-2">
             <label
               className={`flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded ${
-                !selectedRating ? 'bg-blue-50' : ''
+                !selectedRating ? "bg-blue-50" : ""
               }`}
             >
               <input
                 type="radio"
                 name="rating"
                 checked={!selectedRating}
-                onChange={() => onRatingChange('')}
+                onChange={() => onRatingChange("")}
                 className="text-blue-600 focus:ring-blue-500"
               />
               <span className="text-sm text-gray-700">All ratings</span>
@@ -95,7 +96,7 @@ export default function Filters({
               <label
                 key={item.value}
                 className={`flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded ${
-                  selectedRating === String(item.value) ? 'bg-blue-50' : ''
+                  selectedRating === String(item.value) ? "bg-blue-50" : ""
                 }`}
               >
                 <input
@@ -119,14 +120,14 @@ export default function Filters({
           <div className="space-y-2">
             <label
               className={`flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded ${
-                !selectedYear ? 'bg-blue-50' : ''
+                !selectedYear ? "bg-blue-50" : ""
               }`}
             >
               <input
                 type="radio"
                 name="year"
                 checked={!selectedYear}
-                onChange={() => onYearChange('')}
+                onChange={() => onYearChange("")}
                 className="text-blue-600 focus:ring-blue-500"
               />
               <span className="text-sm text-gray-700">All years</span>
@@ -135,7 +136,7 @@ export default function Filters({
               <label
                 key={year}
                 className={`flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded ${
-                  selectedYear === String(year) ? 'bg-blue-50' : ''
+                  selectedYear === String(year) ? "bg-blue-50" : ""
                 }`}
               >
                 <input

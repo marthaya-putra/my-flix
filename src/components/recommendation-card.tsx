@@ -1,11 +1,11 @@
+import { ExternalLink, Play, X } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import { Button } from "@/components/ui/button";
-import { Play, X, ExternalLink } from "lucide-react";
-import { PlayLink } from "./play-link";
-import { MoreInfoLink } from "./more-info-link";
-import { FilmInfo } from "@/lib/types";
-import { motion, AnimatePresence } from "motion/react";
 import { ctaDramaSpring, overlayTransition } from "@/lib/motion";
-import { WatchlistButton, LikeButton, DislikeButton } from "./buttons";
+import { FilmInfo } from "@/lib/types";
+import { DislikeButton, LikeButton, WatchlistButton } from "./buttons";
+import { MoreInfoLink } from "./more-info-link";
+import { PlayLink } from "./play-link";
 
 interface Recommendation {
   title: string;
@@ -134,7 +134,11 @@ export function RecommendationCard({
             title={recommendation.title}
             category={recommendation.category}
           >
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.92 }} transition={ctaDramaSpring}>
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.92 }}
+              transition={ctaDramaSpring}
+            >
               <Button
                 variant="default"
                 size="sm"
@@ -193,7 +197,9 @@ export function RecommendationCard({
                 <span className="px-1.5 py-0.5 bg-yellow-600/90 text-white rounded">
                   ⭐ {recommendation.imdbRating.toFixed(1)}
                 </span>
-                <span>{recommendation.category === "movie" ? "Movie" : "TV"}</span>
+                <span>
+                  {recommendation.category === "movie" ? "Movie" : "TV"}
+                </span>
                 <span>{recommendation.releasedYear}</span>
               </div>
             </div>
@@ -214,7 +220,11 @@ export function RecommendationCard({
                 title={recommendation.title}
                 category={recommendation.category}
               >
-                <Button variant="default" size="sm" className="gap-1.5 text-xs h-8">
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="gap-1.5 text-xs h-8"
+                >
                   <Play className="h-3.5 w-3.5 fill-current" />
                   Watch
                 </Button>

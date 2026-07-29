@@ -1,11 +1,11 @@
+import { motion } from "motion/react";
 import {
   Pagination,
   PaginationContent,
   PaginationItem,
-  PaginationPrevious,
   PaginationNext,
+  PaginationPrevious,
 } from "@/components/ui/pagination";
-import { motion } from "motion/react";
 import { tapSpring } from "@/lib/motion";
 
 interface PaginationProps {

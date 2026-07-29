@@ -1,13 +1,13 @@
 import { queryOptions } from "@tanstack/react-query";
 import {
   fetchUserPreferences,
-  getUserLikedItems,
-  getUserDislikedItems,
-  getUserWatchlistItems,
   fetchUserWatchlist,
+  getUserDislikedItems,
+  getUserLikedItems,
+  getUserWatchlistItems,
 } from "@/lib/data/preferences";
-import type { UserPreferences } from "@/lib/types/preferences";
 import type { UserWatchlist } from "@/lib/db";
+import type { UserPreferences } from "@/lib/types/preferences";
 
 /**
  * Query-key factories + `queryOptions` for user preferences / liked items /
@@ -64,4 +64,3 @@ export const userWatchlistOptions = (page: number = 1) =>
     queryKey: [...preferencesKeys.userWatchlist(), page],
     queryFn: () => fetchUserWatchlist({ data: page }),
   });
-

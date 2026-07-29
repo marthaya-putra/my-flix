@@ -16,12 +16,11 @@
 // next read sees the prior state. That keeps the refetch triggered by the
 // hook's `onSettled` invalidation consistent with what actually happened.
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook, act, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-import { useWatchlist } from "./use-watchlist";
 import type { FilmInfo } from "@/lib/types";
+import { useWatchlist } from "./use-watchlist";
 
 // Mock only the external edge: the server fns. Everything inside the hook
 // (QueryClient manipulation, key factory, optimistic recipe) runs for real.
