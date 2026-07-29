@@ -1,10 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { FilmInfo, Person, SearchResult } from "../types";
+import {
+  type TMDBPersonSearchResponse,
+  type TMDBSearchResponse,
+  FilmInfo,
+  Person,
+  SearchResult,
+} from "../types";
+import { MOVIE_GENRES, TV_GENRES, genreLabels } from "../genres";
 import { convertToDiscoverResult } from "../utils";
-import { genres as movieGenres } from "./movies";
 import { fetchFromTMDB, TMDB_IMAGE_BASE } from "./tmdb";
-import { genres as tvGenres } from "./tvs";
 
 // Plain function types
 type SearchMoviesParams = {
@@ -17,70 +22,6 @@ type SearchTVsParams = {
   query: string;
   page?: number;
   firstAirDateYear?: number;
-};
-
-// TMDB API response types for search
-type TMDBMovieResult = {
-  id: number;
-  poster_path?: string;
-  backdrop_path?: string;
-  title: string;
-  overview: string;
-  vote_average: number;
-  release_date?: string;
-  genre_ids?: number[];
-  media_type: "movie";
-};
-
-type TMDBTVResult = {
-  id: number;
-  poster_path?: string;
-  backdrop_path?: string;
-  name: string;
-  overview: string;
-  vote_average: number;
-  first_air_date?: string;
-  genre_ids?: number[];
-  media_type: "tv";
-};
-
-type TMDBPersonResult = {
-  id: number;
-  name: string;
-  profile_path?: string;
-  popularity: number;
-  known_for_department?: string;
-  adult?: boolean;
-  gender?: number;
-  known_for?: Array<{
-    id: number;
-    poster_path?: string;
-    backdrop_path?: string;
-    title?: string;
-    name?: string;
-    overview?: string;
-    vote_average?: number;
-    release_date?: string;
-    first_air_date?: string;
-    genre_ids?: number[];
-  }>;
-  media_type: "person";
-};
-
-type TMDBSearchItem = TMDBMovieResult | TMDBTVResult | TMDBPersonResult;
-
-type TMDBSearchResponse = {
-  page: number;
-  results: TMDBSearchItem[];
-  total_pages: number;
-  total_results: number;
-};
-
-type TMDBPersonSearchResponse = {
-  page: number;
-  results: TMDBPersonResult[];
-  total_pages: number;
-  total_results: number;
 };
 
 export function convertPersonSearchResult(
@@ -150,11 +91,7 @@ export function convertToSearchResult(data: TMDBSearchResponse): SearchResult {
         releaseDate: item.release_date || "",
         category: "movie",
         genreIds: item.genre_ids || [],
-        genres: Array.isArray(item.genre_ids)
-          ? item.genre_ids
-              .map((g: number) => movieGenres[g])
-              .filter((g: string | undefined) => !!g)
-          : [],
+        genres: genreLabels(item.genre_ids, MOVIE_GENRES),
       });
     } else if (item.media_type === "tv") {
       tvShows.push({
@@ -171,11 +108,7 @@ export function convertToSearchResult(data: TMDBSearchResponse): SearchResult {
         releaseDate: item.first_air_date || "",
         category: "tv",
         genreIds: item.genre_ids || [],
-        genres: Array.isArray(item.genre_ids)
-          ? item.genre_ids
-              .map((g: number) => tvGenres[g])
-              .filter((g: string | undefined) => !!g)
-          : [],
+        genres: genreLabels(item.genre_ids, TV_GENRES),
       });
     } else if (item.media_type === "person") {
       // Determine category based on known_for_department

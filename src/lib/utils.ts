@@ -1,5 +1,7 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { MOVIE_GENRES, genreLabels } from "./genres";
+import { TMDB_IMAGE_BASE } from "./data/tmdb";
 import { DiscoverResult } from "./types";
 
 export function getContentSubtitle(type: "movie" | "tv" | "person"): string {
@@ -14,9 +16,6 @@ export function getContentSubtitle(type: "movie" | "tv" | "person"): string {
       return "Content";
   }
 }
-
-import { genres } from "./data/movies";
-import { TMDB_IMAGE_BASE } from "./data/tmdb";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -53,11 +52,7 @@ export function convertToDiscoverResult(data: any): DiscoverResult {
       voteAverage: res.vote_average,
       releaseDate: res.release_date || res.first_air_date,
       category: res.first_air_date ? "tv" : "movie",
-      genres: Array.isArray(res.genre_ids)
-        ? res.genre_ids
-            .map((g: number) => genres[g])
-            .filter((g: string): g is string => !!g)
-        : [],
+      genres: genreLabels(res.genre_ids, MOVIE_GENRES),
     })),
     totalPages: data.total_pages,
   };

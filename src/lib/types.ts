@@ -71,17 +71,75 @@ export type Person = {
   category: "actor" | "director" | "other";
 };
 
-// TMDB API specific types
-export type TMDBMultiSearchResult = {
+// TMDB API raw response shapes for /search/multi and /search/person.
+// Canonical home per CODING_STANDARDS.md §2 (single source of truth,
+// `type` not `interface`). The search converters in data/search.ts
+// consume these.
+export type TMDBMovieResult = {
+  id: number;
+  poster_path?: string;
+  backdrop_path?: string;
+  title: string;
+  overview: string;
+  vote_average: number;
+  release_date?: string;
+  genre_ids?: number[];
+  media_type: "movie";
+};
+
+export type TMDBTVResult = {
+  id: number;
+  poster_path?: string;
+  backdrop_path?: string;
+  name: string;
+  overview: string;
+  vote_average: number;
+  first_air_date?: string;
+  genre_ids?: number[];
+  media_type: "tv";
+};
+
+export type TMDBPersonResult = {
+  id: number;
+  name: string;
+  profile_path?: string;
+  popularity: number;
+  known_for_department?: string;
+  adult?: boolean;
+  gender?: number;
+  known_for?: Array<{
+    id: number;
+    poster_path?: string;
+    backdrop_path?: string;
+    title?: string;
+    name?: string;
+    overview?: string;
+    vote_average?: number;
+    release_date?: string;
+    first_air_date?: string;
+    genre_ids?: number[];
+  }>;
+  media_type: "person";
+};
+
+export type TMDBSearchItem =
+  | TMDBMovieResult
+  | TMDBTVResult
+  | TMDBPersonResult;
+
+export type TMDBSearchResponse = {
   page: number;
-  results: Array<TMDBSearchItem>;
+  results: TMDBSearchItem[];
   total_pages: number;
   total_results: number;
 };
 
-export type TMDBSearchItem =
-  | (FilmInfo & { media_type: "movie" | "tv" })
-  | (Actor & { media_type: "person" });
+export type TMDBPersonSearchResponse = {
+  page: number;
+  results: TMDBPersonResult[];
+  total_pages: number;
+  total_results: number;
+};
 
 export type ActorSearchParams = {
   searchTerm?: string;

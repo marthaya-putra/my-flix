@@ -1,4 +1,4 @@
-import { genres } from "@/lib/data/movies";
+import { MOVIE_GENRES } from "@/lib/genres";
 import { RatingItems } from "@/lib/types";
 
 type FiltersProps = {
@@ -55,7 +55,7 @@ export function Filters({
             Genres
           </label>
           <div className="space-y-2 max-h-48 overflow-y-auto">
-            {Object.entries(genres).map(([id, name]) => (
+            {Object.entries(MOVIE_GENRES).map(([id, name]) => (
               <label
                 key={id}
                 className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
