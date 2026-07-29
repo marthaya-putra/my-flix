@@ -24,10 +24,13 @@ export const Route = createFileRoute("/preferences")({
 });
 
 function PreferencesLayoutComponent() {
-  const { data: preferences } = useSuspenseQuery(userPreferencesOptions());
+  // Prime the cache via suspense so the shell renders with data ready. The
+  // shell's usePreferences() then reads the same cache (Issue #80) — no prop
+  // threading, single source of truth.
+  useSuspenseQuery(userPreferencesOptions());
 
   return (
-    <PreferencesShell initialPreferences={preferences}>
+    <PreferencesShell>
       <Suspense fallback={<PreferencesSkeleton />}>
         <Outlet />
       </Suspense>
