@@ -177,7 +177,11 @@ Rules:
 - **Server-only deps stay server-only:** heavy imports (`postgres`, `Buffer`,
   AI SDKs) live inside the handler or a `*-server.ts` module. Dynamic
   `await import(...)` inside handlers when needed.
-- **`getDb()` and `auth` are request-scoped** (fresh per call/access).
+- **`db` is a module-level pooled singleton** (one `postgres.js` client shared
+  across requests). Per-query isolation comes from the pool — each query checks
+  out an independent connection — so concurrent requests never share query
+  state. Do not construct ad-hoc clients per call. See
+  [`docs/adr/0003-db-pooling.md`](./docs/adr/0003-db-pooling.md).
 
 ## 8. State
 
