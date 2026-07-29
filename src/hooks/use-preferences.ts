@@ -25,9 +25,21 @@ import type { UserPreferences } from "@/lib/types/preferences";
  * cache and writes through mutations that invalidate `userPreferences` so the
  * cache — one store — refreshes. No local `useState` mirror.
  *
+ * Issue #103: both mutations now optimistically patch the `userPreferences`
+ * cache and roll back on error, mirroring `useWatchlist`. The item flips
+ * immediately on add/remove instead of lagging behind the round-trip. The
+ * appended item omits `dbId` until the refetch reconciles it (the type makes
+ * `dbId?` optional, and `removeMutation` already falls back to the TMDB id),
+ * so the optimistic shape is type-safe.
+ *
  * Mutations throw on failure (server fns throw per Issue #78); `onError`
- * surfaces the failure to the UI with a toast and `onSettled` invalidates so
- * the cache refetches canonical state regardless of success or failure.
+ * restores the snapshotted cache and surfaces the failure with a toast;
+ * `onSettled` invalidates so the cache refetches canonical state regardless of
+ * success or failure.
+ *
+ * `likedItems` is deliberately NOT optimistically patched here — it is a plain
+ * id set read by every Like CTA, and reconciling it is left to the refetch so
+ * the two caches never disagree about fill state mid-flight.
  */
 
 // Discriminated input for the add mutation: a film (movie/tv) or a person.
@@ -58,6 +70,10 @@ const EMPTY_PREFERENCES: UserPreferences = {
 // ("Couldn't … Reverted.") — the raw server message is never shown to the user.
 const ADD_ERROR = "Couldn't save your preference. Reverted.";
 const REMOVE_ERROR = "Couldn't remove your preference. Reverted.";
+
+// Snapshot carried from onMutate into onError so a failed mutation restores
+// the exact cache the optimistic write overwrote.
+type PreferenceSnapshot = { previous?: UserPreferences };
 
 export function usePreferences() {
   const queryClient = useQueryClient();
@@ -107,7 +123,52 @@ export function usePreferences() {
         },
       });
     },
-    onError: () => toast.error(ADD_ERROR),
+    onMutate: async (input): Promise<PreferenceSnapshot> => {
+      // Cancel in-flight reads so they don't clobber the optimistic update.
+      await queryClient.cancelQueries({
+        queryKey: preferencesKeys.userPreferences(),
+      });
+
+      const previous = queryClient.getQueryData<UserPreferences>(
+        preferencesKeys.userPreferences(),
+      );
+
+      // Append the content to the right array. dbId is omitted — the refetch
+      // back-fills it, and the type marks it optional so this is type-safe.
+      const next: UserPreferences = (() => {
+        const base = previous ?? EMPTY_PREFERENCES;
+        if (input.kind === "person") {
+          return {
+            ...base,
+            people: [...base.people, input.content],
+          };
+        }
+        if (input.content.category === "movie") {
+          return {
+            ...base,
+            movies: [...base.movies, input.content],
+          };
+        }
+        return {
+          ...base,
+          tvShows: [...base.tvShows, input.content],
+        };
+      })();
+
+      queryClient.setQueryData(preferencesKeys.userPreferences(), next);
+
+      return { previous };
+    },
+    onError: (_err, _input, context) => {
+      // Revert before the toast so the cache is already truthful.
+      if (context?.previous) {
+        queryClient.setQueryData(
+          preferencesKeys.userPreferences(),
+          context.previous,
+        );
+      }
+      toast.error(ADD_ERROR);
+    },
     onSettled: () => invalidatePreferenceQueries(),
   });
 
@@ -136,7 +197,45 @@ export function usePreferences() {
         },
       });
     },
-    onError: () => toast.error(REMOVE_ERROR),
+    onMutate: async (input): Promise<PreferenceSnapshot> => {
+      await queryClient.cancelQueries({
+        queryKey: preferencesKeys.userPreferences(),
+      });
+
+      const previous = queryClient.getQueryData<UserPreferences>(
+        preferencesKeys.userPreferences(),
+      );
+
+      const base = previous ?? EMPTY_PREFERENCES;
+      const next: UserPreferences =
+        input.type === "movie"
+          ? {
+              ...base,
+              movies: base.movies.filter((m) => m.id !== input.id),
+            }
+          : input.type === "tv"
+            ? {
+                ...base,
+                tvShows: base.tvShows.filter((t) => t.id !== input.id),
+              }
+            : {
+                ...base,
+                people: base.people.filter((p) => p.id !== input.id),
+              };
+
+      queryClient.setQueryData(preferencesKeys.userPreferences(), next);
+
+      return { previous };
+    },
+    onError: (_err, _input, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(
+          preferencesKeys.userPreferences(),
+          context.previous,
+        );
+      }
+      toast.error(REMOVE_ERROR);
+    },
     onSettled: () => invalidatePreferenceQueries(),
   });
 
