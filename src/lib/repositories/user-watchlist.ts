@@ -27,10 +27,13 @@ const getUserWatchlistSchema = z.object({
   offset: z.number().nonnegative().optional(),
 });
 
-// Plain functions for user watchlist. Mirrors the user-dislikes shape: always
-// return success on error (watchlist is not fatal), so the client UI can stay
-// optimistic. Watchlist is orthogonal to likes/dislikes — these fns never
-// touch user_preferences or user_dislikes.
+// Plain functions for user watchlist. Watchlist is orthogonal to
+// likes/dislikes — these fns never touch user_preferences or user_dislikes.
+// Issue #78 / CODING_STANDARDS.md §7: these THROW on failure (no fabricated
+// success). A throw propagates to the toggle server fn and on to the client
+// mutation, where the optimistic hook's onError rolls back + toasts — a
+// swallowed error would mask silent data loss (a bookmark the UI shows but
+// the DB never persisted).
 export async function addUserWatchlist(
   db: DB,
   data: z.infer<typeof addWatchlistSchema>,
@@ -75,22 +78,13 @@ export async function addUserWatchlist(
       watchlist: result[0],
     };
   } catch (error) {
+    // Issue #112: do NOT fabricate a watchlist row on insert failure — that
+    // masked silent data loss (the client believed the row persisted when it
+    // hadn't). Let the throw propagate so the toggle server fn surfaces it.
     console.error("Failed to add user watchlist item:", error);
-    // Always return success even on failure as this is not fatal
-    return {
-      success: true,
-      watchlist: {
-        userId: data.userId,
-        watchListId: data.watchListId,
-        title: data.title,
-        year: data.year,
-        category: data.category,
-        genres: data.genres || null,
-        posterPath: data.posterPath || null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    };
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to add user watchlist item");
   }
 }
 
@@ -172,15 +166,12 @@ export async function removeUserWatchlistByWatchListId(
       deletedWatchlist,
     };
   } catch (error) {
+    // Issue #112: a delete failure must throw, else the client keeps the
+    // optimistic "removed" state while the row survives in the DB.
     console.error("Failed to remove user watchlist item:", error);
-    // Always return success even on failure as this is not fatal
-    return {
-      success: true,
-      deletedWatchlist: {
-        userId: data.userId,
-        watchListId: data.watchListId,
-      },
-    };
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to remove user watchlist item");
   }
 }
 
