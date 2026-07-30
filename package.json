@@ -31,6 +31,9 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "@ai-sdk/google": "^2.0.44",
     "@ai-sdk/mistral": "^2.0.26",
