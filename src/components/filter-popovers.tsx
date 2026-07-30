@@ -7,7 +7,7 @@ type FilterPopoversProps = {
 };
 
 export function FilterPopovers({ children }: FilterPopoversProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
   return (
     <div className="bg-card rounded-lg border border-border shadow-lg relative z-40 overflow-hidden transition-[max-height,opacity] duration-300 mb-8">

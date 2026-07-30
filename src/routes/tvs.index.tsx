@@ -46,7 +46,7 @@ function TVsPage() {
 
   return (
     <Suspense fallback={<DiscoverTvsSkeleton />}>
-      <div className="container mx-auto px-4 py-8">
+      <div className="mx-auto max-w-[1010px] px-4 py-8">
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-foreground mb-2">TV Shows</h1>
           <p className="text-muted-foreground">
