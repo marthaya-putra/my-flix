@@ -4,22 +4,21 @@
 // ({ isDisliked, toggleDislike, isToggling }), wire a real QueryClient +
 // provider, and mock ONLY the server-fn edge (`@/lib/data/preferences`).
 //
-// The focus is the like↔dislike mutual-exclusion recipe: disliking a title
-// that was never liked must NOT call the throwing preference-removal fn
-// (the original bug), while disliking a liked title must clear the like
-// first. The server fns are mocked against shared mutable state so the
-// read fn mirrors what the toggle actually persisted.
+// Like↔dislike mutual exclusion is now enforced by the SERVER (toggleDislike
+// clears any existing like before adding a dislike), so this hook's job is
+// just the optimistic-toggle + rollback recipe: flip its own cache, mirror
+// the exclusion into the liked cache so the UI flips immediately, and
+// reconcile via onSettled. The mock only stands in for the server fn.
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { FilmInfo } from "@/lib/types";
 import { preferencesKeys } from "@/lib/queries/preferences";
+import type { FilmInfo } from "@/lib/types";
 import { useDislikedItems } from "./use-disliked-items";
 
-// Mock only the external edge: the server fns the hook imports.
+// Mock only the external edge: the server fn the hook imports.
 vi.mock("@/lib/data/preferences", () => ({
-  removeUserPreferenceByPreferenceId: vi.fn(),
   toggleDislike: vi.fn(),
 }));
 
@@ -31,10 +30,7 @@ vi.mock("sonner", () => ({
 }));
 
 // Imported after the mocks above so the mocked module is what the hook sees.
-import {
-  removeUserPreferenceByPreferenceId,
-  toggleDislike,
-} from "@/lib/data/preferences";
+import { toggleDislike } from "@/lib/data/preferences";
 
 const FILM: FilmInfo = {
   id: 42,
@@ -70,15 +66,12 @@ describe("useDislikedItems — integration via its public API", () => {
     vi.clearAllMocks();
   });
 
-  it("does not call the preference-removal fn for a never-liked title (regression)", async () => {
+  it("optimistically flips the dislike on, then confirms with the server", async () => {
     const client = makeClient();
     // Seed caches: nothing disliked, nothing liked.
     client.setQueryData(preferencesKeys.dislikedItems(), { dislikedIds: [] });
     client.setQueryData(preferencesKeys.likedItems(), { likedIds: [] });
 
-    vi.mocked(removeUserPreferenceByPreferenceId).mockResolvedValue(
-      undefined as never,
-    );
     vi.mocked(toggleDislike).mockResolvedValue({ action: "added" } as never);
 
     const { result } = renderHook(() => useDislikedItems(), {
@@ -93,31 +86,29 @@ describe("useDislikedItems — integration via its public API", () => {
       result.current.toggleDislike(FILM);
     });
 
-    // The bug: the old isAdding gate called the throwing preference-removal
-    // fn for every never-liked title, rejecting the whole mutation. With the
-    // liked-status gate it is skipped entirely.
-    expect(removeUserPreferenceByPreferenceId).not.toHaveBeenCalled();
+    // Single toggle call — the server owns mutual exclusion now.
     expect(toggleDislike).toHaveBeenCalledTimes(1);
-    expect(toastError).not.toHaveBeenCalled();
+    expect(toggleDislike).toHaveBeenCalledWith({
+      data: {
+        preferenceId: 42,
+        title: "Test Title",
+        year: 2024,
+        category: "movie",
+      },
+    });
+    // State holds after the server confirms.
+    await waitFor(() => {
+      expect(result.current.isDisliked(42)).toBe(true);
+    });
   });
 
-  it("clears an existing like before adding a dislike", async () => {
+  it("mirrors exclusion into the liked cache so the UI flips immediately", async () => {
     const client = makeClient();
     // Seed caches: nothing disliked, but the title IS liked.
     client.setQueryData(preferencesKeys.dislikedItems(), { dislikedIds: [] });
     client.setQueryData(preferencesKeys.likedItems(), { likedIds: [FILM.id] });
 
-    const order: string[] = [];
-    vi.mocked(removeUserPreferenceByPreferenceId).mockImplementation(
-      async () => {
-        order.push("clearLike");
-        return undefined as never;
-      },
-    );
-    vi.mocked(toggleDislike).mockImplementation(async () => {
-      order.push("toggleDislike");
-      return { action: "added" } as never;
-    });
+    vi.mocked(toggleDislike).mockResolvedValue({ action: "added" } as never);
 
     const { result } = renderHook(() => useDislikedItems(), {
       wrapper: wrapper(client),
@@ -131,10 +122,16 @@ describe("useDislikedItems — integration via its public API", () => {
       result.current.toggleDislike(FILM);
     });
 
-    expect(removeUserPreferenceByPreferenceId).toHaveBeenCalledTimes(1);
-    expect(toggleDislike).toHaveBeenCalledTimes(1);
-    // Clearing the like happens before the dislike toggle.
-    expect(order).toEqual(["clearLike", "toggleDislike"]);
+    // The hook optimistically strips the like from the liked cache (the server
+    // is the authority, but the UI shouldn't wait for the round-trip).
+    await waitFor(() => {
+      expect(
+        client.getQueryData<{ likedIds: number[] }>(
+          preferencesKeys.likedItems(),
+        )?.likedIds,
+      ).not.toContain(FILM.id);
+    });
+    expect(result.current.isDisliked(42)).toBe(true);
   });
 
   it("rolls back to the previous state when the server rejects", async () => {
@@ -142,9 +139,6 @@ describe("useDislikedItems — integration via its public API", () => {
     client.setQueryData(preferencesKeys.dislikedItems(), { dislikedIds: [] });
     client.setQueryData(preferencesKeys.likedItems(), { likedIds: [] });
 
-    vi.mocked(removeUserPreferenceByPreferenceId).mockResolvedValue(
-      undefined as never,
-    );
     let rejectMutation!: (e: unknown) => void;
     vi.mocked(toggleDislike).mockImplementation(
       () =>
