@@ -26,6 +26,16 @@ export function useLikedItems() {
   const { data, isPending } = useQuery(likedItemsOptions());
   const likedIds = new Set(data?.likedIds ?? []);
 
+  // Snapshot of the OTHER set (disliked ids) at render time. We snapshot here
+  // rather than reading the cache in mutationFn because this hook's onMutate
+  // optimistically strips the id from the disliked cache before mutationFn
+  // runs — a call-time read would see the id as already gone.
+  const dislikedIdsSnapshot = new Set(
+    queryClient.getQueryData<{ dislikedIds: number[] }>(
+      preferencesKeys.dislikedItems(),
+    )?.dislikedIds ?? [],
+  );
+
   const toggleMutation = useMutation({
     mutationFn: (filmInfo: FilmInfo) => {
       const { id, title, releaseDate, category, genres } = filmInfo;
@@ -34,14 +44,15 @@ export function useLikedItems() {
         : new Date().getFullYear();
       const categoryValue = category === "tv" ? "tv-series" : "movie";
 
-      // Turning the like on: clear any existing dislike first so the server
-      // never holds both. Best-effort — a failure here shouldn't block the
-      // like itself; the caches are reconciled in onSettled regardless.
-      const clearingDislike = likedIds.has(id)
-        ? Promise.resolve()
-        : removeUserDislikeByPreferenceIdFn({
+      // Mutual exclusion: only clear an existing dislike if the title is
+      // actually disliked. Likes & dislikes are mutually exclusive, so a
+      // dislike present already implies we are turning the like on; no
+      // separate flag is needed.
+      const clearingDislike = dislikedIdsSnapshot.has(id)
+        ? removeUserDislikeByPreferenceIdFn({
             data: { preferenceId: id },
-          }).then(() => undefined);
+          }).then(() => undefined)
+        : Promise.resolve();
 
       return clearingDislike.then(() =>
         toggleMoviePreference({

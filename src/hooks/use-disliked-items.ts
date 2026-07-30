@@ -1,9 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  addUserDislikeFn,
-  removeUserDislikeByPreferenceIdFn,
   removeUserPreferenceByPreferenceId,
+  toggleDislike as toggleDislikeFn,
 } from "@/lib/data/preferences";
 import {
   dislikedItemsOptions,
@@ -27,6 +26,16 @@ export function useDislikedItems() {
   const { data, isPending } = useQuery(dislikedItemsOptions());
   const dislikedIds = new Set(data?.dislikedIds ?? []);
 
+  // Snapshot of the OTHER set (liked ids) at render time. We snapshot here
+  // rather than reading the cache in mutationFn because this hook's onMutate
+  // optimistically strips the id from the liked cache before mutationFn runs —
+  // a call-time read would see the id as already gone.
+  const likedIdsSnapshot = new Set(
+    queryClient.getQueryData<{ likedIds: number[] }>(
+      preferencesKeys.likedItems(),
+    )?.likedIds ?? [],
+  );
+
   const toggleMutation = useMutation({
     mutationFn: (filmInfo: FilmInfo) => {
       const { id, title, releaseDate, category } = filmInfo;
@@ -35,27 +44,22 @@ export function useDislikedItems() {
         : new Date().getFullYear();
       const categoryValue = category === "tv" ? "tv-series" : "movie";
 
-      const isAdding = !dislikedIds.has(id);
-
-      // Mutual exclusion: turning the dislike on clears any existing like
-      // first so the server never holds both. Best-effort — a failure here
-      // shouldn't block the dislike itself; the caches are reconciled in
-      // onSettled regardless.
-      const clearingLike = isAdding
+      // Mutual exclusion: only clear an existing like if the title is actually
+      // liked. removeUserPreferenceByPreferenceId throws on a no-match, and most
+      // disliked titles were never liked — calling it unconditionally (as the
+      // old isAdding gate did) broke every dislike of a never-liked title.
+      // Likes & dislikes are mutually exclusive, so "liked" already implies we
+      // are turning the dislike on; no separate flag is needed.
+      const clearingLike = likedIdsSnapshot.has(id)
         ? removeUserPreferenceByPreferenceId({
             data: { preferenceId: id },
           }).then(() => undefined)
         : Promise.resolve();
 
-      if (isAdding) {
-        return clearingLike.then(() =>
-          addUserDislikeFn({
-            data: { preferenceId: id, title, year, category: categoryValue },
-          }),
-        );
-      }
       return clearingLike.then(() =>
-        removeUserDislikeByPreferenceIdFn({ data: { preferenceId: id } }),
+        toggleDislikeFn({
+          data: { preferenceId: id, title, year, category: categoryValue },
+        }),
       );
     },
     onMutate: async (filmInfo) => {

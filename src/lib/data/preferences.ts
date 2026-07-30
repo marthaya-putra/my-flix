@@ -338,8 +338,11 @@ export const addPersonInfoPreference = createServerFn({
     });
   });
 
-// Add content to user dislikes
-export const addUserDislikeFn = createServerFn({
+// Toggle a dislike (add if absent, remove if present). Parallel to
+// toggleMoviePreference but for the user_dislikes table. Returns the action
+// taken ("added" | "removed") so the optimistic hook can reconcile. Throws on
+// auth/DB failure — the hook rolls back via onError.
+export const toggleDislike = createServerFn({
   method: "POST",
 })
   .inputValidator(
@@ -351,19 +354,38 @@ export const addUserDislikeFn = createServerFn({
     }),
   )
   .handler(async ({ data }) => {
-    const { preferenceId, title, year, category } = data;
     const userId = await requireUserId();
 
     const db = getDb();
-    const result = await addUserDislike(db, {
+    const { preferenceId, title, year, category } = data;
+
+    // Check if already disliked
+    const existingResult = await getUserDislikes(db, {
+      userId,
+    });
+
+    const existing = existingResult.dislikes.find(
+      (d) => d.preferenceId === preferenceId,
+    );
+
+    if (existing) {
+      // Remove the dislike
+      await removeUserDislikeByPreferenceId(db, {
+        userId,
+        preferenceId,
+      });
+      return { action: "removed" as const };
+    }
+
+    // Add the dislike
+    await addUserDislike(db, {
       userId,
       preferenceId,
       title,
       year,
       category,
     });
-
-    return result.dislike;
+    return { action: "added" as const };
   });
 
 // Remove content from user dislikes
