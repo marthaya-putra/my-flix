@@ -70,7 +70,6 @@ const RecommendationSchema = z.object({
       imdbRating: z.number().describe("IMDB rating for the title"),
       reason: z
         .string()
-        .max(220)
         .describe(
           "Casual, chatty tone — like texting a friend. Aim for ~180 characters (min 100, HARD MAX 220). No lists, no restating the title.",
         ),
