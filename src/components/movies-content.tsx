@@ -54,7 +54,7 @@ export function MoviesContent({ moviesData, from }: MoviesContentProps) {
         onNextPage={nextPage}
       />
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 my-8">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 my-8 max-w-7xl mx-auto">
         {moviesData.results.map((movie) => (
           <MovieCard key={movie.id} {...movie} />
         ))}
