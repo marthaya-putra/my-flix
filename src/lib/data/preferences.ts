@@ -44,9 +44,6 @@ const RemovePreferenceInput = z.object({
   id: z.number(),
   type: z.enum(["movie", "tv-series"]),
 });
-const RemovePreferenceByPreferenceIdInput = z.object({
-  preferenceId: z.number(),
-});
 const RemovePersonInput = z.object({
   id: z.number(),
   personType: z.enum(["actor", "director", "other"]),
@@ -338,8 +335,11 @@ export const addPersonInfoPreference = createServerFn({
     });
   });
 
-// Add content to user dislikes
-export const addUserDislikeFn = createServerFn({
+// Toggle a dislike (add if absent, remove if present). Parallel to
+// toggleMoviePreference but for the user_dislikes table. Returns the action
+// taken ("added" | "removed") so the optimistic hook can reconcile. Throws on
+// auth/DB failure — the hook rolls back via onError.
+export const toggleDislike = createServerFn({
   method: "POST",
 })
   .inputValidator(
@@ -351,19 +351,47 @@ export const addUserDislikeFn = createServerFn({
     }),
   )
   .handler(async ({ data }) => {
-    const { preferenceId, title, year, category } = data;
     const userId = await requireUserId();
 
     const db = getDb();
-    const result = await addUserDislike(db, {
+    const { preferenceId, title, year, category } = data;
+
+    // Check if already disliked
+    const existingResult = await getUserDislikes(db, {
+      userId,
+    });
+
+    const existing = existingResult.dislikes.find(
+      (d) => d.preferenceId === preferenceId,
+    );
+
+    if (existing) {
+      // Remove the dislike
+      await removeUserDislikeByPreferenceId(db, {
+        userId,
+        preferenceId,
+      });
+      return { action: "removed" as const };
+    }
+
+    // Adding a dislike: the server is the authority for like↔dislike
+    // mutual exclusion, so clear any existing like first. Client-side caches
+    // can't enforce this reliably (a stale snapshot lets a like survive a
+    // dislike, leaving the title in both states).
+    await removeUserPreferenceByPreferenceIdRepo(db, {
+      userId,
+      preferenceId,
+    });
+
+    // Add the dislike
+    await addUserDislike(db, {
       userId,
       preferenceId,
       title,
       year,
       category,
     });
-
-    return result.dislike;
+    return { action: "added" as const };
   });
 
 // Remove content from user dislikes
@@ -386,28 +414,6 @@ export const removeUserDislikeByPreferenceIdFn = createServerFn({
     });
 
     return result.deletedDislike;
-  });
-
-// Remove movie/TV show from user preferences by preferenceId
-export const removeUserPreferenceByPreferenceId = createServerFn({
-  method: "POST",
-})
-  .inputValidator(RemovePreferenceByPreferenceIdInput)
-  .handler(async ({ data }) => {
-    const db = getDb();
-    const { preferenceId } = data;
-    const userId = await requireUserId();
-
-    // Use repository function to remove by preference ID
-    const result = await removeUserPreferenceByPreferenceIdRepo(db, {
-      userId,
-      preferenceId,
-    });
-
-    if (!result.deletedPreference) {
-      throw new Error("Failed to remove preference");
-    }
-    return result.deletedPreference;
   });
 
 // Get user's liked items (preferenceIds)
@@ -490,6 +496,13 @@ export const toggleMoviePreference = createServerFn({
       });
       return { action: "removed" as const };
     }
+
+    // Adding a like: the server is the authority for like↔dislike mutual
+    // exclusion, so clear any existing dislike first (mirrors toggleDislike).
+    await removeUserDislikeByPreferenceId(db, {
+      userId,
+      preferenceId,
+    });
 
     // Add to preferences
     const genresString = genres?.join(", ");

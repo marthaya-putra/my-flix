@@ -1,9 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import {
-  removeUserDislikeByPreferenceIdFn,
-  toggleMoviePreference,
-} from "@/lib/data/preferences";
+import { toggleMoviePreference } from "@/lib/data/preferences";
 import { likedItemsOptions, preferencesKeys } from "@/lib/queries/preferences";
 import type { FilmInfo } from "@/lib/types";
 
@@ -15,10 +12,10 @@ import type { FilmInfo } from "@/lib/types";
  * and on success invalidates both the liked-items and the user-preferences
  * keys so every read path reflects the new state.
  *
- * Like↔dislike mutual exclusion is owned here: turning a like **on** removes
- * an existing dislike for the same id (optimistically, then via the dislike
- * removal server fn). Callers do not orchestrate exclusion — the two caches
- * stay consistent on their own.
+ * Like↔dislike mutual exclusion is enforced by the SERVER (toggleMoviePreference
+ * clears any existing dislike before adding a like). This hook only mirrors
+ * that optimistically in the client caches so the UI flips immediately;
+ * onSettled reconciles to the server's authoritative state.
  */
 export function useLikedItems() {
   const queryClient = useQueryClient();
@@ -34,27 +31,21 @@ export function useLikedItems() {
         : new Date().getFullYear();
       const categoryValue = category === "tv" ? "tv-series" : "movie";
 
-      // Turning the like on: clear any existing dislike first so the server
-      // never holds both. Best-effort — a failure here shouldn't block the
-      // like itself; the caches are reconciled in onSettled regardless.
-      const clearingDislike = likedIds.has(id)
-        ? Promise.resolve()
-        : removeUserDislikeByPreferenceIdFn({
-            data: { preferenceId: id },
-          }).then(() => undefined);
-
-      return clearingDislike.then(() =>
-        toggleMoviePreference({
-          data: {
-            preferenceId: id,
-            title,
-            year,
-            category: categoryValue,
-            genres,
-            posterPath: filmInfo.posterPath,
-          },
-        }),
-      );
+      // The server is the authority for like↔dislike mutual exclusion: when
+      // it adds a like it clears any existing dislike, so the client no longer
+      // needs to clear the other cache itself. The client-side clear was
+      // gated on a render-time snapshot, but a stale snapshot could let a
+      // dislike survive a like (title in both states).
+      return toggleMoviePreference({
+        data: {
+          preferenceId: id,
+          title,
+          year,
+          category: categoryValue,
+          genres,
+          posterPath: filmInfo.posterPath,
+        },
+      });
     },
     onMutate: async (filmInfo) => {
       // Cancel in-flight reads so they don't clobber the optimistic update.
