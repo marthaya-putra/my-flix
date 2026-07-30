@@ -491,6 +491,8 @@ export function createParticleScroll(
       );
       line += (h + band - line) * endP * endP;
     }
+    const reveal = Math.min(scrollSmooth / h, 1);
+    line = h + (line - h) * reveal;
     const vy = docRowY - scrollSmooth;
     return Math.min(Math.max((line + band - vy) / band, 0), 1);
   }
