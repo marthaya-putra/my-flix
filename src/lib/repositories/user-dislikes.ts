@@ -32,7 +32,11 @@ const searchUserDislikesSchema = z.object({
   limit: z.number().positive().default(20),
 });
 
-// Plain functions for user dislikes
+// Plain functions for user dislikes. Issue #78 / CODING_STANDARDS.md §7:
+// these THROW on failure (no fabricated success) so a failed dislike add/
+// remove propagates to the toggle server fn and on to the client mutation,
+// where the optimistic hook's onError rolls back + toasts. Swallowing would
+// mask silent data loss.
 export async function addUserDislike(
   db: DB,
   data: z.infer<typeof addDislikeSchema>,
@@ -74,18 +78,12 @@ export async function addUserDislike(
       dislike: result[0],
     };
   } catch (error) {
+    // Issue #112: do NOT fabricate a dislike on insert failure — that masked
+    // silent data loss (the client believed the row persisted when it hadn't).
     console.error("Failed to add user dislike:", error);
-    // Always return success even on failure as this is not fatal
-    return {
-      success: true,
-      dislike: {
-        userId: data.userId,
-        preferenceId: data.preferenceId,
-        title: data.title,
-        year: data.year,
-        category: data.category,
-      },
-    };
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to add user dislike");
   }
 }
 
@@ -199,15 +197,12 @@ export async function removeUserDislikeByPreferenceId(
       deletedDislike,
     };
   } catch (error) {
+    // Issue #112: a delete failure must throw, else the client keeps the
+    // optimistic "removed" state while the dislike survives in the DB.
     console.error("Failed to remove user dislike:", error);
-    // Always return success even on failure as this is not fatal
-    return {
-      success: true,
-      deletedDislike: {
-        userId: data.userId,
-        preferenceId: data.preferenceId,
-      },
-    };
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to remove user dislike");
   }
 }
 
