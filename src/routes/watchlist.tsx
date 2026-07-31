@@ -17,6 +17,12 @@ export const Route = createFileRoute("/watchlist")({
     page: z.coerce.number().default(1),
   }),
   component: WatchlistComponent,
+  // Override the global spinner — parity with /movies, /tvs, etc. Covers the
+  // route-pending phase (cold client nav while guardAuthenticated resolves
+  // the session, or the code-split chunk loads) before this component mounts.
+  // The in-component <Suspense fallback={<WatchlistSkeleton />}> below still
+  // owns the data-fetch suspense; this only fills the route-resolution gap.
+  pendingComponent: () => <WatchlistSkeleton />,
   beforeLoad: guardAuthenticated,
   loaderDeps: ({ search }) => ({ page: search.page }),
   // No route `loader`: awaiting it (ensureQueryData) blocks past
