@@ -1,6 +1,6 @@
 export function DiscoverTvsSkeleton() {
   return (
-    <div className="container mx-auto px-4 py-8 animate-pulse">
+    <div className="mx-auto max-w-[1010px] px-4 py-8 animate-pulse">
       {/* Page header */}
       <div className="mb-8">
         <div className="h-10 bg-muted rounded-lg w-40 mb-2"></div>
