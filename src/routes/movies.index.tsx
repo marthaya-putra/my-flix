@@ -3,12 +3,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Suspense } from "react";
 import { z } from "zod";
 import { FilterPopovers } from "@/components/filter-popovers";
+import { ActiveFilterChips } from "@/components/filters/active-filter-chips";
 import { ClearFilters } from "@/components/filters/clear-filters";
 import { GenreFilter } from "@/components/filters/genre-filter";
 import { RatingFilter } from "@/components/filters/rating-filter";
 import { YearFilter } from "@/components/filters/year-filter";
 import { MoviesContent } from "@/components/movies-content";
 import { DiscoverMoviesSkeleton } from "@/components/skeletons/discover-movies-skeleton";
+import { MOVIE_GENRES } from "@/lib/genres";
 import { discoverMoviesOptions } from "@/lib/queries/movies";
 
 export const Route = createFileRoute("/movies/")({
@@ -50,14 +52,22 @@ function MoviesPage() {
   return (
     <Suspense fallback={<DiscoverMoviesSkeleton />}>
       <div className="mx-auto max-w-[1010px] px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-foreground mb-2">Movies</h1>
-          <p className="text-muted-foreground">
+        <div className="mb-6">
+          <h1 className="text-4xl font-display font-bold text-foreground leading-none">
+            Movies
+          </h1>
+          <p className="text-muted-foreground mt-2">
             Discover and explore movies from around the world
+            <span className="text-muted-foreground/70"> · </span>
+            <span className="tabular-nums">
+              {moviesData.results.length} titles on this page
+            </span>
           </p>
         </div>
 
-        <FilterPopovers>
+        <FilterPopovers
+          chips={<ActiveFilterChips from="/movies/" genreMap={MOVIE_GENRES} />}
+        >
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-4 flex-wrap">
               <GenreFilter />
