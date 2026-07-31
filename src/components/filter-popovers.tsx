@@ -16,9 +16,7 @@ export function FilterPopovers({ children, chips }: FilterPopoversProps) {
   const [isCollapsed, setIsCollapsed] = useState(true);
 
   return (
-    // Sticky under the 72px navbar (see __root.tsx `pt-[72px]`). Translucent
-    // so content scrolling underneath stays readable while the bar is pinned.
-    <div className="sticky top-[72px] z-40 bg-card/95 backdrop-blur-md rounded-lg border border-border shadow-sm overflow-hidden transition-[max-height,opacity] duration-300 mb-4">
+    <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden transition-[max-height,opacity] duration-300 mb-4">
       <div
         className={cn(
           "flex items-center justify-between gap-4 px-4 py-2",
