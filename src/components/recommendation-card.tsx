@@ -109,10 +109,10 @@ export function RecommendationCard({
               title={recommendation.title}
               category={recommendation.category}
               releasedYear={recommendation.releasedYear}
-              className="text-white hover:text-white border-b border-transparent hover:border-white"
+              className="group/link text-white hover:text-white border-b border-transparent hover:border-white"
             >
               {recommendation.title}
-              <ExternalLink className="inline-block h-3.5 w-3.5 ml-1 align-baseline text-white/50" />
+              <ExternalLink className="inline-block h-3.5 w-3.5 ml-1 align-baseline text-white/50 transition-transform duration-200 ease group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5" />
             </MoreInfoLink>
           </h4>
           <div className="flex items-center gap-2 text-xs text-white/70">
@@ -188,10 +188,10 @@ export function RecommendationCard({
                   title={recommendation.title}
                   category={recommendation.category}
                   releasedYear={recommendation.releasedYear}
-                  className="text-white hover:text-white border-b border-transparent hover:border-white"
+                  className="group/link text-white hover:text-white border-b border-transparent hover:border-white"
                 >
                   {recommendation.title}
-                  <ExternalLink className="inline-block h-3.5 w-3.5 ml-1 align-baseline text-white/50" />
+                  <ExternalLink className="inline-block h-3.5 w-3.5 ml-1 align-baseline text-white/50 transition-transform duration-200 ease group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5" />
                 </MoreInfoLink>
               </h4>
               <div className="flex items-center gap-2 text-xs text-white/70">
