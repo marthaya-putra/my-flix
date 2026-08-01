@@ -174,11 +174,11 @@ export function Navbar() {
           </Button>
 
           {showSessionSkeleton ? (
-            <Skeleton className="w-8 h-8 rounded-full bg-muted-foreground/30" />
+            <Skeleton className="hidden w-8 h-8 rounded-full bg-muted-foreground/30 md:flex" />
           ) : user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Avatar className="w-8 h-8 cursor-pointer active:scale-95 transition-transform ring-2 ring-transparent hover:ring-primary/30">
+                <Avatar className="hidden md:flex w-8 h-8 cursor-pointer active:scale-95 transition-transform ring-2 ring-transparent hover:ring-primary/30">
                   <AvatarImage src={user?.image || ""} alt={user?.name || ""} />
                   <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                     {user?.name?.slice(0, 2).toUpperCase() || "U"}
@@ -249,7 +249,7 @@ export function Navbar() {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-2">
               <Button variant="ghost" asChild>
                 <Link to="/login">Sign in</Link>
               </Button>
