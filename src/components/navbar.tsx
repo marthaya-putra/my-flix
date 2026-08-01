@@ -284,9 +284,33 @@ function MobileNavContent({
   return (
     <div className="flex h-full flex-col">
       <div className="px-5 pt-6 pb-4">
-        <span className="text-2xl font-display font-bold text-primary tracking-tighter">
-          MyFlix
-        </span>
+        {showSessionSkeleton ? (
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-10 w-10 rounded-full bg-muted-foreground/30" />
+            <div className="flex flex-col gap-1.5">
+              <Skeleton className="h-3.5 w-24 rounded bg-muted-foreground/30" />
+              <Skeleton className="h-3 w-36 rounded bg-muted-foreground/30" />
+            </div>
+          </div>
+        ) : user ? (
+          <div className="flex items-center gap-3">
+            <Avatar className="h-10 w-10">
+              <AvatarImage src={user.image || ""} alt={user.name || ""} />
+              <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                {user.name?.slice(0, 2).toUpperCase() || "U"}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col">
+              <span className="text-sm font-semibold text-foreground">
+                {user.name || "My Account"}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <span className="text-2xl font-display font-bold text-primary tracking-tighter">
+            MyFlix
+          </span>
+        )}
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3">
