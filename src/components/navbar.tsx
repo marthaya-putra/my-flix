@@ -374,6 +374,25 @@ function MobileNavContent({
               onClose={onClose}
               index={1}
             />
+            <motion.li
+              initial={{ opacity: 0, transform: "translateY(8px)" }}
+              animate={{ opacity: 1, transform: "translateY(0px)" }}
+              transition={{
+                duration: 0.2,
+                ease: MOBILE_NAV_EASE,
+                delay: 0.25 + 2 * 0.04,
+              }}
+              className="list-none"
+            >
+              <button
+                type="button"
+                onClick={onSignOut}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-base font-medium text-destructive transition-colors active:scale-[0.98] hover:bg-destructive/10"
+              >
+                <LogOut className="w-4 h-4" />
+                Log out
+              </button>
+            </motion.li>
           </ul>
         ) : (
           <div className="flex flex-col gap-2 px-2">
@@ -390,19 +409,6 @@ function MobileNavContent({
           </div>
         )}
       </nav>
-
-      {user && (
-        <div className="border-t border-white/10 p-3">
-          <Button
-            variant="ghost"
-            onClick={onSignOut}
-            className="w-full justify-start gap-3 text-destructive hover:text-destructive hover:bg-destructive/10"
-          >
-            <LogOut className="w-4 h-4" />
-            Log out
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
