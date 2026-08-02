@@ -1,10 +1,16 @@
 import { getRouteApi, Link } from "@tanstack/react-router";
 import { Bookmark, Compass } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import { MovieCard } from "@/components/movie-card";
 import { CustomPagination } from "@/components/pagination";
 import { Button } from "@/components/ui/button";
 import { useWatchlist } from "@/hooks/use-watchlist";
 import type { UserWatchlist } from "@/lib/db";
+import {
+  overlayTransition,
+  watchlistCardVariants,
+  watchlistEmptyState,
+} from "@/lib/motion";
 import type { FilmInfo, FilmType } from "@/lib/types";
 
 // Scoped, typed hook for the /watchlist route. Avoids importing the route
@@ -99,7 +105,12 @@ export function WatchlistPage({
       </div>
 
       {isEmpty || totalItems === 0 ? (
-        <div className="text-center py-12 border-2 border-dashed border-muted rounded-lg flex flex-col items-center justify-center">
+        <motion.div
+          initial={watchlistEmptyState.initial}
+          animate={watchlistEmptyState.animate}
+          transition={watchlistEmptyState.transition}
+          className="text-center py-12 border-2 border-dashed border-muted rounded-lg flex flex-col items-center justify-center"
+        >
           <Bookmark className="h-10 w-10 text-muted-foreground/50 mb-4" />
           <p className="text-muted-foreground mb-4">
             Your Watchlist is empty. Browse titles and add them to your
@@ -111,7 +122,7 @@ export function WatchlistPage({
               Browse titles
             </Link>
           </Button>
-        </div>
+        </motion.div>
       ) : (
         <>
           <CustomPagination
@@ -124,10 +135,24 @@ export function WatchlistPage({
           />
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 my-8">
-            {visibleItems.map((row) => {
-              const filmInfo = rowToFilmInfo(row);
-              return <MovieCard key={row.id} {...filmInfo} />;
-            })}
+            <AnimatePresence mode="popLayout">
+              {visibleItems.map((row) => {
+                const filmInfo = rowToFilmInfo(row);
+                return (
+                  <motion.div
+                    key={row.id}
+                    layout
+                    variants={watchlistCardVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    transition={overlayTransition}
+                  >
+                    <MovieCard {...filmInfo} />
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
           </div>
 
           <CustomPagination

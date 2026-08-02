@@ -51,6 +51,28 @@ export const overlayTransition: Transition = {
 };
 
 /**
+ * Watchlist grid item enter/exit. Bounded tween (no overshoot) so the card
+ * fades + softly scales on remove and on initial mount; siblings FLIP into the
+ * closed gap via `layout`. Pairs with `AnimatePresence mode="popLayout"`.
+ */
+export const watchlistCardVariants: Variants = {
+  initial: { opacity: 0, scale: 0.96 },
+  animate: { opacity: 1, scale: 1 },
+  exit: { opacity: 0, scale: 0.9 },
+};
+
+/**
+ * Watchlist empty-state entrance. Same gentle fade + scale shape as the card,
+ * but a slightly longer beat (0.3s) — the empty state is rare and a touch
+ * slower reads as deliberate, not sluggish. One-off enter only.
+ */
+export const watchlistEmptyState = {
+  initial: { opacity: 0, scale: 0.96 },
+  animate: { opacity: 1, scale: 1 },
+  transition: { duration: 0.3, ease: EASE_OUT },
+} as const;
+
+/**
  * Fade + rise entrance variants (stagger container children). For mount-time
  * reveals (e.g. NotFound). Bounded tween, no underdamped spring.
  */
