@@ -1,5 +1,7 @@
+import { motion } from "motion/react";
 import { Plus, RotateCw } from "lucide-react";
 import { type StreamStage, stageMessagesFor } from "@/lib/data/stream-events";
+import { tapSpring } from "@/lib/motion";
 import { RotatingMessage } from "./rotating-message";
 
 type LoadMoreCardProps = {
@@ -73,8 +75,11 @@ export function LoadMoreCard({
 
   // Idle CTA state.
   return (
-    <button
+    <motion.button
       onClick={onClick}
+      whileHover={{ scale: 1.03 }}
+      whileTap={{ scale: 0.97 }}
+      transition={tapSpring}
       className="rounded-lg overflow-hidden bg-muted/60 border border-dashed border-muted-foreground/25 flex flex-col items-center justify-center gap-2 hover:bg-muted hover:border-muted-foreground/40 transition-colors cursor-pointer w-full mx-auto max-w-[240px]"
       style={{ aspectRatio: "2 / 3" }}
     >
@@ -82,6 +87,6 @@ export function LoadMoreCard({
         <Plus className="h-5 w-5 text-muted-foreground" />
       </div>
       <span className="text-xs text-muted-foreground">Load more</span>
-    </button>
+    </motion.button>
   );
 }
