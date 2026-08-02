@@ -168,7 +168,7 @@ export function RecommendationCard({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={overlayTransition}
-            className="absolute inset-0 z-20 bg-black/90 backdrop-blur-sm flex flex-col justify-between pt-2 px-4 pb-4"
+            className="absolute inset-0 z-20 bg-black/90 backdrop-blur-sm flex flex-col justify-between pt-2 px-3 sm:px-4 pb-4"
           >
             {expanded && onToggleExpand && (
               <button
@@ -216,22 +216,30 @@ export function RecommendationCard({
               )}
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center justify-between shrink-0">
               <PlayLink
                 title={recommendation.title}
                 category={recommendation.category}
               >
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="gap-1.5 text-xs h-8"
+                <motion.div
+                  whileTap={{ scale: 0.92 }}
+                  transition={ctaDramaSpring}
                 >
-                  <Play className="h-3.5 w-3.5 fill-current" />
-                  Watch
-                </Button>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className={cn(
+                      "p-1.5 h-8 w-8 rounded-full",
+                      PILL_BUTTON_CLASS,
+                    )}
+                    aria-label="Watch"
+                  >
+                    <Play className="h-3.5 w-3.5 fill-current" />
+                  </Button>
+                </motion.div>
               </PlayLink>
               {recommendation.tmdbData && filmInfo && (
-                <div className="flex gap-1 ml-auto">
+                <div className="flex gap-1">
                   <WatchlistButton filmInfo={filmInfo} />
                   <DislikeButton filmInfo={filmInfo} />
                   <LikeButton filmInfo={filmInfo} />
