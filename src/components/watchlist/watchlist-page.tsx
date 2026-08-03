@@ -98,7 +98,7 @@ export function WatchlistPage({
   };
 
   return (
-    <div className="container mx-auto p-4 max-w-6xl">
+    <div className="mx-auto px-4 md:px-8 max-w-7xl">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Your Watchlist</h1>
         <p className="text-muted-foreground">{description}</p>
@@ -134,7 +134,7 @@ export function WatchlistPage({
             onNextPage={() => goToPage(page + 1)}
           />
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 my-8">
+          <div className="flex flex-wrap justify-center gap-4 my-8">
             <AnimatePresence mode="popLayout">
               {visibleItems.map((row) => {
                 const filmInfo = rowToFilmInfo(row);
@@ -147,6 +147,7 @@ export function WatchlistPage({
                     animate="animate"
                     exit="exit"
                     transition={overlayTransition}
+                    className="basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5 xl:basis-1/6"
                   >
                     <MovieCard {...filmInfo} />
                   </motion.div>

@@ -1,11 +1,6 @@
 import { ThumbsUp } from "lucide-react";
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { useLikedItems } from "@/hooks/use-liked-items";
 import { ctaDramaSpring } from "@/lib/motion";
 import type { FilmInfo } from "@/lib/types";
@@ -17,8 +12,8 @@ type LikeButtonProps = {
 };
 
 /**
- * Shared like CTA. Owns the Button + motion.div + Tooltip + HIT_ZONE +
- * ctaDramaSpring + the active/inactive glass-pill styling and tooltip label.
+ * Shared like CTA. Owns the Button + motion.div + HIT_ZONE + ctaDramaSpring
+ * + the active/inactive glass-pill styling.
  * Reads `useLikedItems()` and calls `toggleLike(filmInfo)` internally.
  *
  * Canonical style is the hover-overlay glass pill: `rounded-full
@@ -31,44 +26,37 @@ export function LikeButton({ filmInfo, disabled }: LikeButtonProps) {
   const liked = isLiked(filmInfo.id);
 
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <motion.div
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.7 }}
-          transition={ctaDramaSpring}
-        >
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={disabled}
-            aria-pressed={liked}
-            aria-label={`Like ${filmInfo.title}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleLike(filmInfo);
-            }}
-            className={cn(
-              REACTION_BUTTON_BASE,
-              liked
-                ? "border-primary/30 bg-primary/20"
-                : "border-white/20 bg-black/40 hover:bg-white/10",
-            )}
-          >
-            <ThumbsUp
-              className={cn(
-                "h-4 w-4",
-                liked
-                  ? "fill-primary text-primary"
-                  : "text-muted-foreground hover:text-primary hover:fill-primary/20",
-              )}
-            />
-          </Button>
-        </motion.div>
-      </TooltipTrigger>
-      <TooltipContent>
-        <p>{liked ? "Unlike" : "I like this"}</p>
-      </TooltipContent>
-    </Tooltip>
+    <motion.div
+      whileHover={{ scale: 1.1 }}
+      whileTap={{ scale: 0.7 }}
+      transition={ctaDramaSpring}
+    >
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled={disabled}
+        aria-pressed={liked}
+        aria-label={`Like ${filmInfo.title}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          toggleLike(filmInfo);
+        }}
+        className={cn(
+          REACTION_BUTTON_BASE,
+          liked
+            ? "border-primary/30 bg-primary/20"
+            : "border-white/20 bg-black/40 hover:bg-white/10",
+        )}
+      >
+        <ThumbsUp
+          className={cn(
+            "h-4 w-4",
+            liked
+              ? "fill-primary text-primary"
+              : "text-muted-foreground hover:text-primary hover:fill-primary/20",
+          )}
+        />
+      </Button>
+    </motion.div>
   );
 }

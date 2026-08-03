@@ -1,17 +1,14 @@
-import { Play, Star } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { ExternalLink, Play, Star } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { authClient } from "@/lib/auth-client";
+import { buttonVariants } from "@/components/ui/button";
+import { sessionQuery } from "@/lib/data/auth";
 import { ctaDramaSpring } from "@/lib/motion";
 import { FilmInfo } from "@/lib/types";
 import { cn, HIT_ZONE, PILL_BUTTON_CLASS } from "@/lib/utils";
 import { DislikeButton, LikeButton, WatchlistButton } from "./buttons";
+import { MoreInfoLink } from "./more-info-link";
 import { PlayLink } from "./play-link";
 
 type MovieCardProps = FilmInfo & {
@@ -31,7 +28,12 @@ export function MovieCard({
   overview,
   genreIds,
 }: MovieCardProps) {
-  const { data: session, isPending: sessionPending } = authClient.useSession();
+  // Session via the SSR-dehydrated sessionQuery (root beforeLoad resolves it
+  // server-side and router.tsx dehydrates the QueryClient). useQuery returns
+  // the cached session synchronously on first client render, so SSR and
+  // hydration agree — unlike authClient.useSession(), which is client-only
+  // and would render session-gated buttons only after mount → mismatch.
+  const { data: session, isPending: sessionPending } = useQuery(sessionQuery);
   // Like + watchlist state is owned by the shared button components
   // (LikeButton / WatchlistButton), which read straight from the QueryClient
   // cache (primed by the route loaders) and call the reaction hooks
@@ -39,7 +41,6 @@ export function MovieCard({
   // one request. This removes the route → MoviesContent/ContentRow →
   // MovieCard prop chain (~20 lines of pure forwarding).
   const [imgSrc, setImgSrc] = useState(posterPath);
-  const [hasError, setHasError] = useState(!posterPath);
 
   const filmInfo: FilmInfo = {
     id,
@@ -85,25 +86,15 @@ export function MovieCard({
         className="w-full h-full object-cover"
         onError={() => {
           setImgSrc("/poster-placeholder.svg");
-          setHasError(true);
         }}
       />
 
-      {/* Title Overlay — shown on error or as rest-state baseline */}
-      <div
-        className={cn(
-          "absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent transition-opacity duration-300 flex flex-col justify-center p-4",
-          hasError ? "opacity-100" : "opacity-0",
-        )}
-      >
-        <h3 className="font-display font-bold text-white text-lg text-center">
-          {title}
-        </h3>
-      </div>
-
-      {/* Hover Overlay — opacity/translate driven by group-hover utilities */}
-      <motion.div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover/card:opacity-100 flex flex-col justify-end p-4 pointer-events-none group-hover/card:pointer-events-auto transition-opacity duration-200">
-        <div className="translate-y-4 group-hover/card:translate-y-0 transition-transform duration-200 ease-out">
+      {/* Hover Overlay — opacity/translate driven by group-hover utilities.
+          Shows the title + actions on hover. Vertical action rail on the
+          right keeps every button on its own row, so width never constrains
+          (portrait card has height, not width). */}
+      <motion.div className="absolute inset-0 z-20 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover/card:opacity-100 flex flex-row items-end justify-between gap-2 p-3 pointer-events-none group-hover/card:pointer-events-auto transition-opacity duration-200">
+        <div className="flex-1 min-w-0 translate-y-4 group-hover/card:translate-y-0 transition-transform duration-200 ease-out">
           <h3 className="font-display font-bold text-white text-lg leading-tight mb-2">
             {title}
           </h3>
@@ -119,49 +110,66 @@ export function MovieCard({
             </span>
           </div>
 
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex gap-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <PlayLink title={title} category={category}>
-                    <motion.div
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.7 }}
-                      transition={ctaDramaSpring}
-                    >
-                      <Button
-                        size="icon"
-                        aria-label={`Play ${title}`}
-                        className={cn(HIT_ZONE, "w-8 h-8", PILL_BUTTON_CLASS)}
-                      >
-                        <Play className="w-4 h-4 fill-current ml-0.5" />
-                      </Button>
-                    </motion.div>
-                  </PlayLink>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Play</p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
-
-            <div className="flex gap-2">
-              {!sessionPending && session && (
-                <WatchlistButton filmInfo={filmInfo} />
-              )}
-
-              {!sessionPending && session && (
-                <DislikeButton filmInfo={filmInfo} />
-              )}
-
-              {!sessionPending && session && <LikeButton filmInfo={filmInfo} />}
-            </div>
-          </div>
-
-          <div className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50 inline-block"></span>
             {category === "movie" ? "Movie" : "TV Series"}
           </div>
+        </div>
+
+        {/* Vertical action rail. Each trigger wrapped in motion.div for the
+            spring hover/tap scale (safe now that tooltips are gone — no
+            Radix asChild/Slot cloning the motion element). */}
+        <div className="flex flex-col gap-2 shrink-0">
+          <motion.div
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.7 }}
+            transition={ctaDramaSpring}
+          >
+            <PlayLink
+              title={title}
+              category={category}
+              aria-label={`Play ${title}`}
+              className={cn(
+                buttonVariants({ size: "icon" }),
+                HIT_ZONE,
+                "w-8 h-8",
+                PILL_BUTTON_CLASS,
+              )}
+            >
+              <Play className="w-4 h-4 fill-current ml-0.5" />
+            </PlayLink>
+          </motion.div>
+
+          <motion.div
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.7 }}
+            transition={ctaDramaSpring}
+          >
+            <MoreInfoLink
+              title={title}
+              category={category}
+              releasedYear={new Date(releaseDate).getFullYear()}
+              aria-label={`Search more info for ${title}`}
+              className={cn(
+                buttonVariants({ size: "icon" }),
+                HIT_ZONE,
+                "w-8 h-8",
+                PILL_BUTTON_CLASS,
+              )}
+            >
+              <ExternalLink className="w-4 h-4" />
+            </MoreInfoLink>
+          </motion.div>
+
+          {!sessionPending && session && (
+            <WatchlistButton filmInfo={filmInfo} />
+          )}
+
+          {!sessionPending && session && (
+            <DislikeButton filmInfo={filmInfo} />
+          )}
+
+          {!sessionPending && session && <LikeButton filmInfo={filmInfo} />}
         </div>
       </motion.div>
     </div>

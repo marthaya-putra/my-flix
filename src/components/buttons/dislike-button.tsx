@@ -1,11 +1,6 @@
 import { ThumbsDown } from "lucide-react";
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { useDislikedItems } from "@/hooks/use-disliked-items";
 import { ctaDramaSpring } from "@/lib/motion";
 import type { FilmInfo } from "@/lib/types";
@@ -17,8 +12,8 @@ type DislikeButtonProps = {
 };
 
 /**
- * Shared dislike CTA. Owns the Button + motion.div + Tooltip + HIT_ZONE +
- * ctaDramaSpring + the active/inactive glass-pill styling and tooltip label.
+ * Shared dislike CTA. Owns the Button + motion.div + HIT_ZONE +
+ * ctaDramaSpring + the active/inactive glass-pill styling.
  * Reads `useDislikedItems()` and calls `toggleDislike(filmInfo)` internally.
  *
  * Canonical style is the hover-overlay glass pill: `rounded-full
@@ -32,44 +27,37 @@ export function DislikeButton({ filmInfo, disabled }: DislikeButtonProps) {
   const disliked = isDisliked(filmInfo.id);
 
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <motion.div
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.7 }}
-          transition={ctaDramaSpring}
-        >
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={disabled}
-            aria-pressed={disliked}
-            aria-label={`Dislike ${filmInfo.title}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleDislike(filmInfo);
-            }}
-            className={cn(
-              REACTION_BUTTON_BASE,
-              disliked
-                ? "border-destructive/30 bg-destructive/20"
-                : "border-white/20 bg-black/40 hover:bg-white/10",
-            )}
-          >
-            <ThumbsDown
-              className={cn(
-                "h-4 w-4",
-                disliked
-                  ? "fill-destructive text-destructive"
-                  : "text-muted-foreground hover:text-destructive hover:fill-destructive/20",
-              )}
-            />
-          </Button>
-        </motion.div>
-      </TooltipTrigger>
-      <TooltipContent>
-        <p>{disliked ? "Remove dislike" : "Not for me"}</p>
-      </TooltipContent>
-    </Tooltip>
+    <motion.div
+      whileHover={{ scale: 1.1 }}
+      whileTap={{ scale: 0.7 }}
+      transition={ctaDramaSpring}
+    >
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled={disabled}
+        aria-pressed={disliked}
+        aria-label={`Dislike ${filmInfo.title}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          toggleDislike(filmInfo);
+        }}
+        className={cn(
+          REACTION_BUTTON_BASE,
+          disliked
+            ? "border-destructive/30 bg-destructive/20"
+            : "border-white/20 bg-black/40 hover:bg-white/10",
+        )}
+      >
+        <ThumbsDown
+          className={cn(
+            "h-4 w-4",
+            disliked
+              ? "fill-destructive text-destructive"
+              : "text-muted-foreground hover:text-destructive hover:fill-destructive/20",
+          )}
+        />
+      </Button>
+    </motion.div>
   );
 }
