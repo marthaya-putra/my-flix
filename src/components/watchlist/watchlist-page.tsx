@@ -147,7 +147,7 @@ export function WatchlistPage({
                     animate="animate"
                     exit="exit"
                     transition={overlayTransition}
-                    className="basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/5 xl:basis-1/6"
+                    className="basis-[calc(50%-0.5rem)] sm:basis-[calc(33.333%-0.667rem)] md:basis-[calc(25%-0.75rem)] lg:basis-[calc(20%-0.8rem)]"
                   >
                     <MovieCard {...filmInfo} />
                   </motion.div>
