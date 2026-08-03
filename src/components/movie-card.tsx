@@ -85,10 +85,6 @@ export function MovieCard({
         </span>
       </div>
 
-      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-        <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50 inline-block"></span>
-        {category === "movie" ? "Movie" : "TV Series"}
-      </div>
     </div>
   );
 
@@ -158,7 +154,7 @@ export function MovieCard({
     </div>
   );
 
-  return (
+    return (
       <div
         className="group/card relative aspect-[3/4] w-full rounded-lg overflow-hidden cursor-pointer select-none"
         onClick={() => {
@@ -167,6 +163,16 @@ export function MovieCard({
         }
       }}
     >
+      {/* Category badge — glass pill, top-left. Mirrors the rating badge so the
+          two corners stay cohesive. Short label ("TV") keeps the pill compact. */}
+      <div className="absolute top-2.5 left-2.5 z-10">
+        <div className="flex items-center gap-1 px-2 py-0.5 rounded-full border backdrop-blur-md bg-black/50">
+          <span className="text-xs font-bold text-white">
+            {category === "movie" ? "Movie" : "TV"}
+          </span>
+        </div>
+      </div>
+
       {/* Rating badge — glass pill, top-right. Hidden when the card has no
           rating (e.g. watchlist rows, which don't store voteAverage). */}
       {voteAverage > 0 && (
