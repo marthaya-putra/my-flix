@@ -3,11 +3,6 @@ import { ExternalLink, Play, Star } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
 import { buttonVariants } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { sessionQuery } from "@/lib/data/auth";
 import { FilmInfo } from "@/lib/types";
 import { cn, HIT_ZONE, PILL_BUTTON_CLASS } from "@/lib/utils";
@@ -120,55 +115,38 @@ export function MovieCard({
           </div>
         </div>
 
-        {/* Vertical action rail. The link is the TooltipTrigger (asChild
-            clones it directly, now that it forwards ref/props). motion.div is
-            intentionally avoided here: Radix Slot would clone it and Motion
-            injects style/handlers on the client the server render lacks →
-            hydration mismatch. Link styled with buttonVariants + utility
-            classes for hover/active scale. */}
+        {/* Vertical action rail. Links styled with buttonVariants + utility
+            classes for hover/active scale. No tooltips: the Radix tooltip
+            layer interferes with pointer events on the dense rail. */}
         <div className="flex flex-col gap-2 shrink-0">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <PlayLink
-                title={title}
-                category={category}
-                aria-label={`Play ${title}`}
-                className={cn(
-                  buttonVariants({ size: "icon" }),
-                  HIT_ZONE,
-                  "w-8 h-8 hover:scale-110 active:scale-90 transition-transform duration-200 ease-out",
-                  PILL_BUTTON_CLASS,
-                )}
-              >
-                <Play className="w-4 h-4 fill-current ml-0.5" />
-              </PlayLink>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Play</p>
-            </TooltipContent>
-          </Tooltip>
+          <PlayLink
+            title={title}
+            category={category}
+            aria-label={`Play ${title}`}
+            className={cn(
+              buttonVariants({ size: "icon" }),
+              HIT_ZONE,
+              "w-8 h-8 hover:scale-110 active:scale-90 transition-transform duration-200 ease-out",
+              PILL_BUTTON_CLASS,
+            )}
+          >
+            <Play className="w-4 h-4 fill-current ml-0.5" />
+          </PlayLink>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <MoreInfoLink
-                title={title}
-                category={category}
-                releasedYear={new Date(releaseDate).getFullYear()}
-                aria-label={`Search more info for ${title}`}
-                className={cn(
-                  buttonVariants({ size: "icon" }),
-                  HIT_ZONE,
-                  "w-8 h-8 hover:scale-110 active:scale-90 transition-transform duration-200 ease-out",
-                  PILL_BUTTON_CLASS,
-                )}
-              >
-                <ExternalLink className="w-4 h-4" />
-              </MoreInfoLink>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>More info</p>
-            </TooltipContent>
-          </Tooltip>
+          <MoreInfoLink
+            title={title}
+            category={category}
+            releasedYear={new Date(releaseDate).getFullYear()}
+            aria-label={`Search more info for ${title}`}
+            className={cn(
+              buttonVariants({ size: "icon" }),
+              HIT_ZONE,
+              "w-8 h-8 hover:scale-110 active:scale-90 transition-transform duration-200 ease-out",
+              PILL_BUTTON_CLASS,
+            )}
+          >
+            <ExternalLink className="w-4 h-4" />
+          </MoreInfoLink>
 
           {!sessionPending && session && (
             <WatchlistButton filmInfo={filmInfo} />
