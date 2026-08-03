@@ -92,14 +92,18 @@ export function MovieCard({
     </div>
   );
 
-  // Vertical action rail. Shared between overlays. Each trigger wrapped in
-  // motion.div for the spring hover/tap scale (safe now that tooltips are
-  // gone — no Radix asChild/Slot cloning the motion element).
+  // Bottom action block (shared between overlays). Option B: a full-width
+  // Play hero pill, then one tight row of 4 small icons — More info,
+  // watchlist, dislike, like. All CTAs stay in the bottom gradient band, so
+  // they never collide with the carousel's edge arrows (which live at
+  // top-1/2). Each trigger is wrapped in motion.div for the spring hover/tap
+  // scale.
   const actionRail = (
-    <div className="flex flex-col gap-2 shrink-0">
+    <div className="flex flex-col gap-2">
+      {/* Play — full-width primary pill */}
       <motion.div
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.7 }}
+        whileHover={{ scale: 1.03 }}
+        whileTap={{ scale: 0.97 }}
         transition={ctaDramaSpring}
       >
         <PlayLink
@@ -107,46 +111,50 @@ export function MovieCard({
           category={category}
           aria-label={`Play ${title}`}
           className={cn(
-            buttonVariants({ size: "icon" }),
+            buttonVariants(),
             HIT_ZONE,
-            "w-8 h-8",
+            "w-full h-8 gap-1.5",
             PILL_BUTTON_CLASS,
           )}
         >
-          <Play className="w-4 h-4 fill-current ml-0.5" />
+          <Play className="w-3.5 h-3.5 fill-current" />
+          Play
         </PlayLink>
       </motion.div>
 
-      <motion.div
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.7 }}
-        transition={ctaDramaSpring}
-      >
-        <MoreInfoLink
-          title={title}
-          category={category}
-          releasedYear={new Date(releaseDate).getFullYear()}
-          aria-label={`Search more info for ${title}`}
-          className={cn(
-            buttonVariants({ size: "icon" }),
-            HIT_ZONE,
-            "w-8 h-8",
-            PILL_BUTTON_CLASS,
-          )}
+      {/* Icon strip — More info + reactions, all same-weight */}
+      <div className="flex gap-2 justify-start">
+        <motion.div
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.7 }}
+          transition={ctaDramaSpring}
         >
-          <ExternalLink className="w-4 h-4" />
-        </MoreInfoLink>
-      </motion.div>
+          <MoreInfoLink
+            title={title}
+            category={category}
+            releasedYear={new Date(releaseDate).getFullYear()}
+            aria-label={`Search more info for ${title}`}
+            className={cn(
+              buttonVariants({ size: "icon" }),
+              HIT_ZONE,
+              "w-8 h-8",
+              PILL_BUTTON_CLASS,
+            )}
+          >
+            <ExternalLink className="w-4 h-4" />
+          </MoreInfoLink>
+        </motion.div>
 
-      {!sessionPending && session && (
-        <WatchlistButton filmInfo={filmInfo} />
-      )}
+        {!sessionPending && session && (
+          <WatchlistButton filmInfo={filmInfo} />
+        )}
 
-      {!sessionPending && session && (
-        <DislikeButton filmInfo={filmInfo} />
-      )}
+        {!sessionPending && session && (
+          <DislikeButton filmInfo={filmInfo} />
+        )}
 
-      {!sessionPending && session && <LikeButton filmInfo={filmInfo} />}
+        {!sessionPending && session && <LikeButton filmInfo={filmInfo} />}
+      </div>
     </div>
   );
 
@@ -191,14 +199,14 @@ export function MovieCard({
           (portrait card has height, not width). */}
       <motion.div
         className={cn(
-          "absolute inset-0 z-20 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover/card:opacity-100 flex flex-row items-end justify-between gap-2 p-3 pointer-events-none group-hover/card:pointer-events-auto transition-opacity duration-200",
+          "absolute inset-0 z-20 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover/card:opacity-100 flex flex-col justify-end gap-2 p-3 pointer-events-none group-hover/card:pointer-events-auto transition-opacity duration-200",
           expanded && "!opacity-0 !pointer-events-none",
         )}
       >
-        <div className="flex-1 min-w-0 translate-y-4 group-hover/card:translate-y-0 transition-transform duration-200 ease-out">
+        <div className="translate-y-4 group-hover/card:translate-y-0 transition-transform duration-200 ease-out">
           {titleBlock}
+          {actionRail}
         </div>
-        {actionRail}
       </motion.div>
 
       {/* Touch overlay — tap to expand on touch devices. Animated via
@@ -212,7 +220,7 @@ export function MovieCard({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={overlayTransition}
-            className="absolute inset-0 z-30 bg-black/90 backdrop-blur-sm flex flex-row items-end justify-between gap-2 p-3"
+            className="absolute inset-0 z-30 bg-black/90 backdrop-blur-sm flex flex-col justify-end gap-2 p-3"
           >
             <button
               onClick={(e) => {
