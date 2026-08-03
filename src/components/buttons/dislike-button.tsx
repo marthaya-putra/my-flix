@@ -12,8 +12,8 @@ type DislikeButtonProps = {
 };
 
 /**
- * Shared dislike CTA. Owns the Button + HIT_ZONE + CSS hover/active scale +
- * the active/inactive glass-pill styling.
+ * Shared dislike CTA. Owns the Button + motion.div + HIT_ZONE +
+ * ctaDramaSpring + the active/inactive glass-pill styling.
  * Reads `useDislikedItems()` and calls `toggleDislike(filmInfo)` internally.
  *
  * Canonical style is the hover-overlay glass pill: `rounded-full
