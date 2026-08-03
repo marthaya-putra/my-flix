@@ -1,6 +1,7 @@
+import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FrostEmptyState } from "@/components/frost-empty-state";
-import { authClient } from "@/lib/auth-client";
+import { sessionQuery } from "@/lib/data/auth";
 import { type StreamEvent, type StreamStage } from "@/lib/data/stream-events";
 import {
   type Category,
@@ -62,7 +63,9 @@ export function Recommendations() {
 
   const [hasStarted, setHasStarted] = useState(false);
 
-  const { data, isPending: sessionPending } = authClient.useSession();
+  // Session via the SSR-dehydrated sessionQuery — synchronous on first client
+  // render, so the pending/loading branch agrees between server and client.
+  const { data, isPending: sessionPending } = useQuery(sessionQuery);
   const userId = data?.user?.id;
 
   const abortRef = useRef<AbortController | null>(null);

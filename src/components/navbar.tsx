@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { Link, useRouter } from "@tanstack/react-router";
 import {
   Bell,
@@ -47,11 +48,11 @@ export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const router = useRouter();
 
-  // Session via better-auth's own hook (same one movie-card and
-  // recommendations use). Single source of truth; isPending drives the
-  // avatar Skeleton during the initial fetch.
-  const { data: session, isPending: isFetchingSession } =
-    authClient.useSession();
+  // Session via the SSR-dehydrated sessionQuery (root beforeLoad resolves it
+  // server-side; router.tsx dehydrates the QueryClient). Synchronous on first
+  // client render, so the auth area renders identically server + client —
+  // avoids the avatar/Sign-in flash authClient.useSession() causes.
+  const { data: session, isPending: isFetchingSession } = useQuery(sessionQuery);
   const user = session?.user;
   const showSessionSkeleton = isFetchingSession && !user;
 
