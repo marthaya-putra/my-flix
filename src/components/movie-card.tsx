@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import { useState } from "react";
 import { buttonVariants } from "@/components/ui/button";
 import { sessionQuery } from "@/lib/data/auth";
+import { ctaDramaSpring } from "@/lib/motion";
 import { FilmInfo } from "@/lib/types";
 import { cn, HIT_ZONE, PILL_BUTTON_CLASS } from "@/lib/utils";
 import { DislikeButton, LikeButton, WatchlistButton } from "./buttons";
@@ -115,38 +116,50 @@ export function MovieCard({
           </div>
         </div>
 
-        {/* Vertical action rail. Links styled with buttonVariants + utility
-            classes for hover/active scale. No tooltips: the Radix tooltip
-            layer interferes with pointer events on the dense rail. */}
+        {/* Vertical action rail. Each trigger wrapped in motion.div for the
+            spring hover/tap scale (safe now that tooltips are gone — no
+            Radix asChild/Slot cloning the motion element). */}
         <div className="flex flex-col gap-2 shrink-0">
-          <PlayLink
-            title={title}
-            category={category}
-            aria-label={`Play ${title}`}
-            className={cn(
-              buttonVariants({ size: "icon" }),
-              HIT_ZONE,
-              "w-8 h-8 hover:scale-110 active:scale-90 transition-transform duration-200 ease-out",
-              PILL_BUTTON_CLASS,
-            )}
+          <motion.div
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.7 }}
+            transition={ctaDramaSpring}
           >
-            <Play className="w-4 h-4 fill-current ml-0.5" />
-          </PlayLink>
+            <PlayLink
+              title={title}
+              category={category}
+              aria-label={`Play ${title}`}
+              className={cn(
+                buttonVariants({ size: "icon" }),
+                HIT_ZONE,
+                "w-8 h-8",
+                PILL_BUTTON_CLASS,
+              )}
+            >
+              <Play className="w-4 h-4 fill-current ml-0.5" />
+            </PlayLink>
+          </motion.div>
 
-          <MoreInfoLink
-            title={title}
-            category={category}
-            releasedYear={new Date(releaseDate).getFullYear()}
-            aria-label={`Search more info for ${title}`}
-            className={cn(
-              buttonVariants({ size: "icon" }),
-              HIT_ZONE,
-              "w-8 h-8 hover:scale-110 active:scale-90 transition-transform duration-200 ease-out",
-              PILL_BUTTON_CLASS,
-            )}
+          <motion.div
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.7 }}
+            transition={ctaDramaSpring}
           >
-            <ExternalLink className="w-4 h-4" />
-          </MoreInfoLink>
+            <MoreInfoLink
+              title={title}
+              category={category}
+              releasedYear={new Date(releaseDate).getFullYear()}
+              aria-label={`Search more info for ${title}`}
+              className={cn(
+                buttonVariants({ size: "icon" }),
+                HIT_ZONE,
+                "w-8 h-8",
+                PILL_BUTTON_CLASS,
+              )}
+            >
+              <ExternalLink className="w-4 h-4" />
+            </MoreInfoLink>
+          </motion.div>
 
           {!sessionPending && session && (
             <WatchlistButton filmInfo={filmInfo} />

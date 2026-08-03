@@ -1,6 +1,8 @@
 import { ThumbsUp } from "lucide-react";
+import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { useLikedItems } from "@/hooks/use-liked-items";
+import { ctaDramaSpring } from "@/lib/motion";
 import type { FilmInfo } from "@/lib/types";
 import { cn, REACTION_BUTTON_BASE } from "@/lib/utils";
 
@@ -24,32 +26,37 @@ export function LikeButton({ filmInfo, disabled }: LikeButtonProps) {
   const liked = isLiked(filmInfo.id);
 
   return (
-    <Button
-      variant="ghost"
-      size="sm"
-      disabled={disabled}
-      aria-pressed={liked}
-      aria-label={`Like ${filmInfo.title}`}
-      onClick={(e) => {
-        e.stopPropagation();
-        toggleLike(filmInfo);
-      }}
-      className={cn(
-        REACTION_BUTTON_BASE,
-        "hover:scale-110 active:scale-90 transition-transform duration-200 ease-out",
-        liked
-          ? "border-primary/30 bg-primary/20"
-          : "border-white/20 bg-black/40 hover:bg-white/10",
-      )}
+    <motion.div
+      whileHover={{ scale: 1.1 }}
+      whileTap={{ scale: 0.7 }}
+      transition={ctaDramaSpring}
     >
-      <ThumbsUp
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled={disabled}
+        aria-pressed={liked}
+        aria-label={`Like ${filmInfo.title}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          toggleLike(filmInfo);
+        }}
         className={cn(
-          "h-4 w-4",
+          REACTION_BUTTON_BASE,
           liked
-            ? "fill-primary text-primary"
-            : "text-muted-foreground hover:text-primary hover:fill-primary/20",
+            ? "border-primary/30 bg-primary/20"
+            : "border-white/20 bg-black/40 hover:bg-white/10",
         )}
-      />
-    </Button>
+      >
+        <ThumbsUp
+          className={cn(
+            "h-4 w-4",
+            liked
+              ? "fill-primary text-primary"
+              : "text-muted-foreground hover:text-primary hover:fill-primary/20",
+          )}
+        />
+      </Button>
+    </motion.div>
   );
 }

@@ -1,6 +1,8 @@
 import { ThumbsDown } from "lucide-react";
+import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { useDislikedItems } from "@/hooks/use-disliked-items";
+import { ctaDramaSpring } from "@/lib/motion";
 import type { FilmInfo } from "@/lib/types";
 import { cn, REACTION_BUTTON_BASE } from "@/lib/utils";
 
@@ -25,32 +27,37 @@ export function DislikeButton({ filmInfo, disabled }: DislikeButtonProps) {
   const disliked = isDisliked(filmInfo.id);
 
   return (
-    <Button
-      variant="ghost"
-      size="sm"
-      disabled={disabled}
-      aria-pressed={disliked}
-      aria-label={`Dislike ${filmInfo.title}`}
-      onClick={(e) => {
-        e.stopPropagation();
-        toggleDislike(filmInfo);
-      }}
-      className={cn(
-        REACTION_BUTTON_BASE,
-        "hover:scale-110 active:scale-90 transition-transform duration-200 ease-out",
-        disliked
-          ? "border-destructive/30 bg-destructive/20"
-          : "border-white/20 bg-black/40 hover:bg-white/10",
-      )}
+    <motion.div
+      whileHover={{ scale: 1.1 }}
+      whileTap={{ scale: 0.7 }}
+      transition={ctaDramaSpring}
     >
-      <ThumbsDown
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled={disabled}
+        aria-pressed={disliked}
+        aria-label={`Dislike ${filmInfo.title}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          toggleDislike(filmInfo);
+        }}
         className={cn(
-          "h-4 w-4",
+          REACTION_BUTTON_BASE,
           disliked
-            ? "fill-destructive text-destructive"
-            : "text-muted-foreground hover:text-destructive hover:fill-destructive/20",
+            ? "border-destructive/30 bg-destructive/20"
+            : "border-white/20 bg-black/40 hover:bg-white/10",
         )}
-      />
-    </Button>
+      >
+        <ThumbsDown
+          className={cn(
+            "h-4 w-4",
+            disliked
+              ? "fill-destructive text-destructive"
+              : "text-muted-foreground hover:text-destructive hover:fill-destructive/20",
+          )}
+        />
+      </Button>
+    </motion.div>
   );
 }

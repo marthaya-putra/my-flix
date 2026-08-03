@@ -1,6 +1,8 @@
 import { Bookmark } from "lucide-react";
+import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { useWatchlist } from "@/hooks/use-watchlist";
+import { ctaDramaSpring } from "@/lib/motion";
 import type { FilmInfo } from "@/lib/types";
 import { cn, REACTION_BUTTON_BASE } from "@/lib/utils";
 
@@ -24,32 +26,37 @@ export function WatchlistButton({ filmInfo, disabled }: WatchlistButtonProps) {
   const watchlisted = isWatchlisted(filmInfo.id);
 
   return (
-    <Button
-      variant="ghost"
-      size="sm"
-      disabled={disabled}
-      aria-pressed={watchlisted}
-      aria-label={`Add ${filmInfo.title} to Watchlist`}
-      onClick={(e) => {
-        e.stopPropagation();
-        toggleWatchlist(filmInfo);
-      }}
-      className={cn(
-        REACTION_BUTTON_BASE,
-        "hover:scale-110 active:scale-90 transition-transform duration-200 ease-out",
-        watchlisted
-          ? "border-primary/30 bg-primary/20"
-          : "border-white/20 bg-black/40 hover:bg-white/10",
-      )}
+    <motion.div
+      whileHover={{ scale: 1.1 }}
+      whileTap={{ scale: 0.7 }}
+      transition={ctaDramaSpring}
     >
-      <Bookmark
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled={disabled}
+        aria-pressed={watchlisted}
+        aria-label={`Add ${filmInfo.title} to Watchlist`}
+        onClick={(e) => {
+          e.stopPropagation();
+          toggleWatchlist(filmInfo);
+        }}
         className={cn(
-          "h-4 w-4",
+          REACTION_BUTTON_BASE,
           watchlisted
-            ? "fill-primary text-primary"
-            : "text-muted-foreground hover:text-primary hover:fill-primary/20",
+            ? "border-primary/30 bg-primary/20"
+            : "border-white/20 bg-black/40 hover:bg-white/10",
         )}
-      />
-    </Button>
+      >
+        <Bookmark
+          className={cn(
+            "h-4 w-4",
+            watchlisted
+              ? "fill-primary text-primary"
+              : "text-muted-foreground hover:text-primary hover:fill-primary/20",
+          )}
+        />
+      </Button>
+    </motion.div>
   );
 }
