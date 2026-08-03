@@ -1,5 +1,4 @@
 import { Bookmark } from "lucide-react";
-import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -7,7 +6,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useWatchlist } from "@/hooks/use-watchlist";
-import { ctaDramaSpring } from "@/lib/motion";
 import type { FilmInfo } from "@/lib/types";
 import { cn, REACTION_BUTTON_BASE } from "@/lib/utils";
 
@@ -17,8 +15,8 @@ type WatchlistButtonProps = {
 };
 
 /**
- * Shared watchlist CTA. Owns the Button + motion.div + Tooltip + HIT_ZONE +
- * ctaDramaSpring + the active/inactive glass-pill styling and tooltip label.
+ * Shared watchlist CTA. Owns the Button + Tooltip + HIT_ZONE + CSS hover/active
+ * scale + the active/inactive glass-pill styling and tooltip label.
  * Reads `useWatchlist()` and calls `toggleWatchlist(filmInfo)` internally.
  *
  * Canonical style is the hover-overlay glass pill: `rounded-full
@@ -33,38 +31,33 @@ export function WatchlistButton({ filmInfo, disabled }: WatchlistButtonProps) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <motion.div
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.7 }}
-          transition={ctaDramaSpring}
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={disabled}
+          aria-pressed={watchlisted}
+          aria-label={`Add ${filmInfo.title} to Watchlist`}
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleWatchlist(filmInfo);
+          }}
+          className={cn(
+            REACTION_BUTTON_BASE,
+            "hover:scale-110 active:scale-90 transition-transform duration-200 ease-out",
+            watchlisted
+              ? "border-primary/30 bg-primary/20"
+              : "border-white/20 bg-black/40 hover:bg-white/10",
+          )}
         >
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={disabled}
-            aria-pressed={watchlisted}
-            aria-label={`Add ${filmInfo.title} to Watchlist`}
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleWatchlist(filmInfo);
-            }}
+          <Bookmark
             className={cn(
-              REACTION_BUTTON_BASE,
+              "h-4 w-4",
               watchlisted
-                ? "border-primary/30 bg-primary/20"
-                : "border-white/20 bg-black/40 hover:bg-white/10",
+                ? "fill-primary text-primary"
+                : "text-muted-foreground hover:text-primary hover:fill-primary/20",
             )}
-          >
-            <Bookmark
-              className={cn(
-                "h-4 w-4",
-                watchlisted
-                  ? "fill-primary text-primary"
-                  : "text-muted-foreground hover:text-primary hover:fill-primary/20",
-              )}
-            />
-          </Button>
-        </motion.div>
+          />
+        </Button>
       </TooltipTrigger>
       <TooltipContent>
         <p>{watchlisted ? "Remove from Watchlist" : "Add to Watchlist"}</p>
