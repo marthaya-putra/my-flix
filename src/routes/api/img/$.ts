@@ -20,6 +20,7 @@ export const Route = createFileRoute("/api/img/$")({
   server: {
     handlers: {
       GET: async ({ request }) => {
+        const t0 = Date.now();
         const url = new URL(request.url);
         // pathname looks like /api/img/t/p/w500/<file>.jpg
         const tmdbPath = url.pathname.replace(/^\/api\/img/, "");
@@ -39,6 +40,10 @@ export const Route = createFileRoute("/api/img/$")({
         } catch {
           return new Response("upstream fetch failed", { status: 502 });
         }
+        const tFetch = Date.now() - t0;
+        console.log(
+          `[img-proxy] upstream ${tFetch}ms status=${upstreamRes.status} ${tmdbPath}`,
+        );
 
         if (!upstreamRes.ok || !upstreamRes.body) {
           return new Response("upstream error", {
