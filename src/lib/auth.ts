@@ -24,7 +24,10 @@ export const auth = betterAuth({
   // deploy without listing each one.
   trustedOrigins: [
     "http://localhost:3000",
-    "https://*.vercel.app",
+    "https://my-flix.vercel.app",
+    // Preview/branch deploys: https://<branch>-my-flix-<hash>.vercel.app.
+    // Scoped to the my-flix project so unrelated Vercel deploys are rejected.
+    "https://*-my-flix*.vercel.app",
   ],
   plugins: [tanstackStartCookies()], // make sure this is the last plugin in the array
 });
