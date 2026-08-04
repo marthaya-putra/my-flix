@@ -10,6 +10,7 @@ import { cn, HIT_ZONE, PILL_BUTTON_CLASS } from "@/lib/utils";
 import { DislikeButton, LikeButton, WatchlistButton } from "./buttons";
 import { MoreInfoLink } from "./more-info-link";
 import { PlayLink } from "./play-link";
+import { PosterImage } from "./poster-image";
 
 type MovieCardProps = FilmInfo & {
   match?: string;
@@ -40,7 +41,6 @@ export function MovieCard({
   // internally. React Query dedupes identical query keys, so N cards share
   // one request. This removes the route → MoviesContent/ContentRow →
   // MovieCard prop chain (~20 lines of pure forwarding).
-  const [imgSrc, setImgSrc] = useState(posterPath);
   // Touch expand state, self-contained per card. Mirrors RecommendationCard's
   // touch overlay but owned locally (no parent wiring). Desktop keeps using
   // group-hover; this only fires on touch devices.
@@ -189,14 +189,7 @@ export function MovieCard({
         </div>
       )}
 
-      <img
-        src={imgSrc}
-        alt={title}
-        className="w-full h-full object-cover"
-        onError={() => {
-          setImgSrc("/poster-placeholder.svg");
-        }}
-      />
+      <PosterImage src={posterPath} alt={title} className="w-full h-full" />
 
       {/* Hover Overlay — opacity/translate driven by group-hover utilities.
           Shows the title + actions on hover. Hidden when the touch overlay is
