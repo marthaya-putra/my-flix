@@ -15,5 +15,16 @@ export const auth = betterAuth({
     enabled: true,
     requireEmailVerification: false, // Set to true if you want email verification
   },
+  // better-auth rejects any request whose Origin != BETTER_AUTH_URL origin.
+  // On Vercel, BETTER_AUTH_URL is the preview deploy's own URL, so the auth
+  // client (same-origin) already matches. But cross-deploy flows (e.g. a
+  // branch deploy's Origin header reaching the shared auth handler) and
+  // localhost development need explicit trust. better-auth's matchesPattern
+  // supports wildcards, so "https://*.vercel.app" covers every preview/branch
+  // deploy without listing each one.
+  trustedOrigins: [
+    "http://localhost:3000",
+    "https://*.vercel.app",
+  ],
   plugins: [tanstackStartCookies()], // make sure this is the last plugin in the array
 });
