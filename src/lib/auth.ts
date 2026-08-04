@@ -24,10 +24,11 @@ export const auth = betterAuth({
   // deploy without listing each one.
   trustedOrigins: [
     "http://localhost:3000",
-    "https://my-flix.vercel.app",
-    // Preview/branch deploys: https://<branch>-my-flix-<hash>.vercel.app.
-    // Scoped to the my-flix project so unrelated Vercel deploys are rejected.
-    "https://*-my-flix*.vercel.app",
+    // Production + preview/branch deploys. Vercel's preview URL format is
+    // https://my-flix-git-<branch>-<hash>-<team>.vercel.app — it starts with
+    // the project name, so anchoring on "my-flix" scopes trust to only this
+    // project's deploys and rejects unrelated Vercel apps.
+    "https://my-flix*.vercel.app",
   ],
   plugins: [tanstackStartCookies()], // make sure this is the last plugin in the array
 });
