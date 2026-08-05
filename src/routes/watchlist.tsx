@@ -25,14 +25,18 @@ export const Route = createFileRoute("/watchlist")({
   pendingComponent: () => <WatchlistSkeleton />,
   beforeLoad: guardAuthenticated,
   loaderDeps: ({ search }) => ({ page: search.page }),
-  // No route `loader`: awaiting it (ensureQueryData) blocks past
-  // defaultPendingMs on the first client navigation, surfacing the global
-  // spinner. Instead the queries are streamed during render via
-  // useSuspenseQuery under a <Suspense> boundary — server streams the
-  // skeleton, then resolves and dehydrates the cache (same streaming model
-  // as the home route's timezone-dependent rows). The boundary holds both
-  // the page-keyed rows cache and the ids cache, so the cards (which are
-  // `items.filter(isWatchlisted(...))`) never flash an empty grid.
+  // Resolve both queries during SSR so the server streams the resolved grid
+  // (with poster placeholders) instead of holding on the skeleton until the
+  // client mounts. Mirrors /movies's loader pattern. The in-component
+  // <Suspense fallback={<WatchlistSkeleton />}> still owns client-side
+  // nav + the code-split chunk load; this loader only shortens the SSR
+  // streaming gap so the bg-muted card placeholders appear sooner.
+  loader: async ({ context, deps }) => {
+    await Promise.all([
+      context.queryClient.ensureQueryData(userWatchlistOptions(deps.page)),
+      context.queryClient.ensureQueryData(watchlistItemsOptions()),
+    ]);
+  },
 });
 
 function WatchlistComponent() {

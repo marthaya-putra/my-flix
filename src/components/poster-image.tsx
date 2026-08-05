@@ -33,7 +33,12 @@ export function PosterImage({
   }, [src]);
 
   return (
-    <div className={cn("relative bg-muted overflow-hidden", className)}>
+    <div
+      className={cn(
+        "relative overflow-hidden bg-muted animate-pulse",
+        className,
+      )}
+    >
       <img
         ref={imgRef}
         src={currentSrc}
