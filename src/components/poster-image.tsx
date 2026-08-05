@@ -35,7 +35,10 @@ export function PosterImage({
   return (
     <div
       className={cn(
-        "relative overflow-hidden bg-muted animate-pulse",
+        "relative overflow-hidden bg-muted",
+        // Pulse only while loading; stop once the image is shown so a loaded
+        // card is static and nothing throbs behind the fading-in image.
+        !loaded && "animate-pulse",
         className,
       )}
     >
