@@ -13,6 +13,14 @@ type LoadMoreCardProps = {
   onClick: () => void;
 };
 
+// Icon-led hover: Plus spins 90deg + circle scales 1.12. Card body stays still
+// — a load-more card is a CTA disguised as a card, so the affordance (the Plus)
+// is what should move, not the whole surface. Pairs with whileTap press.
+const iconVariants = {
+  rest: { rotate: 0, scale: 1 },
+  hover: { rotate: 90, scale: 1.12 },
+} as const;
+
 function TypingDots() {
   return (
     <span className="inline-flex gap-0.5">
@@ -77,15 +85,19 @@ export function LoadMoreCard({
   return (
     <motion.button
       onClick={onClick}
-      whileHover={{ scale: 1.03 }}
+      initial="rest"
+      whileHover="hover"
       whileTap={{ scale: 0.97 }}
       transition={tapSpring}
       className="rounded-lg overflow-hidden bg-muted/60 border border-dashed border-muted-foreground/25 flex flex-col items-center justify-center gap-2 hover:bg-muted hover:border-muted-foreground/40 transition-colors cursor-pointer w-full mx-auto max-w-[240px]"
       style={{ aspectRatio: "2 / 3" }}
     >
-      <div className="flex items-center justify-center h-10 w-10 rounded-full bg-muted-foreground/10">
+      <motion.div
+        variants={iconVariants}
+        className="flex items-center justify-center h-10 w-10 rounded-full bg-muted-foreground/10"
+      >
         <Plus className="h-5 w-5 text-muted-foreground" />
-      </div>
+      </motion.div>
       <span className="text-xs text-muted-foreground">Load more</span>
     </motion.button>
   );
