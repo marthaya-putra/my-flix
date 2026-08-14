@@ -119,7 +119,7 @@ export function MovieCard({
       </motion.div>
 
       {/* Icon strip — More info + reactions, all same-weight */}
-      <div className="flex gap-2 justify-start">
+      <div className="flex items-center gap-2 justify-center">
         <motion.div
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.7 }}
