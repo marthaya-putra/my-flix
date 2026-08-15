@@ -59,6 +59,7 @@ const RecommendationInput = z.object({
   favoriteDirectors: z.array(z.string()).optional(),
   genres: z.array(z.string()).optional(),
   excludeAdult: z.boolean().default(true),
+  minImdbRating: z.number().min(0).max(10).optional(),
 });
 
 const RecommendationSchema = z.object({
@@ -132,6 +133,11 @@ export async function getAIRecommendations(
 
         QUALITY CONTROL:
         - Recommend well-rated, critically acclaimed content that matches their taste
+        ${
+          input.minImdbRating !== undefined
+            ? `- QUALITY BAR: ONLY include titles with an IMDB rating above ${input.minImdbRating}. If a title is below this bar, do not recommend it. It is better to return fewer titles than low-quality ones.`
+            : "- Prefer titles with an IMDB rating of 7.0 or higher, but you may include a strong taste match with a lower rating."
+        }
         - The IMDB rating field is REQUIRED for every recommendation - this is the rating users will see
         - Ensure IMDB ratings are accurate and current (use your knowledge of actual IMDB ratings)
         ${input.excludeAdult ? "- Exclude adult content (NC-17, XXX, etc.)" : ""}

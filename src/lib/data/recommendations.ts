@@ -29,6 +29,12 @@ const TARGET_PER_CATEGORY = 3;
 const MAX_ROUNDS = 5;
 const OVERASK_BUFFER = 2;
 
+// IMDB quality bar (prompt-only). Rounds 1..STRICT_RATING_ROUNDS demand
+// IMDB > MIN_IMDB_RATING; later deficit rounds relax it so niche tastes
+// still fill the target instead of ending with empty sections.
+const MIN_IMDB_RATING = 7.5;
+const STRICT_RATING_ROUNDS = 2;
+
 type Category = StreamCategory;
 
 // The LLM's raw recommendation before TMDB lookup.
@@ -250,8 +256,10 @@ async function* backfillCategory(
       if (deficit <= 0) break;
 
       const ask = deficit + OVERASK_BUFFER;
+      const ratingBar =
+        round <= STRICT_RATING_ROUNDS ? `strict(>${MIN_IMDB_RATING})` : "relaxed";
       console.log(
-        `[recommendations:${category}] round ${round} deficit=${deficit} ask=${ask} telling LLM to avoid ${localPrevRecs.length} titles: [${localPrevRecs.map((r) => r.title).join(", ")}]`,
+        `[recommendations:${category}] round ${round} deficit=${deficit} ask=${ask} ratingBar=${ratingBar} telling LLM to avoid ${localPrevRecs.length} titles: [${localPrevRecs.map((r) => r.title).join(", ")}]`,
       );
 
       yield progress("finding_titles", round);
@@ -263,6 +271,8 @@ async function* backfillCategory(
           requestedMovies: category === "movie" ? ask : 0,
           requestedTvs: category === "tv" ? ask : 0,
           onlyCategory: category,
+          minImdbRating:
+            round <= STRICT_RATING_ROUNDS ? MIN_IMDB_RATING : undefined,
         },
         models,
         category,
