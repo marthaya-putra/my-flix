@@ -138,6 +138,7 @@ export async function getAIRecommendations(
             ? `- QUALITY BAR: ONLY include titles with an IMDB rating above ${input.minImdbRating}. If a title is below this bar, do not recommend it. It is better to return fewer titles than low-quality ones.`
             : "- Prefer titles with an IMDB rating of 7.0 or higher, but you may include a strong taste match with a lower rating."
         }
+        - PRIORITIZE RECENT RELEASES: favor titles released in the last 10 years (${new Date().getFullYear() - 10}–${new Date().getFullYear()}). Older titles are allowed only as strong taste matches.
         - The IMDB rating field is REQUIRED for every recommendation - this is the rating users will see
         - Ensure IMDB ratings are accurate and current (use your knowledge of actual IMDB ratings)
         ${input.excludeAdult ? "- Exclude adult content (NC-17, XXX, etc.)" : ""}
