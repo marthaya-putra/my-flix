@@ -68,7 +68,13 @@ export function Recommendations() {
   const { data, isPending: sessionPending } = useQuery(sessionQuery);
   const userId = data?.user?.id;
 
-  const abortRef = useRef<AbortController | null>(null);
+  // Issue #128: one AbortController per stream RUN, not one shared. The
+  // initial run is a single connection covering both categories, so ownership
+  // can't be keyed by category — hence a registry of active run controllers.
+  // Runs never abort each other (CONTEXT.md: recommendations stream in
+  // parallel, one stream per category); teardown (unmount / session change)
+  // aborts everything so no fetch outlives the component.
+  const activeRunControllersRef = useRef<Set<AbortController>>(new Set());
 
   const buildPreviousWithIds = (recs: Recommendation[]) =>
     recs
@@ -110,9 +116,12 @@ export function Recommendations() {
       // (the setState calls in dispatch are not visible to the awaiting caller).
       const runError: Partial<Record<Category, string | null>> = {};
 
-      abortRef.current?.abort();
+      // Issue #128: register this run's own controller — do NOT abort other
+      // active runs. Parallel runs are safe: the per-category loadingMore
+      // flag guards same-category double-clicks, and appends are functional
+      // state updates.
       const controller = new AbortController();
-      abortRef.current = controller;
+      activeRunControllersRef.current.add(controller);
 
       const dispatch = (evt: StreamEvent) => {
         if (evt.type === "groupStart") {
@@ -221,6 +230,8 @@ export function Recommendations() {
           if (!(c in runError)) runError[c] = errorMessage;
         });
         console.error("Stream error:", err);
+      } finally {
+        activeRunControllersRef.current.delete(controller);
       }
       const firstCat = cats[0];
       const terminalError = firstCat ? (runError[firstCat] ?? null) : null;
@@ -247,7 +258,12 @@ export function Recommendations() {
     return () => {
       cancelled = true;
       clearTimeout(timer);
-      abortRef.current?.abort();
+      // Teardown aborts every active run — unmount or session (userId)
+      // change must not leave orphaned fetches (issue #128).
+      for (const controller of activeRunControllersRef.current) {
+        controller.abort();
+      }
+      activeRunControllersRef.current.clear();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
