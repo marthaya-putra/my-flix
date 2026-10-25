@@ -1,5 +1,9 @@
-import { LanguageModelV2 } from "@ai-sdk/provider";
-import { generateObject } from "ai";
+import { google } from "@ai-sdk/google";
+import { mistral } from "@ai-sdk/mistral";
+import { Mastra } from "@mastra/core";
+import { Agent } from "@mastra/core/agent";
+import { ConsoleLogger } from "@mastra/core/logger";
+import { MastraPlatformExporter, Observability } from "@mastra/observability";
 import { z } from "zod";
 
 // Plain function type
@@ -78,48 +82,105 @@ const RecommendationSchema = z.object({
   ),
 });
 
-// Plain AI recommendation function
-export async function getAIRecommendations(
-  input: GetRecommendationsInput,
-  model: LanguageModelV2,
-) {
-  try {
-    // Spec 0005: translate to a category-flat shape here so buildPrompt is
-    // a dumb template. Wrong-category liked/disliked lists are dropped
-    // (token + focus win); favoriteActors/Directors/genres are category-
-    // agnostic, kept on both. previousRecommendations scoped to same
-    // category — cross-category dedup is enforced server-side by the ID
-    // filter at survivor resolution.
-    const isMovie = input.onlyCategory === "movie";
-    const cleanData: PromptData = {
-      role: isMovie ? "movie" : "TV series",
-      likedLabel: isMovie ? "Liked movies" : "Liked TV shows",
-      dislikedLabel: isMovie ? "User dislike movies" : "User dislike TV shows",
-      liked: simplifyWatched(
-        isMovie ? input.previouslyLikedMovies : input.previouslyLikedTvs,
-      ),
-      disliked: simplifyWatched(
-        isMovie ? input.dislikedMovies : input.dislikedTvs,
-      ),
-      previousRecommendations: simplifyPrevRecs(input.previousRecommendations)
-        .filter((r) => r.category === input.onlyCategory)
-        .map(({ category, ...rest }) => rest),
-      favoriteActors: input.favoriteActors ?? [],
-      favoriteDirectors: input.favoriteDirectors ?? [],
-      genres: input.genres ?? [],
-    };
+// Issue #131: the model chain lives in Mastra's fallback routing. Mastra
+// advances to the next entry on ANY step failure — provider error or
+// structured-output schema violation (executeStreamWithFallbackModels has
+// no error-type filter) — and throws only after the last entry fails, which
+// the deficit loop maps to threw → generation_failed. gemini-2.5-flash is
+// access-limited by Google; gemini-3.8-flash is the stable free-tier Flash.
+const recommendationAgent = new Agent({
+  id: "recommendationAgent",
+  name: "recommendation-agent",
+  // Static fallback only — every generate() call passes per-call
+  // instructions that fully replace this default.
+  instructions: "You are a movie and TV series recommendation expert.",
+  model: [
+    { model: google("gemini-3.8-flash") },
+    { model: mistral("mistral-medium-latest") },
+  ],
+});
 
-    const prompt = buildPrompt(cleanData);
-    const { object } = await generateObject({
-      model,
-      providerOptions: {
-        gateway: {
-          models: [],
+// Traces export to Mastra Cloud only when MASTRA_CLOUD_API_KEY is set;
+// without it observability stays a no-op and local dev needs no key.
+// Issue #131 asked for OTLP export; @mastra/core 1.79 ships no OTLP
+// exporter — MastraPlatformExporter is the packaged path to the Mastra
+// Cloud dashboard, so routing traces through it is the equivalent.
+const cloudApiKey = process.env.MASTRA_CLOUD_API_KEY;
+
+// Registering the agent wires logger + observability into it; the
+// instance itself has no other caller yet (#132 adds the workflow).
+new Mastra({
+  agents: { recommendationAgent },
+  logger: new ConsoleLogger({
+    level: process.env.NODE_ENV === "production" ? "warn" : "info",
+  }),
+  observability: cloudApiKey
+    ? new Observability({
+        configs: {
+          default: {
+            serviceName: "my-flix",
+            exporters: [
+              new MastraPlatformExporter({ accessToken: cloudApiKey }),
+            ],
+          },
         },
-      },
-      schema: RecommendationSchema,
-      maxRetries: 0,
-      system: `You are a ${cleanData.role} recommendation expert. Your PRIMARY DUTY is to analyze the user's viewing history and preferences to make PERSONALIZED recommendations.
+      })
+    : undefined,
+});
+
+// A handled rejection resolves as [undefined, Error]; success as [T, undefined].
+async function safePromise<T>(
+  promise: Promise<T>,
+): Promise<[T, undefined] | [undefined, Error]> {
+  return promise.then(
+    (value) => [value, undefined],
+    (error) => [
+      undefined,
+      error instanceof Error ? error : new Error(String(error)),
+    ],
+  );
+}
+
+// Plain AI recommendation function
+export async function getAIRecommendations(input: GetRecommendationsInput) {
+  // Spec 0005: translate to a category-flat shape here so buildPrompt is
+  // a dumb template. Wrong-category liked/disliked lists are dropped
+  // (token + focus win); favoriteActors/Directors/genres are category-
+  // agnostic, kept on both. previousRecommendations scoped to same
+  // category — cross-category dedup is enforced server-side by the ID
+  // filter at survivor resolution.
+  const isMovie = input.onlyCategory === "movie";
+  const cleanData: PromptData = {
+    role: isMovie ? "movie" : "TV series",
+    likedLabel: isMovie ? "Liked movies" : "Liked TV shows",
+    dislikedLabel: isMovie ? "User dislike movies" : "User dislike TV shows",
+    liked: simplifyWatched(
+      isMovie ? input.previouslyLikedMovies : input.previouslyLikedTvs,
+    ),
+    disliked: simplifyWatched(
+      isMovie ? input.dislikedMovies : input.dislikedTvs,
+    ),
+    previousRecommendations: simplifyPrevRecs(input.previousRecommendations)
+      .filter((r) => r.category === input.onlyCategory)
+      .map(({ category, ...rest }) => rest),
+    favoriteActors: input.favoriteActors ?? [],
+    favoriteDirectors: input.favoriteDirectors ?? [],
+    genres: input.genres ?? [],
+  };
+
+  const prompt = buildPrompt(cleanData);
+
+  // Per-round system prompt stays the prompt's single source: passed as
+  // per-call instructions (which fully replace any agent default) so the
+  // dynamic rating-bar / category rules are always in force.
+  // maxRetries: 0 disables ai-sdk-level retries — the Mastra fallback chain
+  // owns all retry/failover. The old generateObject call's
+  // providerOptions.gateway directive went with the Vercel AI Gateway;
+  // routing now calls the providers directly, so there is no gateway to
+  // configure.
+  const [result, error] = await safePromise(
+    recommendationAgent.generate(prompt, {
+      instructions: `You are a ${cleanData.role} recommendation expert. Your PRIMARY DUTY is to analyze the user's viewing history and preferences to make PERSONALIZED recommendations.
 
         CRITICAL RULES:
         - User's previously liked content and favorite actors/directors are YOUR GUIDE - use these patterns religiously
@@ -154,25 +215,25 @@ export async function getAIRecommendations(
               }`
             : `Return exactly ${input.requestedTvs} TV SERIES`
         }`,
-      prompt,
-    });
+      structuredOutput: { schema: RecommendationSchema },
+      modelSettings: { maxRetries: 0 },
+    }),
+  );
 
-    return { success: true, data: object };
-  } catch (error) {
+  if (error) {
     console.error("AI Recommendation Error:", error);
     return {
       success: false,
-      error:
-        error instanceof Error
-          ? {
-              name: error.name,
-              message: error.message,
-              stack: error.stack,
-              cause: error.cause as any,
-            }
-          : "Unknown error occurred",
+      error: {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        cause: error.cause as any,
+      },
     };
   }
+
+  return { success: true, data: result.object };
 }
 
 function simplifyWatched(items?: Array<{ title: string; year: number }>) {

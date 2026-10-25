@@ -1,20 +1,19 @@
 // src/lib/data/recommendations.test.ts
 // Issue #130 — StreamEvent contract lock. Drives runPipelines end-to-end
-// with the AI model chain (../ai/models + ../ai/recommendations) and the
-// TMDB edge (./search) mocked, then asserts the exact client-facing event
-// sequence. Safety net for the upcoming Mastra refactor: if the pipeline's
-// observable behaviour changes, these tests fail — not the feed.
+// with the Mastra agent edge (../ai/recommendations) and the TMDB edge
+// (./search) mocked, then asserts the exact client-facing event sequence.
+// Safety net for the Mastra refactor: if the pipeline's observable
+// behaviour changes, these tests fail — not the feed.
 import { describe, expect, it, vi } from "vitest";
 import type { FilmInfo } from "@/lib/types";
 import type { UserContent } from "./preferences";
 import { runPipelines } from "./recommendations";
 import type { StreamCategory, StreamEvent } from "./stream-events";
 
-// Mock the external edges only. The model objects are opaque to the
-// pipeline (passed through to getAIRecommendations), so plain objects do.
+// Mock the external edges only. Model routing (gemini → mistral) is
+// internal to the agent, so the pipeline sees one call per round.
 const getAIRecommendations = vi.hoisted(() => vi.fn());
 vi.mock("../ai/recommendations", () => ({ getAIRecommendations }));
-vi.mock("../ai/models", () => ({ googleModel: {}, mistralModel: {} }));
 
 const searchMoviesAPI = vi.hoisted(() => vi.fn());
 const searchTVsAPI = vi.hoisted(() => vi.fn());
@@ -39,7 +38,11 @@ const EMPTY_PREFS: UserContent = {
   genres: [],
 };
 
-function makeTMDB(id: number, title: string, category: StreamCategory): FilmInfo {
+function makeTMDB(
+  id: number,
+  title: string,
+  category: StreamCategory,
+): FilmInfo {
   return {
     id,
     title,
@@ -130,13 +133,15 @@ function tokens(events: StreamEvent[]) {
 
 function progressEvents(events: StreamEvent[]) {
   return events.filter(
-    (e): e is Extract<StreamEvent, { type: "progress" }> => e.type === "progress",
+    (e): e is Extract<StreamEvent, { type: "progress" }> =>
+      e.type === "progress",
   );
 }
 
 function groupEnds(events: StreamEvent[]) {
   return events.filter(
-    (e): e is Extract<StreamEvent, { type: "groupEnd" }> => e.type === "groupEnd",
+    (e): e is Extract<StreamEvent, { type: "groupEnd" }> =>
+      e.type === "groupEnd",
   );
 }
 
@@ -149,8 +154,20 @@ function happySequence(
 ): StreamEvent[] {
   const seq: StreamEvent[] = [
     { type: "groupStart", category, target: 3 },
-    { type: "progress", category, stage: "loading_preferences", found: 0, retry: false },
-    { type: "progress", category, stage: "finding_titles", found: 0, retry: false },
+    {
+      type: "progress",
+      category,
+      stage: "loading_preferences",
+      found: 0,
+      retry: false,
+    },
+    {
+      type: "progress",
+      category,
+      stage: "finding_titles",
+      found: 0,
+      retry: false,
+    },
   ];
   films.forEach((film, i) => {
     seq.push({
@@ -186,7 +203,9 @@ describe("runPipelines StreamEvent contract", () => {
       ["M1", "M2", "M3"].map((t) => makeRaw(`Movie ${t}`, "movie")),
       ["T1", "T2", "T3"].map((t) => makeRaw(`Show ${t}`, "tv")),
     );
-    const movieFilms = movieRecs.map((r, i) => makeTMDB(100 + i, r.title, "movie"));
+    const movieFilms = movieRecs.map((r, i) =>
+      makeTMDB(100 + i, r.title, "movie"),
+    );
     const tvFilms = tvRecs.map((r, i) => makeTMDB(200 + i, r.title, "tv"));
     stubTMDB(movieFilms, tvFilms);
 
@@ -195,7 +214,9 @@ describe("runPipelines StreamEvent contract", () => {
     expect(eventsFor(events, "movie")).toEqual(
       happySequence("movie", movieRecs, movieFilms),
     );
-    expect(eventsFor(events, "tv")).toEqual(happySequence("tv", tvRecs, tvFilms));
+    expect(eventsFor(events, "tv")).toEqual(
+      happySequence("tv", tvRecs, tvFilms),
+    );
     // Exactly one groupEnd per requested category, both terminal status ok.
     expect(groupEnds(events)).toEqual([
       { type: "groupEnd", category: "movie", status: "ok" },
@@ -222,8 +243,16 @@ describe("runPipelines StreamEvent contract", () => {
     const firstItem = events.findIndex((e) => e.type === "item");
     expect(lastGroupStart).toBeLessThan(firstItem);
     // Both groupStarts lead the stream, in requested-category order.
-    expect(events[0]).toEqual({ type: "groupStart", category: "movie", target: 3 });
-    expect(events[1]).toEqual({ type: "groupStart", category: "tv", target: 3 });
+    expect(events[0]).toEqual({
+      type: "groupStart",
+      category: "movie",
+      target: 3,
+    });
+    expect(events[1]).toEqual({
+      type: "groupStart",
+      category: "tv",
+      target: 3,
+    });
   });
 
   it("ends generation_failed when every model attempt fails", async () => {
@@ -232,9 +261,11 @@ describe("runPipelines StreamEvent contract", () => {
 
     const events = await run({ categories: ["movie"] });
 
-    // google + mistral both attempted before giving up.
-    expect(getAIRecommendations).toHaveBeenCalledTimes(2);
-    expect(eventsFor(events, "movie").filter((e) => e.type === "item")).toEqual([]);
+    // One agent call per round — the routed fallback chain is internal.
+    expect(getAIRecommendations).toHaveBeenCalledTimes(1);
+    expect(eventsFor(events, "movie").filter((e) => e.type === "item")).toEqual(
+      [],
+    );
     expect(tokens(eventsFor(events, "movie"))).toEqual([
       "groupStart",
       "loading_preferences",
@@ -254,11 +285,11 @@ describe("runPipelines StreamEvent contract", () => {
 
     const events = await run({ categories: ["movie"] });
 
-    expect(eventsFor(events, "movie").filter((e) => e.type === "item")).toEqual([]);
+    expect(eventsFor(events, "movie").filter((e) => e.type === "item")).toEqual(
+      [],
+    );
     // Deficit loop runs all 5 rounds; rounds 2+ are flagged as retries.
-    expect(
-      progressEvents(events).map((p) => `${p.stage}:${p.retry}`),
-    ).toEqual([
+    expect(progressEvents(events).map((p) => `${p.stage}:${p.retry}`)).toEqual([
       "loading_preferences:false",
       ...[1, 2, 3, 4, 5].flatMap((r) => [
         `finding_titles:${r > 1}`,
@@ -280,10 +311,15 @@ describe("runPipelines StreamEvent contract", () => {
 
     const events = await run({
       categories: ["movie"],
-      prefs: { ...EMPTY_PREFS, movies: [{ id: 100, title: "Liked Movie", year: 2023 }] },
+      prefs: {
+        ...EMPTY_PREFS,
+        movies: [{ id: 100, title: "Liked Movie", year: 2023 }],
+      },
     });
 
-    expect(eventsFor(events, "movie").filter((e) => e.type === "item")).toEqual([]);
+    expect(eventsFor(events, "movie").filter((e) => e.type === "item")).toEqual(
+      [],
+    );
     expect(tokens(eventsFor(events, "movie"))).toEqual([
       "groupStart",
       "loading_preferences",
@@ -301,7 +337,10 @@ describe("runPipelines StreamEvent contract", () => {
   it("emits no events for the unrequested category", async () => {
     const recs = ["M1", "M2", "M3"].map((t) => makeRaw(`Movie ${t}`, "movie"));
     getAIRecommendations.mockImplementation(() => Promise.resolve(aiOk(recs)));
-    stubTMDB(recs.map((r, i) => makeTMDB(100 + i, r.title, "movie")), []);
+    stubTMDB(
+      recs.map((r, i) => makeTMDB(100 + i, r.title, "movie")),
+      [],
+    );
 
     const events = await run({ categories: ["movie"] });
 
@@ -310,7 +349,6 @@ describe("runPipelines StreamEvent contract", () => {
     expect(searchTVsAPI).not.toHaveBeenCalled();
     expect(getAIRecommendations).toHaveBeenCalledWith(
       expect.objectContaining({ onlyCategory: "movie", requestedTvs: 0 }),
-      expect.anything(),
     );
   });
 
