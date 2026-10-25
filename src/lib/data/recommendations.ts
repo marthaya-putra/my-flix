@@ -240,11 +240,20 @@ async function* backfillCategory(
         minImdbRating:
           round <= STRICT_RATING_ROUNDS ? MIN_IMDB_RATING : undefined,
       });
-      // getAIRecommendations reports failure only after the whole routed
-      // chain errored. `threw` distinguishes "LLM emitted nothing
-      // successfully" (raw empty, threw false) from "all routed models
-      // errored" (raw empty, threw true) — the deficit loop treats them
-      // differently.
+      // getAIRecommendations resolves {success:false} only when the WHOLE
+      // routed chain errored — Mastra already tried gemini-3.8-flash, then
+      // mistral-medium-latest, and both failed. That maps to roundThrew.
+      //
+      // Why roundThrew matters: an empty round has two causes with different
+      // terminal statuses (classifyStatus at the end of this generator):
+      //   - threw = true  → every model errored. allRoundsThrew stays true,
+      //     so with zero survivors the group ends generation_failed ("the
+      //     LLM is down" — retrying immediately won't help).
+      //   - threw = false → the LLM answered but emitted nothing usable
+      //     (e.g. round-1 empties hard-fail above; later empties break the
+      //     loop). With raw produced but nothing surviving, the group ends
+      //     enrichment_empty or exhausted instead — "generation worked,
+      //     TMDB/exclusions rejected the output".
       const roundThrew = !res.success;
       const raw =
         res.success && res.data

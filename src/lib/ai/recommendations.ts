@@ -5,6 +5,7 @@ import { Agent } from "@mastra/core/agent";
 import { ConsoleLogger } from "@mastra/core/logger";
 import { MastraPlatformExporter, Observability } from "@mastra/observability";
 import { z } from "zod";
+import { safePromise } from "../utils/safe-promise";
 
 // Plain function type
 type GetRecommendationsInput = z.infer<typeof RecommendationInput>;
@@ -127,19 +128,6 @@ new Mastra({
       })
     : undefined,
 });
-
-// A handled rejection resolves as [undefined, Error]; success as [T, undefined].
-async function safePromise<T>(
-  promise: Promise<T>,
-): Promise<[T, undefined] | [undefined, Error]> {
-  return promise.then(
-    (value) => [value, undefined],
-    (error) => [
-      undefined,
-      error instanceof Error ? error : new Error(String(error)),
-    ],
-  );
-}
 
 // Plain AI recommendation function
 export async function getAIRecommendations(input: GetRecommendationsInput) {
