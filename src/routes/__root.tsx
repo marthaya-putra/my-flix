@@ -83,9 +83,12 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
           {/*
             HTML-in-Canvas origin-trial token (ParticleScroll effect).
             Scope: https://my-flix-brown.vercel.app — unlocks the
-            experimental `drawElementImage`/`layoutsubtree` API on the
-            deployed site only. Localhost needs its own token or the
-            chrome://flags#canvas-draw-element flag. Expires 2026-10-20.
+            experimental `drawElementImage` API on the deployed site
+            only. Localhost needs its own token or the
+            chrome://flags#canvas-draw-element flag. EXPIRED
+            2026-10-20 — renew at Chrome origin-trial dashboard; trial
+            runs through Chrome 160. Until renewed, prod falls back to
+            plain DOM (no particle effect, hover works).
           */}
           <meta
             httpEquiv="origin-trial"
