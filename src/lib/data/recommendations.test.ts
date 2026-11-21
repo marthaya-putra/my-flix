@@ -2,8 +2,9 @@
 // Issue #130 — StreamEvent contract lock. Drives runPipelines end-to-end
 // with the AI model chain (../ai/models + ../ai/recommendations) and the
 // TMDB edge (./search) mocked, then asserts the exact client-facing event
-// sequence. Safety net for the upcoming Mastra refactor: if the pipeline's
-// observable behaviour changes, these tests fail — not the feed.
+// sequence. Title-first shape (docs/designs/title-first-recommendations.md):
+// items carry LLM fields only, poster lookups patch in afterwards, one LLM
+// round with overask, matcher-based exclusion, optional taste profile.
 import { describe, expect, it, vi } from "vitest";
 import type { FilmInfo } from "@/lib/types";
 import type { UserContent } from "./preferences";
@@ -93,23 +94,17 @@ function stubAIByCategory(
   return { movieRecs, tvRecs };
 }
 
-// Wire the model mock to a per-round response queue; rounds past the queue
-// get an empty success (generation produced nothing new).
-function stubAIRounds(rounds: ReturnType<typeof aiOk>[]) {
-  getAIRecommendations.mockImplementation(() =>
-    Promise.resolve(rounds.shift() ?? aiOk([])),
-  );
-}
-
 async function run(input?: {
   categories?: StreamCategory[];
   prefs?: UserContent;
+  deriveProfile?: (content: UserContent) => Promise<string | null>;
 }): Promise<StreamEvent[]> {
   const events: StreamEvent[] = [];
   for await (const event of runPipelines({
     loadPrefs: async () => input?.prefs ?? EMPTY_PREFS,
     previousRecommendations: [],
     categories: input?.categories,
+    deriveProfile: input?.deriveProfile,
   })) {
     events.push(event);
   }
@@ -128,20 +123,15 @@ function tokens(events: StreamEvent[]) {
   return events.map((e) => (e.type === "progress" ? e.stage : e.type));
 }
 
-function progressEvents(events: StreamEvent[]) {
-  return events.filter(
-    (e): e is Extract<StreamEvent, { type: "progress" }> => e.type === "progress",
-  );
-}
-
 function groupEnds(events: StreamEvent[]) {
   return events.filter(
     (e): e is Extract<StreamEvent, { type: "groupEnd" }> => e.type === "groupEnd",
   );
 }
 
-// Build the exact expected sequence for a category that fills its target in
-// one round: skeleton stages, then item/tick alternation, then finalizing.
+// Build the exact expected sequence for a category whose single round fills
+// the target: stage skeleton, items without tmdbData, one poster patch per
+// item in item order, finalizing.
 function happySequence(
   category: StreamCategory,
   recs: RawRec[],
@@ -149,32 +139,32 @@ function happySequence(
 ): StreamEvent[] {
   const seq: StreamEvent[] = [
     { type: "groupStart", category, target: 3 },
-    { type: "progress", category, stage: "loading_preferences", found: 0, retry: false },
-    { type: "progress", category, stage: "finding_titles", found: 0, retry: false },
+    { type: "progress", category, stage: "loading_preferences", found: 0 },
+    { type: "progress", category, stage: "finding_titles", found: 0 },
   ];
-  films.forEach((film, i) => {
-    seq.push({
-      type: "progress",
-      category,
-      stage: "looking_up_posters",
-      found: i,
-      retry: false,
-    });
-    seq.push({ type: "item", rec: { ...recs[i], tmdbData: film } });
+  films.forEach((_film, i) => {
+    seq.push({ type: "item", rec: { ...recs[i] } });
   });
   seq.push({
     type: "progress",
     category,
     stage: "looking_up_posters",
     found: films.length,
-    retry: false,
+  });
+  films.forEach((film, i) => {
+    seq.push({
+      type: "itemPatch",
+      category,
+      title: recs[i].title,
+      releasedYear: recs[i].releasedYear,
+      filmInfo: film,
+    });
   });
   seq.push({
     type: "progress",
     category,
     stage: "finalizing",
     found: films.length,
-    retry: false,
   });
   seq.push({ type: "groupEnd", category, status: "ok" });
   return seq;
@@ -247,54 +237,70 @@ describe("runPipelines StreamEvent contract", () => {
     ]);
   });
 
-  it("ends enrichment_empty when TMDB lookup misses every generated title", async () => {
+  it("emits items plus itemPatch{filmInfo:null} and status ok when TMDB misses every title", async () => {
     const recs = ["M1", "M2", "M3"].map((t) => makeRaw(`Movie ${t}`, "movie"));
     getAIRecommendations.mockImplementation(() => Promise.resolve(aiOk(recs)));
-    stubTMDB([], []); // every query misses → tmdbData null every time
+    stubTMDB([], []); // every query misses → filmInfo null on every patch
 
     const events = await run({ categories: ["movie"] });
 
-    expect(eventsFor(events, "movie").filter((e) => e.type === "item")).toEqual([]);
-    // Deficit loop runs all 5 rounds; rounds 2+ are flagged as retries.
-    expect(
-      progressEvents(events).map((p) => `${p.stage}:${p.retry}`),
-    ).toEqual([
-      "loading_preferences:false",
-      ...[1, 2, 3, 4, 5].flatMap((r) => [
-        `finding_titles:${r > 1}`,
-        `looking_up_posters:${r > 1}`,
-      ]),
-      "finalizing:false",
-    ]);
+    const movieEvents = eventsFor(events, "movie");
+    // A lookup miss never removes a card: items still emitted, LLM fields only.
+    const items = movieEvents.filter(
+      (e): e is Extract<StreamEvent, { type: "item" }> => e.type === "item",
+    );
+    expect(items).toHaveLength(3);
+    items.forEach((e) => expect(e.rec.tmdbData).toBeUndefined());
+    // Patches carry null in item order; single round, no retries.
+    const patches = movieEvents.filter(
+      (e): e is Extract<StreamEvent, { type: "itemPatch" }> =>
+        e.type === "itemPatch",
+    );
+    expect(patches.map((p) => p.title)).toEqual(recs.map((r) => r.title));
+    patches.forEach((p) => expect(p.filmInfo).toBeNull());
+    expect(getAIRecommendations).toHaveBeenCalledTimes(1);
     expect(groupEnds(events)).toEqual([
-      { type: "groupEnd", category: "movie", status: "enrichment_empty" },
+      { type: "groupEnd", category: "movie", status: "ok" },
     ]);
   });
 
-  it("ends exhausted when every generated title maps to an excluded TMDB id", async () => {
-    // User already liked TMDB id 100; every rec resolves to that id.
-    const recs = ["M1", "M2", "M3"].map((t) => makeRaw(`Movie ${t}`, "movie"));
-    const films = recs.map((r) => makeTMDB(100, r.title, "movie"));
-    stubAIRounds([aiOk(recs), aiOk([])]); // round 2 generates nothing new
-    stubTMDB(films, []);
+  it("filters title+year collisions via the matcher, one round, no retries", async () => {
+    // User already liked "Liked Movie" (2023). The round returns 6 (overask):
+    // two candidates collide by title+year (±1), the rest survive; the cap
+    // keeps exactly the target.
+    const colliding = [
+      makeRaw("Liked Movie", "movie"),
+      makeRaw("Liked Movie", "movie"), // year ±1 variant below
+    ];
+    colliding[1].releasedYear = 2024; // within ±1 of the liked 2023
+    const fresh = ["F1", "F2", "F3", "F4"].map((t) => makeRaw(`Movie ${t}`, "movie"));
+    const recs = [...colliding, ...fresh];
+    getAIRecommendations.mockImplementation(() => Promise.resolve(aiOk(recs)));
+    stubTMDB(
+      fresh.slice(0, 3).map((r, i) => makeTMDB(100 + i, r.title, "movie")),
+      [],
+    );
 
     const events = await run({
       categories: ["movie"],
-      prefs: { ...EMPTY_PREFS, movies: [{ id: 100, title: "Liked Movie", year: 2023 }] },
+      prefs: {
+        ...EMPTY_PREFS,
+        movies: [{ id: 100, title: "Liked Movie", year: 2023 }],
+      },
     });
 
-    expect(eventsFor(events, "movie").filter((e) => e.type === "item")).toEqual([]);
-    expect(tokens(eventsFor(events, "movie"))).toEqual([
-      "groupStart",
-      "loading_preferences",
-      "finding_titles",
-      "looking_up_posters",
-      "finding_titles", // round-2 deficit retry
-      "finalizing",
-      "groupEnd",
+    // Exactly one LLM call — no deficit rounds.
+    expect(getAIRecommendations).toHaveBeenCalledTimes(1);
+    const items = events.filter(
+      (e): e is Extract<StreamEvent, { type: "item" }> => e.type === "item",
+    );
+    expect(items.map((e) => e.rec.title)).toEqual([
+      "Movie F1",
+      "Movie F2",
+      "Movie F3",
     ]);
     expect(groupEnds(events)).toEqual([
-      { type: "groupEnd", category: "movie", status: "exhausted" },
+      { type: "groupEnd", category: "movie", status: "ok" },
     ]);
   });
 
@@ -314,27 +320,95 @@ describe("runPipelines StreamEvent contract", () => {
     );
   });
 
-  it("carries TMDB data on hit lookups and omits items on missed lookups", async () => {
+  it("asks 2× target and carries FilmInfo on hit patches, null on missed patches", async () => {
     const hit1 = makeRaw("Movie Hit One", "movie");
     const miss = makeRaw("Movie Miss", "movie");
     const hit2 = makeRaw("Movie Hit Two", "movie");
     const recs = [hit1, miss, hit2];
-    stubAIRounds([aiOk(recs), aiOk([])]); // round 2 generates nothing new
+    getAIRecommendations.mockImplementation(() => Promise.resolve(aiOk(recs)));
     const film1 = makeTMDB(101, hit1.title, "movie");
     const film2 = makeTMDB(102, hit2.title, "movie");
     stubTMDB([film1, film2], []); // "Movie Miss" resolves to nothing
 
     const events = await run({ categories: ["movie"] });
 
+    // Overask: the single round requests 6 movies.
+    expect(getAIRecommendations).toHaveBeenCalledWith(
+      expect.objectContaining({ onlyCategory: "movie", requestedMovies: 6 }),
+      expect.anything(),
+    );
+    // Inverted from the blocking-enrichment era: the missed lookup still
+    // emits its item; only its patch is null.
     const items = events.filter(
       (e): e is Extract<StreamEvent, { type: "item" }> => e.type === "item",
     );
-    // Missed lookup emits no item; hits carry the full TMDB payload.
-    expect(items.map((e) => e.rec.title)).toEqual([hit1.title, hit2.title]);
-    expect(items[0].rec.tmdbData).toEqual(film1);
-    expect(items[1].rec.tmdbData).toEqual(film2);
+    expect(items.map((e) => e.rec.title)).toEqual([hit1.title, miss.title, hit2.title]);
+    items.forEach((e) => expect(e.rec.tmdbData).toBeUndefined());
+    const patches = events.filter(
+      (e): e is Extract<StreamEvent, { type: "itemPatch" }> =>
+        e.type === "itemPatch",
+    );
+    expect(patches.map((p) => p.filmInfo)).toEqual([film1, null, film2]);
     expect(groupEnds(events)).toEqual([
       { type: "groupEnd", category: "movie", status: "ok" },
     ]);
+  });
+});
+
+describe("runPipelines taste profile", () => {
+  it("threads the derived profile text into the AI call args", async () => {
+    stubAIByCategory(
+      ["M1", "M2", "M3"].map((t) => makeRaw(`Movie ${t}`, "movie")),
+      ["T1", "T2", "T3"].map((t) => makeRaw(`Show ${t}`, "tv")),
+    );
+    stubTMDB([], []);
+
+    await run({ deriveProfile: async () => "Themes: cerebral sci-fi" });
+
+    expect(getAIRecommendations).toHaveBeenCalledWith(
+      expect.objectContaining({ tasteProfile: "Themes: cerebral sci-fi" }),
+      expect.anything(),
+    );
+  });
+
+  it("builds args exactly as today when no deriveProfile thunk is supplied", async () => {
+    stubAIByCategory(
+      ["M1", "M2", "M3"].map((t) => makeRaw(`Movie ${t}`, "movie")),
+      ["T1", "T2", "T3"].map((t) => makeRaw(`Show ${t}`, "tv")),
+    );
+    stubTMDB([], []);
+
+    await run();
+
+    const firstCall = getAIRecommendations.mock.calls[0][0];
+    expect(firstCall).not.toHaveProperty("tasteProfile");
+    expect(firstCall.requestedMovies).toBe(6);
+    expect(firstCall.minImdbRating).toBe(7.5);
+  });
+
+  it("derives the profile exactly once across both categories", async () => {
+    stubAIByCategory(
+      ["M1", "M2", "M3"].map((t) => makeRaw(`Movie ${t}`, "movie")),
+      ["T1", "T2", "T3"].map((t) => makeRaw(`Show ${t}`, "tv")),
+    );
+    stubTMDB([], []);
+    const deriveProfile = vi.fn(async () => "Themes: x");
+
+    await run({ deriveProfile });
+
+    expect(deriveProfile).toHaveBeenCalledTimes(1);
+  });
+
+  it("treats a null profile as absent (fail-open)", async () => {
+    stubAIByCategory(
+      ["M1", "M2", "M3"].map((t) => makeRaw(`Movie ${t}`, "movie")),
+      ["T1", "T2", "T3"].map((t) => makeRaw(`Show ${t}`, "tv")),
+    );
+    stubTMDB([], []);
+
+    await run({ deriveProfile: async () => null });
+
+    const firstCall = getAIRecommendations.mock.calls[0][0];
+    expect(firstCall).not.toHaveProperty("tasteProfile");
   });
 });

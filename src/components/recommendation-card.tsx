@@ -14,7 +14,8 @@ type Recommendation = {
   releasedYear: number;
   reason: string;
   imdbRating: number;
-  tmdbData: FilmInfo | null;
+  /** Absent while the poster patch is pending; null after a failed lookup. */
+  tmdbData?: FilmInfo | null;
 };
 
 type RecommendationCardProps = {
@@ -55,7 +56,12 @@ export function RecommendationCard({
         }
       }}
     >
-      {/* Poster */}
+      {/* Poster slot — three states:
+          1. awaiting-patch (tmdbData undefined): skeleton shimmer — the
+             poster may still arrive via itemPatch, so no "no poster" copy.
+          2. patch-failed / no poster (tmdbData null, empty posterPath, or
+             image error): 🎬 fallback.
+          3. patched: the TMDB poster. */}
       {recommendation.tmdbData?.posterPath &&
       !imageErrors.has(imageErrorKey) ? (
         <img
@@ -63,6 +69,12 @@ export function RecommendationCard({
           alt={`${recommendation.title} poster`}
           className="absolute inset-0 w-full h-full object-cover"
           onError={() => onImageError(imageErrorKey)}
+        />
+      ) : recommendation.tmdbData === undefined ? (
+        <div
+          className="absolute inset-0 shimmer"
+          role="img"
+          aria-label="Loading poster"
         />
       ) : (
         <div className="absolute inset-0 flex items-center justify-center text-muted-foreground bg-card">
@@ -209,7 +221,7 @@ export function RecommendationCard({
               <p className="text-sm md:text-[15px] text-white/90 leading-relaxed">
                 {recommendation.reason}
               </p>
-              {!recommendation.tmdbData && (
+              {recommendation.tmdbData === null && (
                 <p className="text-[10px] text-chart-3/80 mt-2">
                   ℹ️ TMDB data not available
                 </p>

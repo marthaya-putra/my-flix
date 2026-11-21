@@ -2,8 +2,9 @@
 
 The system that turns a user's movie/TV preferences into a live-streamed list of
 personalized recommendations. A server-side generator emits NDJSON events
-(stage progress, items, termination) per category; the client renders them into
-carousels.
+(stage progress, items, poster patches, termination) per category; the client
+renders them into carousels. Cards render title-first from the LLM's own
+output; posters arrive later as background patches.
 
 ## Language
 
@@ -24,20 +25,32 @@ A recommendation domain: `movie` or `tv`. Recommendations stream in parallel, on
 _Avoid_: type, medium, kind
 
 **Survivor**:
-A generated title that passed TMDB enrichment and was not already liked/disliked by the user. Only survivors count toward the per-category target.
+A generated title that passed the exclusion matcher and was capped into the per-category target. Only survivors are emitted as items.
 _Avoid_: result, valid item, keep
 
 **Target**:
 The number of survivors a category aims to produce before completing.
 _Avoid_: quota, limit
 
-**Deficit retry loop**:
-When a generation round yields fewer survivors than the remaining target, the LLM is re-asked in a further round (up to a max), feeding already-seen titles back so it avoids them. Internal resilience — the user perceives one continuous process.
-_Avoid_: retry, loop, re-ask
+**Overask**:
+The single LLM round asks for 2 × target candidates per category; surplus absorbs matcher exclusions and lookup misses. Replaces the old deficit retry loop — there are no retry rounds.
+_Avoid_: retry, buffer, surplus
 
-**Round**:
-One pass through the deficit retry loop: ask the LLM, enrich, filter exclusions, count survivors.
-_Avoid_: attempt, pass
+**Poster lookup**:
+The best-effort TMDB search (title + year with fallback, 10s timeout each) that runs in the background after items are emitted. Replaces the old blocking enrichment gate: a miss no longer rejects a candidate, it only leaves the card posterless.
+_Avoid_: enrichment, TMDB gate
+
+**Poster patch**:
+The wire variant `{ type: "itemPatch"; category; title; releasedYear; filmInfo }`. Keyed by the item's LLM title/year; emitted once per item, in item order, after all of a category's lookups settle. `filmInfo: null` means the lookup failed or timed out.
+_Avoid_: update, refresh
+
+**Exclusion matcher**:
+Duplicate protection by normalized title + year (±1) + category against liked, disliked, previously recommended, and already-emitted titles — not by TMDB id.
+_Avoid_: exclude set, ID filter
+
+**Taste profile**:
+A per-run LLM distillation of the user's last ≤100 liked titles and favorite people (themes, tones, plot affinities, summary) injected into the recommendation prompt. Never stored; any failure leaves the prompt exactly as without it.
+_Avoid_: stored profile, weights
 
 **Stream run**:
 One `groupStart` → `groupEnd` lifecycle for a single category; the unit over which stage progress is tracked. A fresh user-triggered load (initial load, load-more) begins a new run.

@@ -1,19 +1,23 @@
 import type { FilmInfo } from "@/lib/types";
 
-// Sentinel streaming protocol (Specs 0004 + 0006). groupStart fires per
-// category up front so the client can render skeletons; items interleave as
-// TMDB resolves; groupEnd fires exactly once per category on termination
-// with a status the client uses to decide between content / error card.
+// Sentinel streaming protocol (Specs 0004 + 0006, extended by the
+// title-first design: docs/designs/title-first-recommendations.md).
+// groupStart fires per category up front so the client can render
+// skeletons; `item` events carry the LLM's own fields (title, year,
+// rating, reason) and render cards immediately — no TMDB call sits on
+// the critical path. `itemPatch` delivers the background poster lookup
+// result per card after all lookups settle; groupEnd fires exactly once
+// per category on termination with a status the client uses to decide
+// between content / error card.
 //
 // Isolated into its own module so the client can import the type without
 // pulling server-only runtime code (ai-sdk, postgres, better-auth) into the
 // browser bundle — that was causing `Buffer is not defined`.
 export type StreamCategory = "movie" | "tv";
-export type StreamStatus =
-  | "ok"
-  | "generation_failed"
-  | "exhausted"
-  | "enrichment_empty";
+// With the deficit retry loop deleted, every terminal state is either
+// "survivors were emitted" or "the single LLM round produced nothing
+// usable" — enrichment_empty and exhausted are unreachable.
+export type StreamStatus = "ok" | "generation_failed";
 
 export type StreamStage =
   | "loading_preferences"
@@ -46,27 +50,19 @@ export const STAGE_MESSAGES: Record<StreamStage, string[]> = {
     "Still narrowing things down…",
     "Almost there…",
   ],
-  looking_up_posters: ["Sprucing up your recommendations"],
+  // Covers the patch phase: cards are already rendered; posters and
+  // details arrive as itemPatch events while this stage is active.
+  looking_up_posters: ["Adding posters & details"],
   finalizing: ["Putting on the finishing touches"],
 };
 
 /**
- * Copy shown during a deficit-retry round (see CONTEXT.md → Deficit retry
- * loop). Applied globally regardless of stage — a retry is the same process
- * continuing, so one message set covers it. Specializing per-stage later is
- * a matter of turning this into a `Partial<Record<StreamStage, string[]>>`.
- */
-export const RETRY_MESSAGES = ["Digging deeper for more titles…"];
-
-/**
- * Pick the message array for a stage, honoring the retry flag. Returns the
- * fallback set when there's no stage yet (before the first progress event).
+ * Pick the message array for a stage. Returns the fallback set when
+ * there's no stage yet (before the first progress event).
  */
 export function stageMessagesFor(
   stage: StreamStage | undefined,
-  retry = false,
 ): string[] {
-  if (retry) return RETRY_MESSAGES;
   if (stage == null) return STAGE_FALLBACK_MESSAGES;
   return STAGE_MESSAGES[stage];
 }
@@ -126,8 +122,21 @@ export type StreamEvent =
         releasedYear: number;
         reason: string;
         imdbRating: number;
-        tmdbData: FilmInfo;
+        /** Absent on LLM-only items — the poster lookup patches it in later. */
+        tmdbData?: FilmInfo;
       };
+    }
+  | {
+      /** Background poster-lookup result for one already-rendered card.
+        * Keyed by the natural key (category, title, releasedYear); echoes
+        * the item's LLM title/year verbatim — never TMDB-corrected values,
+        * which would break client addressing. filmInfo is null when the
+        * lookup failed or timed out. */
+      type: "itemPatch";
+      category: StreamCategory;
+      title: string;
+      releasedYear: number;
+      filmInfo: FilmInfo | null;
     }
   | {
       type: "groupEnd";
@@ -140,6 +149,4 @@ export type StreamEvent =
       category: StreamCategory;
       stage: StreamStage;
       found: number;
-      /** True when emitted from a deficit-retry round (> 1). See CONTEXT.md. */
-      retry?: boolean;
     };

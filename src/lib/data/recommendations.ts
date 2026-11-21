@@ -1,9 +1,14 @@
-import { LanguageModelV2 } from "@ai-sdk/provider";
 import { z } from "zod";
 import { googleModel, mistralModel } from "../ai/models";
+import { callWithFallback, type FallbackModel } from "../ai/call-with-fallback";
 import { getAIRecommendations } from "../ai/recommendations";
 import { FilmInfo } from "../types";
 import type { UserContent } from "./preferences";
+import {
+  exclusionHitFor,
+  type ExclusionPools,
+  type TitleRef,
+} from "../utils/title-matcher";
 import { searchMoviesAPI, searchTVsAPI } from "./search";
 
 // Re-export the wire types from the isolated module so server callers have
@@ -23,21 +28,35 @@ import type {
   StreamStatus,
 } from "./stream-events";
 
-// ---- Spec 0004 tuning constants (server-side deficit loop) ----
-// Per-category target + over-ask buffer. Worst case = 2 sides × MAX_ROUNDS.
+// ---- Title-first tuning constants (docs/designs/title-first-recommendations.md) ----
+// One LLM round per category, overask = 2 × target. Surplus candidates
+// absorb matcher exclusions and lookup misses; there are NO deficit retry
+// rounds (MAX_ROUNDS / STRICT_RATING_ROUNDS / retry events deleted).
 const TARGET_PER_CATEGORY = 3;
-const MAX_ROUNDS = 5;
-const OVERASK_BUFFER = 2;
+const OVERASK_MULTIPLIER = 2;
 
-// IMDB quality bar (prompt-only). Rounds 1..STRICT_RATING_ROUNDS demand
-// IMDB > MIN_IMDB_RATING; later deficit rounds relax it so niche tastes
-// still fill the target instead of ending with empty sections.
+// IMDB quality bar (prompt-only, applied in the single round).
 const MIN_IMDB_RATING = 7.5;
-const STRICT_RATING_ROUNDS = 2;
+
+// Per-lookup poster timeout (CUJ 1: the wait is bounded per lookup).
+const POSTER_LOOKUP_TIMEOUT_MS = 10_000;
+
+// Safety bound for the single reco LLM round shared across the
+// google→mistral chain. Today's pipeline had no timeout; this only stops a
+// fully hung chain from pinning the stream open.
+const RECO_CHAIN_TIMEOUT_MS = 120_000;
+
+// Baseline (recorded before this rework, per the design's verification
+// plan): the old blocking-enrichment pipeline logged one line per round —
+// `round N reject breakdown: excluded=X enrichFail=Y capped=Z survivors=…`
+// (old recommendations.ts:347-349) — and enrichFail (TMDB search miss or
+// throw) was the author-observed largest reject cause. That enrichFail
+// rate is the comparator for the fake-title rate that
+// scripts/verify-titles.mjs reports from RECO_DEBUG_LOG patch misses.
 
 type Category = StreamCategory;
 
-// The LLM's raw recommendation before TMDB lookup.
+// The LLM's raw recommendation — the full card payload minus the poster.
 type RawRec = {
   title: string;
   category: Category;
@@ -46,13 +65,20 @@ type RawRec = {
   imdbRating: number;
 };
 
-// A RawRec after its TMDB lookup attempt. tmdbData is null on lookup
-// failure (search returned nothing, or the search threw).
-type EnrichedRec = RawRec & { tmdbData: FilmInfo | null };
-
-// A labelled model in the fallback chain. The label flows into logs so the
-// chain is self-describing rather than relying on array index.
-type ModelEntry = { label: string; model: LanguageModelV2 };
+// Per-category TMDB search adapter. Replaces the repeated
+// `category === "movie" ? searchMoviesAPI : searchTVsAPI` ternary; adds
+// the optional AbortSignal threading (design doc item 11).
+const categorySearch: Record<
+  Category,
+  (query: string, year: number | undefined, signal?: AbortSignal) => Promise<{
+    results: FilmInfo[];
+  }>
+> = {
+  movie: (query, year, signal) =>
+    searchMoviesAPI({ query, primaryReleaseYear: year, page: 1 }, signal),
+  tv: (query, year, signal) =>
+    searchTVsAPI({ query, firstAirDateYear: year, page: 1 }, signal),
+};
 
 // Year-extract helper (handles both movie release_date and tv first_air_date).
 function releaseYear(releaseDate: string): number | null {
@@ -61,34 +87,46 @@ function releaseYear(releaseDate: string): number | null {
   return Number.isNaN(y) ? null : y;
 }
 
-// Per-category TMDB search adapter. Replaces the repeated
-// `category === "movie" ? searchMoviesAPI : searchTVsAPI` ternary that
-// appeared at both the exact-year and loose-year search sites.
-const categorySearch: Record<
-  Category,
-  (query: string, year?: number) => Promise<{ results: FilmInfo[] }>
-> = {
-  movie: (query, year) =>
-    searchMoviesAPI({ query, primaryReleaseYear: year, page: 1 }),
-  tv: (query, year) => searchTVsAPI({ query, firstAirDateYear: year, page: 1 }),
-};
+// Combine an outer (route/disconnect) signal with a per-lookup timeout.
+// AbortSignal.any is unavailable in some runtimes (jsdom), so wire it by
+// hand: whichever source fires first aborts the controller.
+function withTimeout(
+  signal: AbortSignal | undefined,
+  timeoutMs: number,
+): AbortSignal {
+  const controller = new AbortController();
+  const forward = (source: AbortSignal) => () => {
+    if (!controller.signal.aborted) controller.abort(source.reason);
+  };
+  if (signal) {
+    if (signal.aborted) controller.abort(signal.reason);
+    else signal.addEventListener("abort", forward(signal), { once: true });
+  }
+  const timeout = AbortSignal.timeout(timeoutMs);
+  if (timeout.aborted) controller.abort(timeout.reason);
+  else timeout.addEventListener("abort", forward(timeout), { once: true });
+  return controller.signal;
+}
 
 // Search TMDB for a title+year. The LLM's year is often off-by-one
 // (festival vs wide release) or otherwise slightly wrong, so an exact
 // year match returns nothing. Strategy: try the exact year first; if that
 // yields nothing, re-search without the year and pick the result whose
-// year is closest to the requested one.
+// year is closest to the requested one. Forwards the given signal to the
+// search calls; applies the 10s poster-lookup timeout when none is given.
 async function searchTitleWithYearFallback(
   title: string,
   category: Category,
   requestedYear: number,
+  signal?: AbortSignal,
 ): Promise<FilmInfo | null> {
-  const exact = await categorySearch[category](title, requestedYear);
+  const effective = signal ?? AbortSignal.timeout(POSTER_LOOKUP_TIMEOUT_MS);
+  const exact = await categorySearch[category](title, requestedYear, effective);
   if (exact.results.length > 0) return exact.results[0];
 
   // Year-filtered search returned nothing — retry without the year and
   // pick the closest match by release year to avoid grabbing a wrong title.
-  const loose = await categorySearch[category](title);
+  const loose = await categorySearch[category](title, undefined, effective);
   if (loose.results.length === 0) return null;
 
   const scored = loose.results
@@ -101,71 +139,40 @@ async function searchTitleWithYearFallback(
   return scored[0].r;
 }
 
-// Enrich one raw recommendation with its TMDB data. A lookup failure never
-// throws outwards — it resolves to tmdbData: null so the caller can count
-// it as an enrich failure and keep draining the round.
-async function enrichOne(rec: RawRec): Promise<EnrichedRec> {
-  try {
-    const tmdbData = await searchTitleWithYearFallback(
-      rec.title,
-      rec.category,
-      rec.releasedYear,
-    );
-    return { ...rec, tmdbData };
-  } catch (error) {
-    console.error(`Failed to enrich recommendation "${rec.title}":`, error);
-    return { ...rec, tmdbData: null };
-  }
-}
-
-// Drive the model-fallback chain (google → mistral). Returns the first
-// model's category-scoped raw recs, or { raw: [], threw: true } if every
-// model failed. `threw` distinguishes "LLM emitted nothing successfully"
-// (raw empty, threw false) from "all models errored" (raw empty, threw true)
-// — the deficit loop treats them differently.
-async function fetchWithModelFallback(
+// Single LLM round via the shared fallback chain (google → mistral).
+// Returns this category's raw recs — possibly fewer than asked, possibly
+// empty — or null when every model failed (→ generation_failed).
+async function fetchRawOnce(
   args: Parameters<typeof getAIRecommendations>[0],
-  models: ModelEntry[],
+  models: FallbackModel[],
   category: Category,
-  round: number,
-): Promise<{ raw: RawRec[]; threw: boolean }> {
-  for (let i = 0; i < models.length; i++) {
-    const { label, model } = models[i];
-    console.log(
-      `[recommendations:${category}] round ${round} model ${i + 1}/${models.length}: ${label}`,
-    );
-    const res = await getAIRecommendations(args, model);
-    if (res.success && res.data) {
+): Promise<RawRec[] | null> {
+  return callWithFallback(
+    async (model) => {
+      const res = await getAIRecommendations(args, model);
+      if (!res.success || !res.data) {
+        throw new Error(
+          `reco model call failed: ${JSON.stringify(res.error ?? "unknown")}`,
+        );
+      }
       // LLM may still emit the other category despite the prompt —
       // filter to this side only.
       const raw = res.data.recommendations.filter(
         (r): r is RawRec => r.category === category,
       );
-      console.log(
-        `[recommendations:${category}] round ${round} ${label} ok, raw=${raw.length}`,
-      );
-      return { raw, threw: false };
-    }
-    console.warn(
-      `[recommendations:${category}] round ${round} ${label} failed`,
-    );
-  }
-  return { raw: [], threw: true };
+      console.log(`[recommendations:${category}] model ok, raw=${raw.length}`);
+      return raw;
+    },
+    models,
+    { timeoutMs: RECO_CHAIN_TIMEOUT_MS },
+  );
 }
 
-// Terminal status classification (acceptance criteria 4–6). Pure: maps the
-// pipeline's accumulated counters onto exactly one StreamStatus. Kept out
-// of backfillCategory so the rules are legible and unit-testable.
-function classifyStatus(s: {
-  survivors: number;
-  allRoundsThrew: boolean;
-  rawProduced: number;
-  enrichFailures: number;
-}): StreamStatus {
-  if (s.survivors > 0) return "ok";
-  if (s.allRoundsThrew || s.rawProduced === 0) return "generation_failed";
-  if (s.rawProduced === s.enrichFailures) return "enrichment_empty";
-  return "exhausted";
+// Terminal status classification: survivors were emitted → ok; anything
+// else (all models failed, or the round produced nothing usable) →
+// generation_failed. enrichment_empty/exhausted died with the retry loop.
+function classifyStatus(survivors: number): StreamStatus {
+  return survivors > 0 ? "ok" : "generation_failed";
 }
 
 // Shared base args passed into getAIRecommendations for each category.
@@ -186,47 +193,78 @@ type CategoryArgs = {
   }>;
 };
 
-// Per-category pipeline (Spec 0004 + 0011). Drives the deficit loop
-// (≤MAX_ROUNDS) and yields StreamEvents in order: loading_preferences →
-// finding_titles → looking_up_posters → interleaved item/progress →
-// finalizing → exactly one groupEnd. Delegates the model-fallback chain,
-// single-item enrichment, and terminal status classification to their
-// helpers so this body reads as a recipe.
-async function* backfillCategory(
-  category: Category,
-  loadPrefs: () => Promise<UserContent>,
-  previousRecommendations: CategoryArgs["previousRecommendations"],
-  models: ModelEntry[],
-): AsyncGenerator<StreamEvent> {
-  let totalSurvivors = 0;
-  let totalRawProduced = 0;
-  let totalEnrichFailures = 0;
-  let allRoundsThrew = true;
+// Everything one category generator needs, built once per run.
+type CategoryRun = {
+  category: Category;
+  loadPrefs: () => Promise<UserContent>;
+  // Memoized profile thunk — resolves null when absent/failed (fail-open).
+  profileFor: (content: UserContent) => Promise<string | null>;
+  previousRecommendations: CategoryArgs["previousRecommendations"];
+  models: FallbackModel[];
+  /** Route request signal — client disconnect cancels in-flight lookups. */
+  signal?: AbortSignal;
+  runId: string;
+};
 
-  // Build a progress event for the current pipeline state (Spec 0007).
-  // `retry` is set when round > 1 — i.e. this progress comes from a deficit
-  // retry round rather than the category's first generation pass. The client
-  // uses it to hold the stage message steady instead of visibly regressing.
-  // Before the loop starts (loading_preferences) round is 0 → not a retry.
-  const progress = (stage: StreamStage, round = 0): StreamEvent => ({
+// Exclusion pools for the matcher: liked ∪ disliked ∪ prevRecs ∪ earlier
+// survivors this round ("round" grows as survivors are accepted, so
+// within-round duplicates are filtered too).
+function buildPools(
+  userPrefs: UserContent,
+  previousRecommendations: CategoryArgs["previousRecommendations"],
+): ExclusionPools {
+  const asMovie = (t: { title: string; year: number }): TitleRef => ({
+    category: "movie",
+    title: t.title,
+    year: t.year,
+  });
+  const asTv = (t: { title: string; year: number }): TitleRef => ({
+    category: "tv",
+    title: t.title,
+    year: t.year,
+  });
+  return {
+    liked: [
+      ...userPrefs.movies.map(asMovie),
+      ...userPrefs.tvs.map(asTv),
+    ],
+    disliked: [
+      ...userPrefs.dislikedMovies.map(asMovie),
+      ...userPrefs.dislikedTvs.map(asTv),
+    ],
+    prevRecs: previousRecommendations.map((r) => ({
+      category: r.category,
+      title: r.title,
+      year: r.year,
+    })),
+    round: [],
+  };
+}
+
+// Per-category pipeline (title-first). Yields StreamEvents in order:
+// loading_preferences → finding_titles → item per survivor (LLM fields,
+// no tmdbData) → looking_up_posters → itemPatch per item in item order →
+// finalizing → exactly one groupEnd. Poster lookups run concurrently off
+// the critical path, each bounded by POSTER_LOOKUP_TIMEOUT_MS.
+async function* backfillCategory(run: CategoryRun): AsyncGenerator<StreamEvent> {
+  const { category } = run;
+
+  const progress = (stage: StreamStage, found = 0): StreamEvent => ({
     type: "progress",
     category,
     stage,
-    found: totalSurvivors,
-    retry: round > 1,
+    found,
   });
 
   try {
     // Spec 0011: yield loading_preferences first, before any await,
-    // so the client shows status during the DB fetch.
+    // so the client shows status during the DB fetch. The taste-profile
+    // step (when supplied) also runs under this stage.
     yield progress("loading_preferences");
 
-    const userPrefs = await loadPrefs();
+    const userPrefs = await run.loadPrefs();
+    const tasteProfile = await run.profileFor(userPrefs);
 
-    // Build baseArgs + excludeIds from the shared userPrefs (moved from
-    // runPipelines — see Spec 0011). Each generator builds its own copies;
-    // they're identical at construction; divergence happens as each
-    // category's localExcludeIds grows.
     const baseArgs: CategoryArgs = {
       previouslyLikedMovies: userPrefs.movies,
       previouslyLikedTvs: userPrefs.tvs,
@@ -236,131 +274,142 @@ async function* backfillCategory(
       favoriteDirectors: userPrefs.directors,
       genres: userPrefs.genres,
       excludeAdult: true,
-      previousRecommendations,
+      previousRecommendations: run.previousRecommendations,
     };
 
-    const localExcludeIds = new Set<number>([
-      ...userPrefs.movies.map((m) => m.id),
-      ...userPrefs.tvs.map((t) => t.id),
-      ...userPrefs.dislikedMovies.map((m) => m.id),
-      ...userPrefs.dislikedTvs.map((t) => t.id),
-      ...previousRecommendations
-        .map((r) => r.id)
-        .filter((id): id is number => typeof id === "number"),
-    ]);
+    const pools = buildPools(userPrefs, run.previousRecommendations);
 
-    const localPrevRecs = [...previousRecommendations];
+    // Single round with overask: ask 2 × target so matcher exclusions and
+    // lookup misses are absorbed by surplus candidates (design §5).
+    const ask = TARGET_PER_CATEGORY * OVERASK_MULTIPLIER;
+    console.log(
+      `[recommendations:${category}] single round ask=${ask} ratingBar=strict(>${MIN_IMDB_RATING}) telling LLM to avoid ${run.previousRecommendations.length} titles: [${run.previousRecommendations.map((r) => r.title).join(", ")}]`,
+    );
 
-    for (let round = 1; round <= MAX_ROUNDS; round++) {
-      const deficit = TARGET_PER_CATEGORY - totalSurvivors;
-      if (deficit <= 0) break;
+    yield progress("finding_titles");
 
-      const ask = deficit + OVERASK_BUFFER;
-      const ratingBar =
-        round <= STRICT_RATING_ROUNDS ? `strict(>${MIN_IMDB_RATING})` : "relaxed";
-      console.log(
-        `[recommendations:${category}] round ${round} deficit=${deficit} ask=${ask} ratingBar=${ratingBar} telling LLM to avoid ${localPrevRecs.length} titles: [${localPrevRecs.map((r) => r.title).join(", ")}]`,
-      );
-
-      yield progress("finding_titles", round);
-
-      const { raw, threw: roundThrew } = await fetchWithModelFallback(
+    const raw =
+      (await fetchRawOnce(
         {
           ...baseArgs,
-          previousRecommendations: localPrevRecs,
           requestedMovies: category === "movie" ? ask : 0,
           requestedTvs: category === "tv" ? ask : 0,
           onlyCategory: category,
-          minImdbRating:
-            round <= STRICT_RATING_ROUNDS ? MIN_IMDB_RATING : undefined,
+          minImdbRating: MIN_IMDB_RATING,
+          ...(tasteProfile ? { tasteProfile } : {}),
         },
-        models,
+        run.models,
         category,
-        round,
+      )) ?? [];
+
+    // Matcher filter — the only reject step. Survivors cap at the target
+    // (existing cap logic); every exclusion is counted per source.
+    const survivors: RawRec[] = [];
+    const excluded = { liked: 0, disliked: 0, prevRecs: 0, round: 0 };
+    let capped = 0;
+    for (const rec of raw) {
+      if (survivors.length >= TARGET_PER_CATEGORY) {
+        capped++;
+        continue;
+      }
+      const hit = exclusionHitFor(
+        { category: rec.category, title: rec.title, year: rec.releasedYear },
+        pools,
       );
-      if (!roundThrew) allRoundsThrew = false;
-
-      // Criterion 6: round 1 returning 0 raw items (LLM emitted nothing)
-      // is a hard generation failure — no point looping.
-      if (round === 1 && !roundThrew && raw.length === 0) {
-        yield { type: "groupEnd", category, status: "generation_failed" };
-        return;
+      if (hit) {
+        excluded[hit]++;
+        continue;
       }
-      // Subsequent empty round: no progress, stop looping.
-      if (raw.length === 0) break;
+      survivors.push(rec);
+      pools.round.push({
+        category: rec.category,
+        title: rec.title,
+        year: rec.releasedYear,
+      });
+    }
+    console.log(
+      `[recommendations:${category}] matcher filter: raw=${raw.length} survivors=${survivors.length} excluded(liked=${excluded.liked} disliked=${excluded.disliked} prevRecs=${excluded.prevRecs} round=${excluded.round}) capped=${capped}`,
+    );
 
-      totalRawProduced += raw.length;
+    // One outcome per survivor, in item order — filled after the lookups
+    // settle; also read by the env-gated debug line below.
+    const patchOutcomes: Array<{
+      title: string;
+      year: number;
+      found: boolean;
+    }> = [];
 
-      // Emit progress before the TMDB enrichment fan-out.
-      yield progress("looking_up_posters", round);
+    if (survivors.length > 0) {
+      // Kick the poster lookups off before yielding items so the network
+      // work overlaps event serialization. A lookup failure resolves
+      // filmInfo: null — never removes or delays the card.
+      const patchPromises = survivors.map((rec) =>
+        searchTitleWithYearFallback(
+          rec.title,
+          rec.category,
+          rec.releasedYear,
+          withTimeout(run.signal, POSTER_LOOKUP_TIMEOUT_MS),
+        ).catch((error) => {
+          console.error(
+            `[recommendations:${category}] poster lookup failed for "${rec.title}":`,
+            error,
+          );
+          return null;
+        }),
+      );
 
-      // Per-round reject breakdown (Spec 0005 diagnostic). Survivors +
-      // excluded + enrichFail should reconcile to raw.
-      let roundExcluded = 0;
-      let roundEnrichFail = 0;
-      let roundCapped = 0;
+      // Items render immediately from LLM fields — no tmdbData.
+      for (const rec of survivors) {
+        yield { type: "item", rec: { ...rec } };
+      }
+      yield progress("looking_up_posters", survivors.length);
 
-      // Fan out enrichment, then await in input order so survivors yield as
-      // they resolve without later items blocking earlier yields.
-      const enrichedPromises = raw.map(enrichOne);
-
-      for (let i = 0; i < enrichedPromises.length; i++) {
-        // Over-ask buffer is for resilience, not for yielding extras.
-        // Stop as soon as the target is met.
-        if (totalSurvivors >= TARGET_PER_CATEGORY) {
-          roundCapped = enrichedPromises.length - i;
-          break;
-        }
-        const rec = await enrichedPromises[i];
-        if (!rec.tmdbData) {
-          totalEnrichFailures++;
-          roundEnrichFail++;
-          continue;
-        }
-        if (localExcludeIds.has(rec.tmdbData.id)) {
-          roundExcluded++;
-          // Feed excluded titles (liked/disliked hits) back into
-          // previousRecommendations so the next round's prompt's "Already
-          // recommended" section grows — otherwise the LLM keeps
-          // re-suggesting the same excluded titles every round and the
-          // deficit loop never makes progress.
-          localPrevRecs.push({
-            id: rec.tmdbData.id,
-            title: rec.title,
-            year: rec.releasedYear,
-            category,
-          });
-          continue;
-        }
-        totalSurvivors++;
-        localExcludeIds.add(rec.tmdbData.id);
-        localPrevRecs.push({
-          id: rec.tmdbData.id,
-          title: rec.title,
-          year: rec.releasedYear,
-          category,
+      // One patch per item, in item order, after every lookup settles.
+      const settled = await Promise.allSettled(patchPromises);
+      for (let i = 0; i < settled.length; i++) {
+        const result = settled[i];
+        const filmInfo =
+          result.status === "fulfilled" ? result.value : null;
+        patchOutcomes.push({
+          title: survivors[i].title,
+          year: survivors[i].releasedYear,
+          found: filmInfo !== null,
         });
-        yield { type: "item", rec: { ...rec, tmdbData: rec.tmdbData } };
-        // Tick progress so the count updates live as items land.
-        yield progress("looking_up_posters", round);
+        yield {
+          type: "itemPatch",
+          category,
+          title: survivors[i].title,
+          releasedYear: survivors[i].releasedYear,
+          filmInfo,
+        };
       }
+    }
+
+    yield progress("finalizing", survivors.length);
+
+    const status = classifyStatus(survivors.length);
+    console.log(
+      `[recommendations:${category}] groupEnd status=${status} survivors=${survivors.length} raw=${raw.length}`,
+    );
+
+    // Structured per-run debug line (env-gated). scripts/verify-titles.mjs
+    // parses these to report per-title hit/miss and the fake-title rate —
+    // its oracle is exactly the pipeline's own lookup (no TMDB re-query).
+    if (process.env.RECO_DEBUG_LOG) {
       console.log(
-        `[recommendations:${category}] round ${round} reject breakdown: excluded=${roundExcluded} enrichFail=${roundEnrichFail} capped=${roundCapped} survivors_this_round_ended_at=${totalSurvivors} prevRecsFedToLLM=${localPrevRecs.length}`,
+        `RECO_DEBUG_LOG ${JSON.stringify({
+          runId: run.runId,
+          category,
+          titles: survivors.map((r) => ({
+            title: r.title,
+            year: r.releasedYear,
+          })),
+          patchOutcomes,
+          matcherExcluded: excluded,
+        })}`,
       );
     }
 
-    // Emit finalizing before terminal status classification.
-    yield progress("finalizing");
-
-    const status = classifyStatus({
-      survivors: totalSurvivors,
-      allRoundsThrew,
-      rawProduced: totalRawProduced,
-      enrichFailures: totalEnrichFailures,
-    });
-    console.log(
-      `[recommendations:${category}] groupEnd status=${status} survivors=${totalSurvivors} raw=${totalRawProduced} enrichFail=${totalEnrichFailures}`,
-    );
     yield { type: "groupEnd", category, status };
   } catch (error: any) {
     console.error(`[recommendations:${category}] pipeline threw:`, error);
@@ -380,48 +429,57 @@ async function* backfillCategory(
 // Emits groupStart for each category up front (so the client renders
 // skeletons immediately), then forwards events from whichever generator
 // resolves next. Each generator's groupEnd is emitted exactly once (the
-// generator guarantees it, even on throw).
+// generator guarantees it, even on throw). The try/finally forwards
+// return() to the child generators — when the route stops draining the
+// stream (client disconnect), children terminate and their in-flight
+// lookups observe the route signal.
 async function* raceMerge(
   generators: { category: Category; gen: AsyncGenerator<StreamEvent> }[],
   target: number,
 ): AsyncGenerator<StreamEvent> {
   if (generators.length === 0) return;
 
-  // Emit groupStart for every requested category up front.
-  for (const { category } of generators) {
-    yield { type: "groupStart", category, target };
-  }
+  try {
+    // Emit groupStart for every requested category up front.
+    for (const { category } of generators) {
+      yield { type: "groupStart", category, target };
+    }
 
-  type Tagged = { cat: Category; result: IteratorResult<StreamEvent> };
-  const nextTagged = (
-    cat: Category,
-    gen: AsyncGenerator<StreamEvent>,
-  ): Promise<Tagged> => gen.next().then((result) => ({ cat, result }));
+    type Tagged = { cat: Category; result: IteratorResult<StreamEvent> };
+    const nextTagged = (
+      cat: Category,
+      gen: AsyncGenerator<StreamEvent>,
+    ): Promise<Tagged> => gen.next().then((result) => ({ cat, result }));
 
-  // Track in-flight promises. Nulling a promise and decrementing remaining
-  // happen together, so #non-null-promises === remaining at all times — the
-  // loop never races an empty pending list and never hangs.
-  const promises = new Map<Category, Promise<Tagged> | null>();
-  for (const { category, gen } of generators) {
-    promises.set(category, nextTagged(category, gen));
-  }
+    // Track in-flight promises. Nulling a promise and decrementing remaining
+    // happen together, so #non-null-promises === remaining at all times — the
+    // loop never races an empty pending list and never hangs.
+    const promises = new Map<Category, Promise<Tagged> | null>();
+    for (const { category, gen } of generators) {
+      promises.set(category, nextTagged(category, gen));
+    }
 
-  let remaining = generators.length;
+    let remaining = generators.length;
 
-  while (remaining > 0) {
-    const pending = [...promises.entries()]
-      .filter(([, p]) => p !== null)
-      .map(([, p]) => p!);
+    while (remaining > 0) {
+      const pending = [...promises.entries()]
+        .filter(([, p]) => p !== null)
+        .map(([, p]) => p!);
 
-    const { cat, result } = await Promise.race(pending);
+      const { cat, result } = await Promise.race(pending);
 
-    if (result.done) {
-      promises.set(cat, null);
-      remaining--;
-    } else {
-      yield result.value;
-      const gen = generators.find((g) => g.category === cat)!;
-      promises.set(cat, nextTagged(cat, gen.gen));
+      if (result.done) {
+        promises.set(cat, null);
+        remaining--;
+      } else {
+        yield result.value;
+        const gen = generators.find((g) => g.category === cat)!;
+        promises.set(cat, nextTagged(cat, gen.gen));
+      }
+    }
+  } finally {
+    for (const { gen } of generators) {
+      await gen.return(undefined as unknown as void);
     }
   }
 }
@@ -452,20 +510,25 @@ export function resolveCategories(raw?: Category[]): Category[] {
   return !raw || raw.length === 0 ? ALL_CATEGORIES : [...new Set(raw)];
 }
 
-// Pipeline entry point (Spec 0006 + 0011). Takes a lazy loadPrefs thunk
-// + previousRecommendations and drives raceMerge over the requested
-// category generators. The loadPrefs call is memoized so exactly one DB
-// round-trip occurs regardless of category count. No transport concerns —
-// the NDJSON route drains the yielded StreamEvents however it likes.
+// Pipeline entry point (Spec 0006 + 0011, title-first design §3). Takes a
+// lazy loadPrefs thunk + previousRecommendations and drives raceMerge over
+// the requested category generators. loadPrefs is memoized (one DB
+// round-trip per run) and so is deriveProfile (one profile call per run,
+// shared by both categories). Optional `signal` is the route's
+// request.signal — disconnect cancels in-flight poster lookups.
 export async function* runPipelines(input: {
   loadPrefs: () => Promise<UserContent>;
   previousRecommendations: StreamRequest["previousRecommendations"];
   categories?: Category[];
+  deriveProfile?: (content: UserContent) => Promise<string | null>;
+  signal?: AbortSignal;
 }): AsyncGenerator<StreamEvent> {
   const {
     loadPrefs,
     previousRecommendations,
     categories: rawCategories,
+    deriveProfile,
+    signal,
   } = input;
 
   const requested = resolveCategories(rawCategories);
@@ -479,21 +542,52 @@ export async function* runPipelines(input: {
     return cached;
   };
 
-  const models: ModelEntry[] = [
+  // Memoize the profile beside loadPrefs: one derivation per run. Absent
+  // thunk or failed/null derivation → prompt exactly as today (fail-open);
+  // each case logs one warning.
+  if (!deriveProfile) {
+    console.warn(
+      "[recommendations] no deriveProfile thunk supplied — building prompt without taste profile",
+    );
+  }
+  let profileCache: Promise<string | null> | null = null;
+  const memoizedProfile = (content: UserContent): Promise<string | null> => {
+    if (!deriveProfile) return Promise.resolve(null);
+    if (!profileCache) {
+      profileCache = deriveProfile(content).then(
+        (text) => text,
+        (error) => {
+          console.warn(
+            "[recommendations] taste profile derivation failed — building prompt without it:",
+            error,
+          );
+          return null;
+        },
+      );
+    }
+    return profileCache;
+  };
+
+  const models: FallbackModel[] = [
     { label: "google", model: googleModel },
     { label: "mistral", model: mistralModel },
   ];
+
+  const runId = crypto.randomUUID();
 
   // Build generator list only for requested categories. Generators are
   // lazy — they only progress as raceMerge drains them.
   const generators = requested.map((category) => ({
     category,
-    gen: backfillCategory(
+    gen: backfillCategory({
       category,
-      memoizedLoadPrefs,
+      loadPrefs: memoizedLoadPrefs,
+      profileFor: memoizedProfile,
       previousRecommendations,
       models,
-    ),
+      signal,
+      runId,
+    }),
   }));
 
   yield* raceMerge(generators, TARGET_PER_CATEGORY);

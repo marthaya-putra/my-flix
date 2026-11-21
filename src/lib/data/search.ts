@@ -255,8 +255,13 @@ export const searchContent = createServerFn({
     }
   });
 
-// Core search functions for use in other plain functions
-export async function searchMoviesAPI(params: SearchMoviesParams) {
+// Core search functions for use in other plain functions. The optional
+// AbortSignal threads caller cancellation (route disconnect / per-lookup
+// timeout) into fetchFromTMDB (design doc item 11).
+export async function searchMoviesAPI(
+  params: SearchMoviesParams,
+  signal?: AbortSignal,
+) {
   if (!params.query || params.query.trim().length < 2) {
     return {
       page: 1,
@@ -281,7 +286,7 @@ export async function searchMoviesAPI(params: SearchMoviesParams) {
     }
 
     const searchPath = `/search/movie?${urlParams.toString()}`;
-    const result = await fetchFromTMDB(searchPath);
+    const result = await fetchFromTMDB(searchPath, { signal });
     return convertToDiscoverResult(result);
   } catch (error) {
     console.error("TMDB movie search error:", error);
@@ -289,7 +294,10 @@ export async function searchMoviesAPI(params: SearchMoviesParams) {
   }
 }
 
-export async function searchTVsAPI(params: SearchTVsParams) {
+export async function searchTVsAPI(
+  params: SearchTVsParams,
+  signal?: AbortSignal,
+) {
   if (!params.query || params.query.trim().length < 2) {
     return {
       page: 1,
@@ -314,7 +322,7 @@ export async function searchTVsAPI(params: SearchTVsParams) {
     }
 
     const searchPath = `/search/tv?${urlParams.toString()}`;
-    const result = await fetchFromTMDB(searchPath);
+    const result = await fetchFromTMDB(searchPath, { signal });
     return convertToDiscoverResult(result);
   } catch (error) {
     console.error("TMDB TV search error:", error);

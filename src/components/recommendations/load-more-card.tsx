@@ -8,7 +8,6 @@ type LoadMoreCardProps = {
   /** Whether load-more is currently in-flight for this category. */
   loading: boolean;
   stage?: StreamStage;
-  stageRetry?: boolean;
   error?: string | null;
   onClick: () => void;
 };
@@ -38,7 +37,6 @@ function TypingDots() {
 export function LoadMoreCard({
   loading,
   stage,
-  stageRetry,
   error,
   onClick,
 }: LoadMoreCardProps) {
@@ -63,7 +61,7 @@ export function LoadMoreCard({
 
   // Loading state — animated shimmer copy, mirrors the stage messaging.
   if (loading) {
-    const messages = stageMessagesFor(stage, stageRetry);
+    const messages = stageMessagesFor(stage);
 
     return (
       <div

@@ -72,8 +72,16 @@ function makeFilmInfo(
   };
 }
 
+type PrevRecPayload = {
+  id?: number;
+  title: string;
+  year: number;
+  category: string;
+};
+
 type RunHandle = {
   categories: string[];
+  previousRecommendations?: PrevRecPayload[];
   signal: AbortSignal;
   emit: (evt: StreamEvent) => void;
   end: () => void;
@@ -85,6 +93,7 @@ const fetchMock = vi.fn(
   async (_input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const body = JSON.parse(String(init?.body ?? "{}")) as {
       categories?: string[];
+      previousRecommendations?: PrevRecPayload[];
     };
     const signal = init?.signal ?? new AbortController().signal;
     let streamController: ReadableStreamDefaultController<Uint8Array> | null =
@@ -106,6 +115,7 @@ const fetchMock = vi.fn(
     const encoder = new TextEncoder();
     const handle: RunHandle = {
       categories: body.categories ?? [],
+      previousRecommendations: body.previousRecommendations,
       signal,
       emit: (evt) => {
         if (!aborted && streamController) {
@@ -138,6 +148,7 @@ function runFor(category: "movie" | "tv"): RunHandle {
   return run;
 }
 
+// Title-first items: LLM fields only — tmdbData arrives later via itemPatch.
 function itemEvent(
   title: string,
   category: "movie" | "tv",
@@ -150,8 +161,21 @@ function itemEvent(
       releasedYear: 2024,
       reason: "Because you liked test data.",
       imdbRating: 7.5,
-      tmdbData: makeFilmInfo(title.length, title, category),
     },
+  };
+}
+
+function patchEvent(
+  title: string,
+  category: "movie" | "tv",
+  filmInfo: FilmInfo | null,
+): Extract<StreamEvent, { type: "itemPatch" }> {
+  return {
+    type: "itemPatch",
+    category,
+    title,
+    releasedYear: 2024,
+    filmInfo,
   };
 }
 
@@ -168,12 +192,17 @@ function groupEndOk(
 }
 
 // Complete the initial two-category run so both Load more CTAs render.
+// Items land first (title-first), patches follow in item order.
 function completeInitialRun() {
   const initial = runs[0];
   initial.emit(groupStart("movie"));
   initial.emit(groupStart("tv"));
   initial.emit(itemEvent("Movie Alpha", "movie"));
   initial.emit(itemEvent("TV Alpha", "tv"));
+  initial.emit(
+    patchEvent("Movie Alpha", "movie", makeFilmInfo(1, "Movie Alpha", "movie")),
+  );
+  initial.emit(patchEvent("TV Alpha", "tv", makeFilmInfo(2, "TV Alpha", "tv")));
   initial.emit(groupEndOk("movie"));
   initial.emit(groupEndOk("tv"));
   initial.end();
@@ -400,5 +429,119 @@ describe("Recommendations stream runs (issue #128)", () => {
     await waitFor(() => expect(loadMoreCTA("TV")).toBeInTheDocument());
     fireEvent.click(loadMoreCTA("TV"));
     await waitFor(() => expect(runsFor("tv")).toHaveLength(2));
+  });
+});
+
+describe("Recommendations title-first cards (poster patch)", () => {
+  beforeEach(() => {
+    runs.length = 0;
+    sessionState.userId = "user-1";
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("IntersectionObserver", MockIntersectionObserver);
+    vi.stubGlobal("ResizeObserver", MockResizeObserver);
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it("renders the card immediately and applies the itemPatch poster", async () => {
+    renderRecommendations();
+    await waitFor(() => expect(runs.length).toBe(1));
+    const initial = runs[0];
+    initial.emit(groupStart("movie"));
+    initial.emit(itemEvent("Movie Alpha", "movie"));
+
+    // Card is live before any TMDB data: title shows, poster slot is an
+    // awaiting-patch skeleton — NOT the "No poster available" copy.
+    await awaitTitle("Movie Alpha");
+    expect(screen.queryByAltText("Movie Alpha poster")).not.toBeInTheDocument();
+    expect(screen.queryByText("No poster available")).not.toBeInTheDocument();
+
+    initial.emit(
+      patchEvent("Movie Alpha", "movie", makeFilmInfo(1, "Movie Alpha", "movie")),
+    );
+    await waitFor(() =>
+      expect(screen.getByAltText("Movie Alpha poster")).toBeInTheDocument(),
+    );
+    initial.emit(groupEndOk("movie"));
+    initial.end();
+  });
+
+  it("falls back to the no-poster state on a null patch", async () => {
+    renderRecommendations();
+    await waitFor(() => expect(runs.length).toBe(1));
+    const initial = runs[0];
+    initial.emit(groupStart("movie"));
+    initial.emit(itemEvent("Movie Ghost", "movie"));
+    await awaitTitle("Movie Ghost");
+
+    initial.emit(patchEvent("Movie Ghost", "movie", null));
+    await waitFor(() =>
+      expect(screen.getAllByText("No poster available").length).toBeGreaterThan(0),
+    );
+    // Card itself stays rendered.
+    expect(screen.getAllByText("Movie Ghost").length).toBeGreaterThan(0);
+    initial.emit(groupEndOk("movie"));
+    initial.end();
+  });
+
+  it("ignores an itemPatch whose key matches no rendered card", async () => {
+    renderRecommendations();
+    await waitFor(() => expect(runs.length).toBe(1));
+    const initial = runs[0];
+    initial.emit(groupStart("movie"));
+    initial.emit(itemEvent("Movie Alpha", "movie"));
+    await awaitTitle("Movie Alpha");
+
+    // Unknown key: no card matches — ignored without disturbing state.
+    initial.emit(
+      patchEvent("Unknown Title", "movie", makeFilmInfo(9, "Unknown Title", "movie")),
+    );
+    await awaitTitle("Movie Alpha");
+    expect(screen.queryByAltText("Movie Alpha poster")).not.toBeInTheDocument();
+    expect(screen.queryByAltText("Unknown Title poster")).not.toBeInTheDocument();
+
+    // The real key still patches afterwards.
+    initial.emit(patchEvent("Movie Alpha", "movie", null));
+    await waitFor(() =>
+      expect(screen.getAllByText("No poster available").length).toBeGreaterThan(0),
+    );
+    initial.emit(groupEndOk("movie"));
+    initial.end();
+  });
+
+  it("sends id-less previousRecommendations including failed-lookup items", async () => {
+    renderRecommendations();
+    await waitFor(() => expect(runs.length).toBe(1));
+    const initial = runs[0];
+    initial.emit(groupStart("movie"));
+    initial.emit(groupStart("tv"));
+    initial.emit(itemEvent("Movie Alpha", "movie"));
+    initial.emit(itemEvent("Movie Ghost", "movie"));
+    initial.emit(itemEvent("TV Alpha", "tv"));
+    // One patched hit, one failed lookup (null), one never patched.
+    initial.emit(
+      patchEvent("Movie Alpha", "movie", makeFilmInfo(1, "Movie Alpha", "movie")),
+    );
+    initial.emit(patchEvent("Movie Ghost", "movie", null));
+    initial.emit(groupEndOk("movie"));
+    initial.emit(groupEndOk("tv"));
+    initial.end();
+    await awaitTitle("Movie Ghost");
+
+    fireEvent.click(loadMoreCTA("Movies"));
+    await waitFor(() => expect(runsFor("movie")).toHaveLength(1));
+
+    const payload = runFor("movie").previousRecommendations ?? [];
+    // Every shown movie item is sent — patched, failed, and pending alike —
+    // with title+year+category and NO TMDB id.
+    expect(payload).toHaveLength(2);
+    expect(payload).toEqual([
+      { title: "Movie Alpha", year: 2024, category: "movie" },
+      { title: "Movie Ghost", year: 2024, category: "movie" },
+    ]);
+    payload.forEach((entry) => expect(entry).not.toHaveProperty("id"));
   });
 });
