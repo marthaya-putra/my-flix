@@ -1261,8 +1261,11 @@ export function Frost({ children, className, style, ...options }: FrostProps) {
     <div className={className} style={{ position: "relative", ...style }}>
       <canvas
         ref={sourceRef}
-        // @ts-expect-error experimental html-in-canvas attribute
+        // @ts-expect-error experimental html-in-canvas attributes.
+        // Chrome 155 renamed `layoutsubtree` to `content="drawable"`.
+        // Set both: each Chrome build ignores the name it does not know.
         layoutsubtree="true"
+        content="drawable"
         suppressHydrationWarning
         style={
           native

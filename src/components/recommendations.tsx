@@ -16,8 +16,6 @@ const STREAM_ROUTE = "/api/recommendations/stream";
 
 const STATUS_MESSAGES: Record<string, string> = {
   generation_failed: "Couldn't generate recommendations. Try again.",
-  exhausted: "Couldn't find fresh recommendations — try again.",
-  enrichment_empty: "Recommendations failed to resolve. Try again.",
 };
 
 // --- Cache mutation helpers for liked/disliked ID lists ---------------------
@@ -44,14 +42,12 @@ export function Recommendations() {
   >({ movie: null, tv: null });
 
   // Spec 0010: per-category stage descriptor — drives the in-content loading
-  // copy (LoadMoreCard), NOT the header. Bundles the stage with whether it was
-  // reached via a deficit-retry round so message selection is a single lookup
-  // (stageMessagesFor). See CONTEXT.md → Deficit retry loop, Stream run.
+  // copy (LoadMoreCard), NOT the header. See CONTEXT.md → Stream run.
   const [categoryStage, setCategoryStage] = useState<
-    Record<Category, { stage?: StreamStage; retry?: boolean }>
+    Record<Category, { stage?: StreamStage }>
   >({ movie: {}, tv: {} });
   // Per-category target — how many skeletons to render while pending so the
-  // carousel layout stays stable through the deficit-retry loop.
+  // carousel layout stays stable while the single LLM round streams in.
   const [categoryTarget, setCategoryTarget] = useState<
     Record<Category, number>
   >({ movie: 3, tv: 3 });
@@ -76,15 +72,16 @@ export function Recommendations() {
   // aborts everything so no fetch outlives the component.
   const activeRunControllersRef = useRef<Set<AbortController>>(new Set());
 
+  // Title-first exclusion payload: every shown item is sent as
+  // title+year+category — including items whose poster lookup failed or is
+  // still pending (tmdbData absent/null). The server's matcher excludes by
+  // normalized title+year, so no TMDB id is needed (and none may exist).
   const buildPreviousWithIds = (recs: Recommendation[]) =>
-    recs
-      .filter((r) => r.tmdbData)
-      .map((r) => ({
-        id: r.tmdbData!.id,
-        title: r.title,
-        year: r.releasedYear,
-        category: r.category,
-      }));
+    recs.map((r) => ({
+      title: r.title,
+      year: r.releasedYear,
+      category: r.category,
+    }));
 
   const consumeStream = useCallback(
     async (
@@ -140,16 +137,27 @@ export function Recommendations() {
         } else if (evt.type === "item") {
           local.push(evt.rec as Recommendation);
           setRecommendations((prev) => [...prev, evt.rec as Recommendation]);
+        } else if (evt.type === "itemPatch") {
+          // Patch the already-rendered card by its natural key
+          // (category + title + year). The patch echoes the item's LLM
+          // title/year verbatim, so an exact match addresses the card;
+          // unknown keys simply match nothing and are ignored.
+          setRecommendations((prev) =>
+            prev.map((r) =>
+              r.category === evt.category &&
+              r.title === evt.title &&
+              r.releasedYear === evt.releasedYear
+                ? { ...r, tmdbData: evt.filmInfo }
+                : r,
+            ),
+          );
         } else if (evt.type === "progress") {
           setCategoryStage((prev) => ({
             ...prev,
-            [evt.category]: { stage: evt.stage, retry: evt.retry ?? false },
+            [evt.category]: { stage: evt.stage },
           }));
         } else if (evt.type === "groupEnd") {
-          const isError =
-            evt.status === "generation_failed" ||
-            evt.status === "exhausted" ||
-            evt.status === "enrichment_empty";
+          const isError = evt.status !== "ok";
           // During load-more, do NOT flip status — it stays `ok`.
           // Only set categoryError so the trailing card can show it.
           if (!isLoadMore) {
@@ -372,7 +380,6 @@ export function Recommendations() {
           items={items}
           status={categoryStatus[category]}
           stage={categoryStage[category].stage}
-          stageRetry={categoryStage[category].retry}
           target={categoryTarget[category]}
           errorMessage={categoryError[category]}
           loadingMore={loadingMore[category]}

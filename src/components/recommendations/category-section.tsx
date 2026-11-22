@@ -19,7 +19,8 @@ export type Recommendation = {
   releasedYear: number;
   reason: string;
   imdbRating: number;
-  tmdbData: FilmInfo | null;
+  /** Absent while the poster patch is pending; null after a failed lookup. */
+  tmdbData?: FilmInfo | null;
 };
 
 type CategorySectionProps = {
@@ -27,8 +28,6 @@ type CategorySectionProps = {
   items: Recommendation[];
   status: CategoryStatus;
   stage?: StreamStage;
-  /** True when the current stage was reached via a deficit-retry round. */
-  stageRetry?: boolean;
   /** Target card count — skeletons fill up to this while pending. */
   target?: number;
   errorMessage?: string | null;
@@ -44,7 +43,6 @@ export function CategorySection({
   items,
   status,
   stage,
-  stageRetry,
   target,
   errorMessage,
   loadingMore,
@@ -61,8 +59,8 @@ export function CategorySection({
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
   // Skeletons fill the carousel ONLY beside real cards during the initial
-  // stream — they keep the slide count stable (up to target) as survivors
-  // trickle in from the deficit-retry loop. With 0 real items the centered
+  // stream — they keep the slide count stable (up to target) as items
+  // arrive from the single LLM round. With 0 real items the centered
   // stage label owns the state, not skeletons.
   const skeletonCount =
     hasItems && isPending && !loadingMore
@@ -89,7 +87,7 @@ export function CategorySection({
 
       {/* 0-items-pending: centered stage label (not skeletons). */}
       {isPending && !hasItems && !isError && (
-        <InitialLoadComposition stage={stage} stageRetry={stageRetry} />
+        <InitialLoadComposition stage={stage} />
       )}
 
       {/* Carousel */}
@@ -129,7 +127,6 @@ export function CategorySection({
                 <LoadMoreCard
                   loading={loadingMore}
                   stage={stage}
-                  stageRetry={stageRetry}
                   error={errorMessage}
                   onClick={onLoadMore}
                 />

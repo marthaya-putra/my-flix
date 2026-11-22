@@ -49,13 +49,25 @@ export async function loadUserContent(userId: string): Promise<UserContent> {
     .filter((genre) => genre.length > 0);
   const uniqueGenres = [...new Set(allGenres)];
 
+  // Liked-title entries carry createdAt + per-title genres (existing
+  // columns — no migration) for the per-run taste profile: createdAt
+  // orders the recent-liked window, genres feed in-memory counts.
+  const toTitle = (p: (typeof preferences)[number]) => ({
+    id: p.preferenceId,
+    title: p.title,
+    year: p.year,
+    createdAt: p.createdAt ?? null,
+    genres: p.genres
+      ? p.genres
+          .split(",")
+          .map((genre) => genre.trim())
+          .filter((genre) => genre.length > 0)
+      : [],
+  });
+
   return {
-    movies: preferences
-      .filter((p) => p.category === "movie")
-      .map((p) => ({ id: p.preferenceId, title: p.title, year: p.year })),
-    tvs: preferences
-      .filter((p) => p.category === "tv-series")
-      .map((p) => ({ id: p.preferenceId, title: p.title, year: p.year })),
+    movies: preferences.filter((p) => p.category === "movie").map(toTitle),
+    tvs: preferences.filter((p) => p.category === "tv-series").map(toTitle),
     dislikedMovies: dislikes
       .filter((d) => d.category === "movie")
       .map((d) => ({ id: d.preferenceId, title: d.title, year: d.year })),

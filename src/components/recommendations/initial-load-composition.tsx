@@ -4,7 +4,6 @@ import { RotatingMessage } from "./rotating-message";
 
 type InitialLoadCompositionProps = {
   stage?: StreamStage;
-  stageRetry?: boolean;
 };
 
 function TypingDots() {
@@ -29,9 +28,8 @@ function TypingDots() {
  */
 export function InitialLoadComposition({
   stage,
-  stageRetry,
 }: InitialLoadCompositionProps) {
-  const messages = stageMessagesFor(stage, stageRetry);
+  const messages = stageMessagesFor(stage);
 
   return (
     <div className="relative overflow-hidden min-h-[280px] w-full">

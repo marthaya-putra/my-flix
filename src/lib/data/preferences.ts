@@ -522,9 +522,22 @@ export const toggleMoviePreference = createServerFn({
 // source of truth is the server (DB) — never trust a client-supplied copy.
 // Exported so the streaming route and other server callers share one type.
 // Type-only — safe for the client to import without pulling server runtime.
+//
+// Liked-title entries carry optional createdAt (creation timestamp) and
+// per-title genres — selected by loadUserContent from existing columns
+// (no migration) so the per-run taste profile can order its recent-liked
+// window by createdAt and count genres in memory.
+export type UserContentTitle = {
+  id: number;
+  title: string;
+  year: number;
+  createdAt?: Date | null;
+  genres?: string[];
+};
+
 export type UserContent = {
-  movies: Array<{ id: number; title: string; year: number }>;
-  tvs: Array<{ id: number; title: string; year: number }>;
+  movies: UserContentTitle[];
+  tvs: UserContentTitle[];
   dislikedMovies: Array<{ id: number; title: string; year: number }>;
   dislikedTvs: Array<{ id: number; title: string; year: number }>;
   actors: string[];

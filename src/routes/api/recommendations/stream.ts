@@ -92,6 +92,19 @@ export const Route = createFileRoute("/api/recommendations/stream")({
         // yielded) instead of before the stream is created.
         const loadPrefs = () => loadUserContent(session.user.id);
 
+        // Per-run taste profile (design doc item 10): wraps
+        // generateTasteProfile + renderProfileText; every failure resolves
+        // null inside, so the prompt fail-opens to today's shape. Derived
+        // inside runPipelines from the memoized load — one DB read, one
+        // profile call per run.
+        const { generateTasteProfile, renderProfileText } = await import(
+          "@/lib/ai/taste-profile"
+        );
+        const deriveProfile = async (content: Awaited<ReturnType<typeof loadPrefs>>) => {
+          const profile = await generateTasteProfile(content);
+          return profile ? renderProfileText(profile) : null;
+        };
+
         const encoder = new TextEncoder();
         // Track whether the client has disconnected (abort/navigation). When
         // it has, the stream controller is closed and enqueue() would throw
@@ -119,11 +132,13 @@ export const Route = createFileRoute("/api/recommendations/stream")({
               // NDJSON line. raceMerge guarantees groupStart per category
               // up front, interleaved items, and exactly one groupEnd per
               // requested category.
-              for await (const evt of runPipelines({
-                loadPrefs,
-                previousRecommendations: parsed.data.previousRecommendations,
-                categories: parsed.data.categories,
-              })) {
+                  for await (const evt of runPipelines({
+                    loadPrefs,
+                    previousRecommendations: parsed.data.previousRecommendations,
+                    categories: parsed.data.categories,
+                    deriveProfile,
+                    signal: request.signal,
+                  })) {
                 if (clientGone) break;
                 enqueueSafe(encoder.encode(JSON.stringify(evt) + "\n"));
               }

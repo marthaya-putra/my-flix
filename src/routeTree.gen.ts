@@ -9,46 +9,31 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as WatchlistRouteImport } from './routes/watchlist'
-import { Route as SignUpRouteImport } from './routes/sign-up'
-import { Route as RecommendationsRouteImport } from './routes/recommendations'
-import { Route as PreferencesRouteImport } from './routes/preferences'
-import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as TvsIndexRouteImport } from './routes/tvs.index'
-import { Route as RecommendationsIndexRouteImport } from './routes/recommendations.index'
-import { Route as PreferencesIndexRouteImport } from './routes/preferences.index'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as PreferencesRouteImport } from './routes/preferences'
+import { Route as RecommendationsRouteImport } from './routes/recommendations'
+import { Route as SignUpRouteImport } from './routes/sign-up'
+import { Route as WatchlistRouteImport } from './routes/watchlist'
 import { Route as MoviesIndexRouteImport } from './routes/movies.index'
-import { Route as TvsSearchRouteImport } from './routes/tvs.search'
-import { Route as TvsAiringTodayRouteImport } from './routes/tvs.airing-today'
-import { Route as TvsAiringThisWeekRouteImport } from './routes/tvs.airing-this-week'
-import { Route as PreferencesTvRouteImport } from './routes/preferences.tv'
-import { Route as PreferencesPersonRouteImport } from './routes/preferences.person'
-import { Route as PreferencesMovieRouteImport } from './routes/preferences.movie'
-import { Route as PersonSearchRouteImport } from './routes/person.search'
 import { Route as MoviesSearchRouteImport } from './routes/movies.search'
-import { Route as ApiRecommendationsStreamRouteImport } from './routes/api/recommendations/stream'
-import { Route as ApiImgSplatRouteImport } from './routes/api/img/$'
+import { Route as PersonSearchRouteImport } from './routes/person.search'
+import { Route as PreferencesIndexRouteImport } from './routes/preferences.index'
+import { Route as PreferencesMovieRouteImport } from './routes/preferences.movie'
+import { Route as PreferencesPersonRouteImport } from './routes/preferences.person'
+import { Route as PreferencesTvRouteImport } from './routes/preferences.tv'
+import { Route as RecommendationsIndexRouteImport } from './routes/recommendations.index'
+import { Route as TvsIndexRouteImport } from './routes/tvs.index'
+import { Route as TvsAiringThisWeekRouteImport } from './routes/tvs.airing-this-week'
+import { Route as TvsAiringTodayRouteImport } from './routes/tvs.airing-today'
+import { Route as TvsSearchRouteImport } from './routes/tvs.search'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiImgSplatRouteImport } from './routes/api/img/$'
+import { Route as ApiRecommendationsStreamRouteImport } from './routes/api/recommendations/stream'
 
-const WatchlistRoute = WatchlistRouteImport.update({
-  id: '/watchlist',
-  path: '/watchlist',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SignUpRoute = SignUpRouteImport.update({
-  id: '/sign-up',
-  path: '/sign-up',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RecommendationsRoute = RecommendationsRouteImport.update({
-  id: '/recommendations',
-  path: '/recommendations',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PreferencesRoute = PreferencesRouteImport.update({
-  id: '/preferences',
-  path: '/preferences',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -56,54 +41,44 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const PreferencesRoute = PreferencesRouteImport.update({
+  id: '/preferences',
+  path: '/preferences',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TvsIndexRoute = TvsIndexRouteImport.update({
-  id: '/tvs/',
-  path: '/tvs/',
+const RecommendationsRoute = RecommendationsRouteImport.update({
+  id: '/recommendations',
+  path: '/recommendations',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RecommendationsIndexRoute = RecommendationsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => RecommendationsRoute,
+const SignUpRoute = SignUpRouteImport.update({
+  id: '/sign-up',
+  path: '/sign-up',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const PreferencesIndexRoute = PreferencesIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => PreferencesRoute,
+const WatchlistRoute = WatchlistRouteImport.update({
+  id: '/watchlist',
+  path: '/watchlist',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const MoviesIndexRoute = MoviesIndexRouteImport.update({
   id: '/movies/',
   path: '/movies/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TvsSearchRoute = TvsSearchRouteImport.update({
-  id: '/tvs/search',
-  path: '/tvs/search',
+const MoviesSearchRoute = MoviesSearchRouteImport.update({
+  id: '/movies/search',
+  path: '/movies/search',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TvsAiringTodayRoute = TvsAiringTodayRouteImport.update({
-  id: '/tvs/airing-today',
-  path: '/tvs/airing-today',
+const PersonSearchRoute = PersonSearchRouteImport.update({
+  id: '/person/search',
+  path: '/person/search',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TvsAiringThisWeekRoute = TvsAiringThisWeekRouteImport.update({
-  id: '/tvs/airing-this-week',
-  path: '/tvs/airing-this-week',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PreferencesTvRoute = PreferencesTvRouteImport.update({
-  id: '/tv',
-  path: '/tv',
-  getParentRoute: () => PreferencesRoute,
-} as any)
-const PreferencesPersonRoute = PreferencesPersonRouteImport.update({
-  id: '/person',
-  path: '/person',
+const PreferencesIndexRoute = PreferencesIndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => PreferencesRoute,
 } as any)
 const PreferencesMovieRoute = PreferencesMovieRouteImport.update({
@@ -111,14 +86,49 @@ const PreferencesMovieRoute = PreferencesMovieRouteImport.update({
   path: '/movie',
   getParentRoute: () => PreferencesRoute,
 } as any)
-const PersonSearchRoute = PersonSearchRouteImport.update({
-  id: '/person/search',
-  path: '/person/search',
+const PreferencesPersonRoute = PreferencesPersonRouteImport.update({
+  id: '/person',
+  path: '/person',
+  getParentRoute: () => PreferencesRoute,
+} as any)
+const PreferencesTvRoute = PreferencesTvRouteImport.update({
+  id: '/tv',
+  path: '/tv',
+  getParentRoute: () => PreferencesRoute,
+} as any)
+const RecommendationsIndexRoute = RecommendationsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => RecommendationsRoute,
+} as any)
+const TvsIndexRoute = TvsIndexRouteImport.update({
+  id: '/tvs/',
+  path: '/tvs/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MoviesSearchRoute = MoviesSearchRouteImport.update({
-  id: '/movies/search',
-  path: '/movies/search',
+const TvsAiringThisWeekRoute = TvsAiringThisWeekRouteImport.update({
+  id: '/tvs/airing-this-week',
+  path: '/tvs/airing-this-week',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TvsAiringTodayRoute = TvsAiringTodayRouteImport.update({
+  id: '/tvs/airing-today',
+  path: '/tvs/airing-today',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TvsSearchRoute = TvsSearchRouteImport.update({
+  id: '/tvs/search',
+  path: '/tvs/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiImgSplatRoute = ApiImgSplatRouteImport.update({
+  id: '/api/img/$',
+  path: '/api/img/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiRecommendationsStreamRoute =
@@ -127,16 +137,6 @@ const ApiRecommendationsStreamRoute =
     path: '/api/recommendations/stream',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiImgSplatRoute = ApiImgSplatRouteImport.update({
-  id: '/api/img/$',
-  path: '/api/img/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
-  id: '/api/auth/$',
-  path: '/api/auth/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -297,32 +297,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/watchlist': {
-      id: '/watchlist'
-      path: '/watchlist'
-      fullPath: '/watchlist'
-      preLoaderRoute: typeof WatchlistRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sign-up': {
-      id: '/sign-up'
-      path: '/sign-up'
-      fullPath: '/sign-up'
-      preLoaderRoute: typeof SignUpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/recommendations': {
-      id: '/recommendations'
-      path: '/recommendations'
-      fullPath: '/recommendations'
-      preLoaderRoute: typeof RecommendationsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/preferences': {
-      id: '/preferences'
-      path: '/preferences'
-      fullPath: '/preferences'
-      preLoaderRoute: typeof PreferencesRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -332,88 +311,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/preferences': {
+      id: '/preferences'
+      path: '/preferences'
+      fullPath: '/preferences'
+      preLoaderRoute: typeof PreferencesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/tvs/': {
-      id: '/tvs/'
-      path: '/tvs'
-      fullPath: '/tvs/'
-      preLoaderRoute: typeof TvsIndexRouteImport
+    '/recommendations': {
+      id: '/recommendations'
+      path: '/recommendations'
+      fullPath: '/recommendations'
+      preLoaderRoute: typeof RecommendationsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/recommendations/': {
-      id: '/recommendations/'
-      path: '/'
-      fullPath: '/recommendations/'
-      preLoaderRoute: typeof RecommendationsIndexRouteImport
-      parentRoute: typeof RecommendationsRoute
+    '/sign-up': {
+      id: '/sign-up'
+      path: '/sign-up'
+      fullPath: '/sign-up'
+      preLoaderRoute: typeof SignUpRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/preferences/': {
-      id: '/preferences/'
-      path: '/'
-      fullPath: '/preferences/'
-      preLoaderRoute: typeof PreferencesIndexRouteImport
-      parentRoute: typeof PreferencesRoute
+    '/watchlist': {
+      id: '/watchlist'
+      path: '/watchlist'
+      fullPath: '/watchlist'
+      preLoaderRoute: typeof WatchlistRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/movies/': {
       id: '/movies/'
       path: '/movies'
       fullPath: '/movies/'
       preLoaderRoute: typeof MoviesIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/tvs/search': {
-      id: '/tvs/search'
-      path: '/tvs/search'
-      fullPath: '/tvs/search'
-      preLoaderRoute: typeof TvsSearchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/tvs/airing-today': {
-      id: '/tvs/airing-today'
-      path: '/tvs/airing-today'
-      fullPath: '/tvs/airing-today'
-      preLoaderRoute: typeof TvsAiringTodayRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/tvs/airing-this-week': {
-      id: '/tvs/airing-this-week'
-      path: '/tvs/airing-this-week'
-      fullPath: '/tvs/airing-this-week'
-      preLoaderRoute: typeof TvsAiringThisWeekRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/preferences/tv': {
-      id: '/preferences/tv'
-      path: '/tv'
-      fullPath: '/preferences/tv'
-      preLoaderRoute: typeof PreferencesTvRouteImport
-      parentRoute: typeof PreferencesRoute
-    }
-    '/preferences/person': {
-      id: '/preferences/person'
-      path: '/person'
-      fullPath: '/preferences/person'
-      preLoaderRoute: typeof PreferencesPersonRouteImport
-      parentRoute: typeof PreferencesRoute
-    }
-    '/preferences/movie': {
-      id: '/preferences/movie'
-      path: '/movie'
-      fullPath: '/preferences/movie'
-      preLoaderRoute: typeof PreferencesMovieRouteImport
-      parentRoute: typeof PreferencesRoute
-    }
-    '/person/search': {
-      id: '/person/search'
-      path: '/person/search'
-      fullPath: '/person/search'
-      preLoaderRoute: typeof PersonSearchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/movies/search': {
@@ -423,11 +353,81 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MoviesSearchRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/recommendations/stream': {
-      id: '/api/recommendations/stream'
-      path: '/api/recommendations/stream'
-      fullPath: '/api/recommendations/stream'
-      preLoaderRoute: typeof ApiRecommendationsStreamRouteImport
+    '/person/search': {
+      id: '/person/search'
+      path: '/person/search'
+      fullPath: '/person/search'
+      preLoaderRoute: typeof PersonSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/preferences/': {
+      id: '/preferences/'
+      path: '/'
+      fullPath: '/preferences/'
+      preLoaderRoute: typeof PreferencesIndexRouteImport
+      parentRoute: typeof PreferencesRoute
+    }
+    '/preferences/movie': {
+      id: '/preferences/movie'
+      path: '/movie'
+      fullPath: '/preferences/movie'
+      preLoaderRoute: typeof PreferencesMovieRouteImport
+      parentRoute: typeof PreferencesRoute
+    }
+    '/preferences/person': {
+      id: '/preferences/person'
+      path: '/person'
+      fullPath: '/preferences/person'
+      preLoaderRoute: typeof PreferencesPersonRouteImport
+      parentRoute: typeof PreferencesRoute
+    }
+    '/preferences/tv': {
+      id: '/preferences/tv'
+      path: '/tv'
+      fullPath: '/preferences/tv'
+      preLoaderRoute: typeof PreferencesTvRouteImport
+      parentRoute: typeof PreferencesRoute
+    }
+    '/recommendations/': {
+      id: '/recommendations/'
+      path: '/'
+      fullPath: '/recommendations/'
+      preLoaderRoute: typeof RecommendationsIndexRouteImport
+      parentRoute: typeof RecommendationsRoute
+    }
+    '/tvs/': {
+      id: '/tvs/'
+      path: '/tvs'
+      fullPath: '/tvs/'
+      preLoaderRoute: typeof TvsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tvs/airing-this-week': {
+      id: '/tvs/airing-this-week'
+      path: '/tvs/airing-this-week'
+      fullPath: '/tvs/airing-this-week'
+      preLoaderRoute: typeof TvsAiringThisWeekRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tvs/airing-today': {
+      id: '/tvs/airing-today'
+      path: '/tvs/airing-today'
+      fullPath: '/tvs/airing-today'
+      preLoaderRoute: typeof TvsAiringTodayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tvs/search': {
+      id: '/tvs/search'
+      path: '/tvs/search'
+      fullPath: '/tvs/search'
+      preLoaderRoute: typeof TvsSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/img/$': {
@@ -437,11 +437,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiImgSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/auth/$': {
-      id: '/api/auth/$'
-      path: '/api/auth/$'
-      fullPath: '/api/auth/$'
-      preLoaderRoute: typeof ApiAuthSplatRouteImport
+    '/api/recommendations/stream': {
+      id: '/api/recommendations/stream'
+      path: '/api/recommendations/stream'
+      fullPath: '/api/recommendations/stream'
+      preLoaderRoute: typeof ApiRecommendationsStreamRouteImport
       parentRoute: typeof rootRouteImport
     }
   }

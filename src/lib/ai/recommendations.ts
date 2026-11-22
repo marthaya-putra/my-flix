@@ -1,10 +1,5 @@
-import { google } from "@ai-sdk/google";
-import { mistral } from "@ai-sdk/mistral";
-import { Mastra } from "@mastra/core";
-import { Agent } from "@mastra/core/agent";
-import { ConsoleLogger } from "@mastra/core/logger";
-import { MastraPlatformExporter, Observability } from "@mastra/observability";
 import { z } from "zod";
+import { recommendationAgent } from "./agents";
 import { safePromise } from "../utils/safe-promise";
 
 // Plain function type
@@ -65,6 +60,9 @@ const RecommendationInput = z.object({
   genres: z.array(z.string()).optional(),
   excludeAdult: z.boolean().default(true),
   minImdbRating: z.number().min(0).max(10).optional(),
+  // Per-run taste profile (renderProfileText output). Absent/null → the
+  // prompt renders exactly as before the profile step existed.
+  tasteProfile: z.string().optional(),
 });
 
 const RecommendationSchema = z.object({
@@ -83,60 +81,14 @@ const RecommendationSchema = z.object({
   ),
 });
 
-// Issue #131: the model chain lives in Mastra's fallback routing. Mastra
-// advances to the next entry on ANY step failure — provider error or
-// structured-output schema violation (executeStreamWithFallbackModels has
-// no error-type filter) — and throws only after the last entry fails, which
-// the deficit loop maps to threw → generation_failed. gemini-2.5-flash is
-// access-limited by Google; gemini-3.8-flash is the stable free-tier Flash.
-const recommendationAgent = new Agent({
-  id: "recommendationAgent",
-  name: "recommendation-agent",
-  // Static fallback only — every generate() call passes per-call
-  // instructions that fully replace this default.
-  instructions: "You are a movie and TV series recommendation expert.",
-  model: [
-    { model: google("gemini-3.8-flash") },
-    { model: mistral("mistral-medium-latest") },
-  ],
-});
-
-// Traces export to Mastra Cloud only when MASTRA_CLOUD_API_KEY is set;
-// without it observability stays a no-op and local dev needs no key.
-// Issue #131 asked for OTLP export; @mastra/core 1.79 ships no OTLP
-// exporter — MastraPlatformExporter is the packaged path to the Mastra
-// Cloud dashboard, so routing traces through it is the equivalent.
-const cloudApiKey = process.env.MASTRA_CLOUD_API_KEY;
-
-// Registering the agent wires logger + observability into it; the
-// instance itself has no other caller yet (#132 adds the workflow).
-new Mastra({
-  agents: { recommendationAgent },
-  logger: new ConsoleLogger({
-    level: process.env.NODE_ENV === "production" ? "warn" : "info",
-  }),
-  observability: cloudApiKey
-    ? new Observability({
-        configs: {
-          default: {
-            serviceName: "my-flix",
-            exporters: [
-              new MastraPlatformExporter({ accessToken: cloudApiKey }),
-            ],
-          },
-        },
-      })
-    : undefined,
-});
-
 // Plain AI recommendation function
 export async function getAIRecommendations(input: GetRecommendationsInput) {
   // Spec 0005: translate to a category-flat shape here so buildPrompt is
   // a dumb template. Wrong-category liked/disliked lists are dropped
   // (token + focus win); favoriteActors/Directors/genres are category-
   // agnostic, kept on both. previousRecommendations scoped to same
-  // category — cross-category dedup is enforced server-side by the ID
-  // filter at survivor resolution.
+  // category — cross-category dedup is enforced server-side by the
+  // exclusion matcher at survivor resolution.
   const isMovie = input.onlyCategory === "movie";
   const cleanData: PromptData = {
     role: isMovie ? "movie" : "TV series",
@@ -154,6 +106,7 @@ export async function getAIRecommendations(input: GetRecommendationsInput) {
     favoriteActors: input.favoriteActors ?? [],
     favoriteDirectors: input.favoriteDirectors ?? [],
     genres: input.genres ?? [],
+    tasteProfile: input.tasteProfile,
   };
 
   const prompt = buildPrompt(cleanData);
@@ -178,6 +131,8 @@ export async function getAIRecommendations(input: GetRecommendationsInput) {
         - If user likes a director, prioritize other films/shows by that director
         - If user likes specific genres, heavily favor those genres
         - Each recommendation reason MUST name the specific preference it's based on
+        - HALLUCINATION CONSTRAINT: ONLY recommend well-known, real, verifiable titles. Before emitting a title, internally confirm it actually exists. NEVER invent, approximate, or guess titles.
+        - REASON FENCE: every reason MUST name a concrete liked title or favorite person from the user data. NEVER paraphrase or echo the TASTE PROFILE section's language — anchor each reason in a specific title or person, not the profile's abstractions.
         - REASON LENGTH IS CRITICAL: Aim for ~180 characters (min 100, HARD MAX 220 — enforced, longer ones get REJECTED). Write it like you're texting a friend — casual, chatty, fun. No lists, no restating the title.
 
         QUALITY CONTROL:
@@ -249,7 +204,9 @@ function simplifyPrevRecs(
 
 // Spec 0005: buildPrompt takes a single flat, category-resolved shape —
 // no branching inside. All category translation lives in cleanData above.
-type PromptData = {
+// Exported (with PromptData) so tests assert the TASTE PROFILE section
+// directly (title-first design item 6).
+export type PromptData = {
   role: string;
   likedLabel: string;
   dislikedLabel: string;
@@ -259,15 +216,27 @@ type PromptData = {
   favoriteActors: string[];
   favoriteDirectors: string[];
   genres: string[];
+  /** Pre-rendered taste-profile text; absent → section omitted entirely. */
+  tasteProfile?: string;
 };
 
-function buildPrompt(d: PromptData) {
+export function buildPrompt(d: PromptData) {
+  // Fail-open: with no tasteProfile the user-data block renders byte-for-byte
+  // as before the profile step existed (CUJ 2 rollback check).
+  const tasteProfileSection =
+    d.tasteProfile != null && d.tasteProfile.length > 0
+      ? `
+TASTE PROFILE (a distillation of the user's taste — use it to guide variety, but anchor every reason in the raw data below):
+${d.tasteProfile}
+`
+      : "";
+
   return `
 The following is the user's taste profile.  
 Recommend based on this USER PREFERENCES DATA SECTION:
 
 ==================== USER PREFERENCES DATA SECTION ========================
-${d.likedLabel}: ${JSON.stringify(d.liked, null, 2)}
+${tasteProfileSection}${d.likedLabel}: ${JSON.stringify(d.liked, null, 2)}
 Actors: ${JSON.stringify(d.favoriteActors, null, 2)}
 Directors: ${JSON.stringify(d.favoriteDirectors, null, 2)}
 Genres: ${JSON.stringify(d.genres, null, 2)}

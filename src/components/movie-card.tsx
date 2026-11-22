@@ -35,6 +35,7 @@ export function MovieCard({
   // hydration agree — unlike authClient.useSession(), which is client-only
   // and would render session-gated buttons only after mount → mismatch.
   const { data: session, isPending: sessionPending } = useQuery(sessionQuery);
+  const authed = !sessionPending && Boolean(session);
   // Like + watchlist state is owned by the shared button components
   // (LikeButton / WatchlistButton), which read straight from the QueryClient
   // cache (primed by the route loaders) and call the reaction hooks
@@ -76,15 +77,12 @@ export function MovieCard({
 
       <div className="flex items-center gap-2 mb-3 flex-wrap">
         {match && (
-          <span className="text-xs font-bold text-chart-2">
-            {match} Match
-          </span>
+          <span className="text-xs font-bold text-chart-2">{match} Match</span>
         )}
         <span className="text-xs text-muted-foreground">
           {new Date(releaseDate).getFullYear()}
         </span>
       </div>
-
     </div>
   );
 
@@ -118,11 +116,43 @@ export function MovieCard({
         </PlayLink>
       </motion.div>
 
-      {/* Icon strip — More info + reactions, all same-weight */}
-      <div className="flex items-center gap-2 justify-center">
+      {/* Icon strip — More info + reactions, all same-weight. Signed out,
+          reactions are gone, so one lone icon under Play reads as a broken
+          strip. Promote More info to a full-width glass pill that mirrors
+          the Play CTA instead. */}
+      {authed ? (
+        <div className="flex items-center gap-2 justify-center">
+          <motion.div
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.7 }}
+            transition={ctaDramaSpring}
+          >
+            <MoreInfoLink
+              title={title}
+              category={category}
+              releasedYear={new Date(releaseDate).getFullYear()}
+              aria-label={`Search more info for ${title}`}
+              className={cn(
+                buttonVariants({ size: "icon" }),
+                HIT_ZONE,
+                "w-8 h-8",
+                PILL_BUTTON_CLASS,
+              )}
+            >
+              <ExternalLink className="w-4 h-4" />
+            </MoreInfoLink>
+          </motion.div>
+
+          <WatchlistButton filmInfo={filmInfo} />
+
+          <DislikeButton filmInfo={filmInfo} />
+
+          <LikeButton filmInfo={filmInfo} />
+        </div>
+      ) : (
         <motion.div
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.7 }}
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
           transition={ctaDramaSpring}
         >
           <MoreInfoLink
@@ -131,33 +161,23 @@ export function MovieCard({
             releasedYear={new Date(releaseDate).getFullYear()}
             aria-label={`Search more info for ${title}`}
             className={cn(
-              buttonVariants({ size: "icon" }),
+              buttonVariants(),
               HIT_ZONE,
-              "w-8 h-8",
-              PILL_BUTTON_CLASS,
+              "w-full h-8 gap-1.5 rounded-full border-white/15 bg-black/50 backdrop-blur-md text-white hover:bg-black/70",
             )}
           >
-            <ExternalLink className="w-4 h-4" />
+            <ExternalLink className="w-3.5 h-3.5" />
+            More info
           </MoreInfoLink>
         </motion.div>
-
-        {!sessionPending && session && (
-          <WatchlistButton filmInfo={filmInfo} />
-        )}
-
-        {!sessionPending && session && (
-          <DislikeButton filmInfo={filmInfo} />
-        )}
-
-        {!sessionPending && session && <LikeButton filmInfo={filmInfo} />}
-      </div>
+      )}
     </div>
   );
 
-    return (
-      <div
-        className="group/card relative aspect-[3/4] w-full rounded-lg overflow-hidden cursor-pointer select-none"
-        onClick={() => {
+  return (
+    <div
+      className="group/card relative aspect-[3/4] w-full rounded-lg overflow-hidden cursor-pointer select-none"
+      onClick={() => {
         if ("ontouchstart" in window) {
           setExpanded((e) => !e);
         }

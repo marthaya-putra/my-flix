@@ -445,6 +445,22 @@ export function createParticleScroll(
   });
   mutationObserver.observe(content, { childList: true, subtree: true });
 
+  // CSS state changes (:hover, transitions, motion springs) mutate no DOM,
+  // so nothing above asks for a repaint and hover overlays stay frozen in
+  // the captured texture. Re-capture in a short burst around pointer moves
+  // between elements — long enough to film the 200 ms card overlay fade
+  // plus the CTA hover springs.
+  const REPAINT_BURST_MS = 500;
+  let repaintBurstUntil = 0;
+  function onPointerActivity() {
+    if (!htmlInCanvas) return;
+    repaintBurstUntil = performance.now() + REPAINT_BURST_MS;
+    paintable.requestPaint!();
+    start();
+  }
+  content.addEventListener("pointerover", onPointerActivity);
+  content.addEventListener("pointerout", onPointerActivity);
+
   let time = 0;
   let introDone = false;
   let introWait = 0;
@@ -643,6 +659,11 @@ export function createParticleScroll(
       running = false;
       return;
     }
+    // While a pointer burst is open, request one capture per frame. Each
+    // requestPaint fires onpaint → contentDirty + wake, so the loop stays
+    // alive until the burst window closes.
+    const bursting = htmlInCanvas && performance.now() < repaintBurstUntil;
+    if (bursting) paintable.requestPaint!();
     const delta = Math.min((now - lastTime) / 1000, 1 / 30);
     lastTime = now;
     time += delta;
@@ -668,6 +689,7 @@ export function createParticleScroll(
     if (Math.abs(scrollTop - scrollSmooth) < 0.5) scrollSmooth = scrollTop;
     render(delta);
     if (
+      !bursting &&
       !contentDirty &&
       scrollSmooth === scrollTop &&
       !rowsAnimating &&
@@ -733,6 +755,8 @@ export function createParticleScroll(
       destroyed = true;
       cancelAnimationFrame(raf);
       window.removeEventListener("scroll", onScroll);
+      content.removeEventListener("pointerover", onPointerActivity);
+      content.removeEventListener("pointerout", onPointerActivity);
       observer.disconnect();
       intersection.disconnect();
       motionQuery.removeEventListener("change", onMotionChange);
@@ -845,8 +869,11 @@ export function ParticleScroll({
       >
         <canvas
           ref={sourceRef}
-          // @ts-expect-error experimental html-in-canvas attribute
+          // @ts-expect-error experimental html-in-canvas attributes.
+          // Chrome 155 renamed `layoutsubtree` to `content="drawable"`.
+          // Set both: each Chrome build ignores the name it does not know.
           layoutsubtree="true"
+          content="drawable"
           suppressHydrationWarning
           style={{
             position: "absolute",
