@@ -105,11 +105,20 @@ ${genreCounts.length ? genreCounts.map((g) => `- ${g.genre}: ${g.count}`).join("
 `;
 }
 
+// Trace correlation for the pipeline run that asked for this profile:
+// traceId joins this call into the run's single Mastra trace (all agent
+// calls of one user-visible run share it), runId lands in trace metadata.
+export type ProfileTraceContext = {
+  runId: string;
+  traceId: string;
+};
+
 // Generate the profile via the taste-profile agent. Resolves null on
 // chain failure, the 8s total budget elapsing, schema rejection, or
 // empty input (nothing to distill — fail open to today's prompt).
 export async function generateTasteProfile(
   content: TasteProfileContent,
+  trace?: ProfileTraceContext,
 ): Promise<TasteProfile | null> {
   const liked = recentLiked(content);
   const favoritePeople = [...content.actors, ...content.directors];
@@ -118,14 +127,27 @@ export async function generateTasteProfile(
   const genreCounts = genreCountsOf(liked);
 
   const [result, error] = await safePromise(
-    tasteProfileAgent.generate(buildProfilePrompt(liked, favoritePeople, genreCounts), {
-      instructions: PROFILE_INSTRUCTIONS,
-      structuredOutput: { schema: TasteProfileSchema },
-      modelSettings: { maxRetries: 0 },
-      // One timer across the whole fallback loop — Mastra aborts the
-      // in-flight model call and the loop on it.
-      abortSignal: AbortSignal.timeout(PROFILE_TOTAL_TIMEOUT_MS),
-    }),
+    tasteProfileAgent.generate(
+      buildProfilePrompt(liked, favoritePeople, genreCounts),
+      {
+        instructions: PROFILE_INSTRUCTIONS,
+        structuredOutput: { schema: TasteProfileSchema },
+        modelSettings: { maxRetries: 0 },
+        ...(trace
+          ? {
+              tracingOptions: {
+                traceId: trace.traceId,
+                metadata: { runId: trace.runId, step: "taste-profile" },
+                rootSpanName: `reco run ${trace.runId.slice(0, 8)} — taste profile`,
+                tags: ["recommendations", "taste-profile"],
+              },
+            }
+          : {}),
+        // One timer across the whole fallback loop — Mastra aborts the
+        // in-flight model call and the loop on it.
+        abortSignal: AbortSignal.timeout(PROFILE_TOTAL_TIMEOUT_MS),
+      },
+    ),
   );
 
   if (error) {
@@ -146,6 +168,11 @@ export async function generateTasteProfile(
     );
     return null;
   }
+  // The profile text is otherwise visible only inside a trace (15-day
+  // retention) — log it so the run's log line and the dashboard cross-check.
+  console.log(
+    `[taste-profile${trace ? ` run:${trace.runId.slice(0, 8)}` : ""}] profile:\n${renderProfileText(parsed.data)}`,
+  );
   return parsed.data;
 }
 

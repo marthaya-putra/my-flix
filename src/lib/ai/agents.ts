@@ -38,12 +38,24 @@ export const tasteProfileAgent = new Agent({
   model: MODEL_CHAIN,
 });
 
-// Traces export to Mastra Cloud only when MASTRA_CLOUD_API_KEY is set;
-// without it observability stays a no-op and local dev needs no key.
+// Traces export to the Mastra platform only when
+// MASTRA_PLATFORM_ACCESS_TOKEN is set (the canonical platform var name —
+// the same token `mastra init` writes); without it observability stays a
+// no-op and local dev needs no key. MASTRA_PROJECT_ID and the endpoint
+// vars are read from env by the exporter itself (resolveFromEnv default).
 // Issue #131 asked for OTLP export; @mastra/core 1.79 ships no OTLP
-// exporter — MastraPlatformExporter is the packaged path to the Mastra
-// Cloud dashboard, so routing traces through it is the equivalent.
-const cloudApiKey = process.env.MASTRA_CLOUD_API_KEY;
+// exporter — MastraPlatformExporter is the packaged path to the platform
+// dashboard, so routing traces through it is the equivalent.
+const platformAccessToken = process.env.MASTRA_PLATFORM_ACCESS_TOKEN;
+
+// Env changes do not reach running instances — observability silently off
+// in prod means traces vanish with no error anywhere. Warn once per cold
+// start so a missing key is found in logs, not discovered weeks later.
+if (!platformAccessToken && process.env.NODE_ENV === "production") {
+  console.warn(
+    "[mastra] MASTRA_PLATFORM_ACCESS_TOKEN not set — observability disabled, traces will not export",
+  );
+}
 
 // Registering the agents wires logger + observability into them.
 new Mastra({
@@ -51,13 +63,13 @@ new Mastra({
   logger: new ConsoleLogger({
     level: process.env.NODE_ENV === "production" ? "warn" : "info",
   }),
-  observability: cloudApiKey
+  observability: platformAccessToken
     ? new Observability({
         configs: {
           default: {
             serviceName: "my-flix",
             exporters: [
-              new MastraPlatformExporter({ accessToken: cloudApiKey }),
+              new MastraPlatformExporter({ accessToken: platformAccessToken }),
             ],
           },
         },

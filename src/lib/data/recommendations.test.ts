@@ -39,7 +39,11 @@ const EMPTY_PREFS: UserContent = {
   genres: [],
 };
 
-function makeTMDB(id: number, title: string, category: StreamCategory): FilmInfo {
+function makeTMDB(
+  id: number,
+  title: string,
+  category: StreamCategory,
+): FilmInfo {
   return {
     id,
     title,
@@ -124,7 +128,8 @@ function tokens(events: StreamEvent[]) {
 
 function groupEnds(events: StreamEvent[]) {
   return events.filter(
-    (e): e is Extract<StreamEvent, { type: "groupEnd" }> => e.type === "groupEnd",
+    (e): e is Extract<StreamEvent, { type: "groupEnd" }> =>
+      e.type === "groupEnd",
   );
 }
 
@@ -175,7 +180,9 @@ describe("runPipelines StreamEvent contract", () => {
       ["M1", "M2", "M3"].map((t) => makeRaw(`Movie ${t}`, "movie")),
       ["T1", "T2", "T3"].map((t) => makeRaw(`Show ${t}`, "tv")),
     );
-    const movieFilms = movieRecs.map((r, i) => makeTMDB(100 + i, r.title, "movie"));
+    const movieFilms = movieRecs.map((r, i) =>
+      makeTMDB(100 + i, r.title, "movie"),
+    );
     const tvFilms = tvRecs.map((r, i) => makeTMDB(200 + i, r.title, "tv"));
     stubTMDB(movieFilms, tvFilms);
 
@@ -184,7 +191,9 @@ describe("runPipelines StreamEvent contract", () => {
     expect(eventsFor(events, "movie")).toEqual(
       happySequence("movie", movieRecs, movieFilms),
     );
-    expect(eventsFor(events, "tv")).toEqual(happySequence("tv", tvRecs, tvFilms));
+    expect(eventsFor(events, "tv")).toEqual(
+      happySequence("tv", tvRecs, tvFilms),
+    );
     // Exactly one groupEnd per requested category, both terminal status ok.
     expect(groupEnds(events)).toEqual([
       { type: "groupEnd", category: "movie", status: "ok" },
@@ -211,8 +220,16 @@ describe("runPipelines StreamEvent contract", () => {
     const firstItem = events.findIndex((e) => e.type === "item");
     expect(lastGroupStart).toBeLessThan(firstItem);
     // Both groupStarts lead the stream, in requested-category order.
-    expect(events[0]).toEqual({ type: "groupStart", category: "movie", target: 3 });
-    expect(events[1]).toEqual({ type: "groupStart", category: "tv", target: 3 });
+    expect(events[0]).toEqual({
+      type: "groupStart",
+      category: "movie",
+      target: 3,
+    });
+    expect(events[1]).toEqual({
+      type: "groupStart",
+      category: "tv",
+      target: 3,
+    });
   });
 
   it("ends generation_failed when every model attempt fails", async () => {
@@ -224,7 +241,9 @@ describe("runPipelines StreamEvent contract", () => {
     // One call per round — the google→mistral chain is internal to the
     // agent and surfaces here as a single failed call.
     expect(getAIRecommendations).toHaveBeenCalledTimes(1);
-    expect(eventsFor(events, "movie").filter((e) => e.type === "item")).toEqual([]);
+    expect(eventsFor(events, "movie").filter((e) => e.type === "item")).toEqual(
+      [],
+    );
     expect(tokens(eventsFor(events, "movie"))).toEqual([
       "groupStart",
       "loading_preferences",
@@ -273,7 +292,9 @@ describe("runPipelines StreamEvent contract", () => {
       makeRaw("Liked Movie", "movie"), // year ±1 variant below
     ];
     colliding[1].releasedYear = 2024; // within ±1 of the liked 2023
-    const fresh = ["F1", "F2", "F3", "F4"].map((t) => makeRaw(`Movie ${t}`, "movie"));
+    const fresh = ["F1", "F2", "F3", "F4"].map((t) =>
+      makeRaw(`Movie ${t}`, "movie"),
+    );
     const recs = [...colliding, ...fresh];
     getAIRecommendations.mockImplementation(() => Promise.resolve(aiOk(recs)));
     stubTMDB(
@@ -307,7 +328,10 @@ describe("runPipelines StreamEvent contract", () => {
   it("emits no events for the unrequested category", async () => {
     const recs = ["M1", "M2", "M3"].map((t) => makeRaw(`Movie ${t}`, "movie"));
     getAIRecommendations.mockImplementation(() => Promise.resolve(aiOk(recs)));
-    stubTMDB(recs.map((r, i) => makeTMDB(100 + i, r.title, "movie")), []);
+    stubTMDB(
+      recs.map((r, i) => makeTMDB(100 + i, r.title, "movie")),
+      [],
+    );
 
     const events = await run({ categories: ["movie"] });
 
@@ -316,6 +340,10 @@ describe("runPipelines StreamEvent contract", () => {
     expect(searchTVsAPI).not.toHaveBeenCalled();
     expect(getAIRecommendations).toHaveBeenCalledWith(
       expect.objectContaining({ onlyCategory: "movie", requestedTvs: 0 }),
+      // Second arg is the per-run trace context (runId + traceId).
+      expect.objectContaining({
+        traceId: expect.stringMatching(/^[0-9a-f]{32}$/),
+      }),
     );
   });
 
@@ -334,13 +362,20 @@ describe("runPipelines StreamEvent contract", () => {
     // Overask: the single round requests 6 movies.
     expect(getAIRecommendations).toHaveBeenCalledWith(
       expect.objectContaining({ onlyCategory: "movie", requestedMovies: 6 }),
+      expect.objectContaining({
+        traceId: expect.stringMatching(/^[0-9a-f]{32}$/),
+      }),
     );
     // Inverted from the blocking-enrichment era: the missed lookup still
     // emits its item; only its patch is null.
     const items = events.filter(
       (e): e is Extract<StreamEvent, { type: "item" }> => e.type === "item",
     );
-    expect(items.map((e) => e.rec.title)).toEqual([hit1.title, miss.title, hit2.title]);
+    expect(items.map((e) => e.rec.title)).toEqual([
+      hit1.title,
+      miss.title,
+      hit2.title,
+    ]);
     items.forEach((e) => expect(e.rec.tmdbData).toBeUndefined());
     const patches = events.filter(
       (e): e is Extract<StreamEvent, { type: "itemPatch" }> =>
@@ -365,6 +400,9 @@ describe("runPipelines taste profile", () => {
 
     expect(getAIRecommendations).toHaveBeenCalledWith(
       expect.objectContaining({ tasteProfile: "Themes: cerebral sci-fi" }),
+      expect.objectContaining({
+        traceId: expect.stringMatching(/^[0-9a-f]{32}$/),
+      }),
     );
   });
 

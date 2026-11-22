@@ -100,8 +100,11 @@ export const Route = createFileRoute("/api/recommendations/stream")({
         const { generateTasteProfile, renderProfileText } = await import(
           "@/lib/ai/taste-profile"
         );
-        const deriveProfile = async (content: Awaited<ReturnType<typeof loadPrefs>>) => {
-          const profile = await generateTasteProfile(content);
+        const deriveProfile = async (
+          content: Awaited<ReturnType<typeof loadPrefs>>,
+          trace?: { runId: string; traceId: string },
+        ) => {
+          const profile = await generateTasteProfile(content, trace);
           return profile ? renderProfileText(profile) : null;
         };
 
@@ -132,13 +135,13 @@ export const Route = createFileRoute("/api/recommendations/stream")({
               // NDJSON line. raceMerge guarantees groupStart per category
               // up front, interleaved items, and exactly one groupEnd per
               // requested category.
-                  for await (const evt of runPipelines({
-                    loadPrefs,
-                    previousRecommendations: parsed.data.previousRecommendations,
-                    categories: parsed.data.categories,
-                    deriveProfile,
-                    signal: request.signal,
-                  })) {
+              for await (const evt of runPipelines({
+                loadPrefs,
+                previousRecommendations: parsed.data.previousRecommendations,
+                categories: parsed.data.categories,
+                deriveProfile,
+                signal: request.signal,
+              })) {
                 if (clientGone) break;
                 enqueueSafe(encoder.encode(JSON.stringify(evt) + "\n"));
               }
