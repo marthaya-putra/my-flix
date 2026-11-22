@@ -63,7 +63,11 @@ type RawRec = {
 // the optional AbortSignal threading (design doc item 11).
 const categorySearch: Record<
   Category,
-  (query: string, year: number | undefined, signal?: AbortSignal) => Promise<{
+  (
+    query: string,
+    year: number | undefined,
+    signal?: AbortSignal,
+  ) => Promise<{
     results: FilmInfo[];
   }>
 > = {
@@ -141,8 +145,9 @@ async function searchTitleWithYearFallback(
 async function fetchRawOnce(
   args: Parameters<typeof getAIRecommendations>[0],
   category: Category,
+  trace?: Parameters<typeof getAIRecommendations>[1],
 ): Promise<RawRec[] | null> {
-  const res = await getAIRecommendations(args);
+  const res = await getAIRecommendations(args, trace);
   if (!res.success || !res.data) {
     console.warn(`[recommendations:${category}] reco agent call failed`);
     return null;
@@ -191,6 +196,8 @@ type CategoryRun = {
   /** Route request signal — client disconnect cancels in-flight lookups. */
   signal?: AbortSignal;
   runId: string;
+  /** runId without dashes (32 hex) — joins all agent calls into one trace. */
+  traceId: string;
 };
 
 // Exclusion pools for the matcher: liked ∪ disliked ∪ prevRecs ∪ earlier
@@ -211,10 +218,7 @@ function buildPools(
     year: t.year,
   });
   return {
-    liked: [
-      ...userPrefs.movies.map(asMovie),
-      ...userPrefs.tvs.map(asTv),
-    ],
+    liked: [...userPrefs.movies.map(asMovie), ...userPrefs.tvs.map(asTv)],
     disliked: [
       ...userPrefs.dislikedMovies.map(asMovie),
       ...userPrefs.dislikedTvs.map(asTv),
@@ -233,8 +237,15 @@ function buildPools(
 // no tmdbData) → looking_up_posters → itemPatch per item in item order →
 // finalizing → exactly one groupEnd. Poster lookups run concurrently off
 // the critical path, each bounded by POSTER_LOOKUP_TIMEOUT_MS.
-async function* backfillCategory(run: CategoryRun): AsyncGenerator<StreamEvent> {
+async function* backfillCategory(
+  run: CategoryRun,
+): AsyncGenerator<StreamEvent> {
   const { category } = run;
+  // Short run id on every log line: matches trace metadata / dashboard
+  // browsing without flooding logs with full UUIDs (RECO_DEBUG_LOG keeps
+  // the full runId).
+  const tag = `[recommendations:${category} run:${run.runId.slice(0, 8)}]`;
+  const trace = { runId: run.runId, traceId: run.traceId };
 
   const progress = (stage: StreamStage, found = 0): StreamEvent => ({
     type: "progress",
@@ -270,7 +281,7 @@ async function* backfillCategory(run: CategoryRun): AsyncGenerator<StreamEvent> 
     // lookup misses are absorbed by surplus candidates (design §5).
     const ask = TARGET_PER_CATEGORY * OVERASK_MULTIPLIER;
     console.log(
-      `[recommendations:${category}] single round ask=${ask} ratingBar=strict(>${MIN_IMDB_RATING}) telling LLM to avoid ${run.previousRecommendations.length} titles: [${run.previousRecommendations.map((r) => r.title).join(", ")}]`,
+      `${tag} single round ask=${ask} ratingBar=strict(>${MIN_IMDB_RATING}) telling LLM to avoid ${run.previousRecommendations.length} titles: [${run.previousRecommendations.map((r) => r.title).join(", ")}]`,
     );
 
     yield progress("finding_titles");
@@ -286,6 +297,7 @@ async function* backfillCategory(run: CategoryRun): AsyncGenerator<StreamEvent> 
           ...(tasteProfile ? { tasteProfile } : {}),
         },
         category,
+        trace,
       )) ?? [];
 
     // Matcher filter — the only reject step. Survivors cap at the target
@@ -314,7 +326,7 @@ async function* backfillCategory(run: CategoryRun): AsyncGenerator<StreamEvent> 
       });
     }
     console.log(
-      `[recommendations:${category}] matcher filter: raw=${raw.length} survivors=${survivors.length} excluded(liked=${excluded.liked} disliked=${excluded.disliked} prevRecs=${excluded.prevRecs} round=${excluded.round}) capped=${capped}`,
+      `${tag} matcher filter: raw=${raw.length} survivors=${survivors.length} excluded(liked=${excluded.liked} disliked=${excluded.disliked} prevRecs=${excluded.prevRecs} round=${excluded.round}) capped=${capped}`,
     );
 
     // One outcome per survivor, in item order — filled after the lookups
@@ -337,7 +349,7 @@ async function* backfillCategory(run: CategoryRun): AsyncGenerator<StreamEvent> 
           withTimeout(run.signal, POSTER_LOOKUP_TIMEOUT_MS),
         ).catch((error) => {
           console.error(
-            `[recommendations:${category}] poster lookup failed for "${rec.title}":`,
+            `${tag} poster lookup failed for "${rec.title}":`,
             error,
           );
           return null;
@@ -354,8 +366,7 @@ async function* backfillCategory(run: CategoryRun): AsyncGenerator<StreamEvent> 
       const settled = await Promise.allSettled(patchPromises);
       for (let i = 0; i < settled.length; i++) {
         const result = settled[i];
-        const filmInfo =
-          result.status === "fulfilled" ? result.value : null;
+        const filmInfo = result.status === "fulfilled" ? result.value : null;
         patchOutcomes.push({
           title: survivors[i].title,
           year: survivors[i].releasedYear,
@@ -375,7 +386,7 @@ async function* backfillCategory(run: CategoryRun): AsyncGenerator<StreamEvent> 
 
     const status = classifyStatus(survivors.length);
     console.log(
-      `[recommendations:${category}] groupEnd status=${status} survivors=${survivors.length} raw=${raw.length}`,
+      `${tag} groupEnd status=${status} survivors=${survivors.length} raw=${raw.length}`,
     );
 
     // Structured per-run debug line (env-gated). scripts/verify-titles.mjs
@@ -398,7 +409,7 @@ async function* backfillCategory(run: CategoryRun): AsyncGenerator<StreamEvent> 
 
     yield { type: "groupEnd", category, status };
   } catch (error: any) {
-    console.error(`[recommendations:${category}] pipeline threw:`, error);
+    console.error(`${tag} pipeline threw:`, error);
     yield {
       type: "groupEnd",
       category,
@@ -506,7 +517,13 @@ export async function* runPipelines(input: {
   loadPrefs: () => Promise<UserContent>;
   previousRecommendations: StreamRequest["previousRecommendations"];
   categories?: Category[];
-  deriveProfile?: (content: UserContent) => Promise<string | null>;
+  // Optional second arg carries the run's trace context so the profile's
+  // agent call joins the same Mastra trace as the reco calls. Thunks that
+  // ignore it (tests) keep working.
+  deriveProfile?: (
+    content: UserContent,
+    trace?: { runId: string; traceId: string },
+  ) => Promise<string | null>;
   signal?: AbortSignal;
 }): AsyncGenerator<StreamEvent> {
   const {
@@ -540,11 +557,12 @@ export async function* runPipelines(input: {
   const memoizedProfile = (content: UserContent): Promise<string | null> => {
     if (!deriveProfile) return Promise.resolve(null);
     if (!profileCache) {
-      profileCache = deriveProfile(content).then(
+      const trace = { runId, traceId };
+      profileCache = deriveProfile(content, trace).then(
         (text) => text,
         (error) => {
           console.warn(
-            "[recommendations] taste profile derivation failed — building prompt without it:",
+            `[recommendations run:${runId.slice(0, 8)}] taste profile derivation failed — building prompt without it:`,
             error,
           );
           return null;
@@ -555,6 +573,10 @@ export async function* runPipelines(input: {
   };
 
   const runId = crypto.randomUUID();
+  // UUID without dashes = 32 hex chars — the format Mastra tracingOptions
+  // accepts as traceId. Every agent call of this run passes it, so the
+  // dashboard shows one trace per user-visible run.
+  const traceId = runId.replace(/-/g, "");
 
   // Build generator list only for requested categories. Generators are
   // lazy — they only progress as raceMerge drains them.
@@ -567,6 +589,7 @@ export async function* runPipelines(input: {
       previousRecommendations,
       signal,
       runId,
+      traceId,
     }),
   }));
 

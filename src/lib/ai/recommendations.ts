@@ -81,8 +81,19 @@ const RecommendationSchema = z.object({
   ),
 });
 
+// Trace correlation for the pipeline run that asked for this round: all
+// agent calls of one user-visible run share traceId, so the Mastra Cloud
+// dashboard shows the whole run as one trace.
+export type RecoTraceContext = {
+  runId: string;
+  traceId: string;
+};
+
 // Plain AI recommendation function
-export async function getAIRecommendations(input: GetRecommendationsInput) {
+export async function getAIRecommendations(
+  input: GetRecommendationsInput,
+  trace?: RecoTraceContext,
+) {
   // Spec 0005: translate to a category-flat shape here so buildPrompt is
   // a dumb template. Wrong-category liked/disliked lists are dropped
   // (token + focus win); favoriteActors/Directors/genres are category-
@@ -160,6 +171,20 @@ export async function getAIRecommendations(input: GetRecommendationsInput) {
         }`,
       structuredOutput: { schema: RecommendationSchema },
       modelSettings: { maxRetries: 0 },
+      ...(trace
+        ? {
+            tracingOptions: {
+              traceId: trace.traceId,
+              metadata: {
+                runId: trace.runId,
+                category: input.onlyCategory,
+                step: "reco",
+              },
+              rootSpanName: `reco run ${trace.runId.slice(0, 8)} (${input.onlyCategory})`,
+              tags: ["recommendations", input.onlyCategory],
+            },
+          }
+        : {}),
     }),
   );
 
