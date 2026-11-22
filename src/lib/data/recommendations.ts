@@ -1,6 +1,4 @@
-import { LanguageModelV2 } from "@ai-sdk/provider";
 import { z } from "zod";
-import { googleModel, mistralModel } from "../ai/models";
 import { getAIRecommendations } from "../ai/recommendations";
 import { FilmInfo } from "../types";
 import type { UserContent } from "./preferences";
@@ -49,10 +47,6 @@ type RawRec = {
 // A RawRec after its TMDB lookup attempt. tmdbData is null on lookup
 // failure (search returned nothing, or the search threw).
 type EnrichedRec = RawRec & { tmdbData: FilmInfo | null };
-
-// A labelled model in the fallback chain. The label flows into logs so the
-// chain is self-describing rather than relying on array index.
-type ModelEntry = { label: string; model: LanguageModelV2 };
 
 // Year-extract helper (handles both movie release_date and tv first_air_date).
 function releaseYear(releaseDate: string): number | null {
@@ -118,41 +112,6 @@ async function enrichOne(rec: RawRec): Promise<EnrichedRec> {
   }
 }
 
-// Drive the model-fallback chain (google → mistral). Returns the first
-// model's category-scoped raw recs, or { raw: [], threw: true } if every
-// model failed. `threw` distinguishes "LLM emitted nothing successfully"
-// (raw empty, threw false) from "all models errored" (raw empty, threw true)
-// — the deficit loop treats them differently.
-async function fetchWithModelFallback(
-  args: Parameters<typeof getAIRecommendations>[0],
-  models: ModelEntry[],
-  category: Category,
-  round: number,
-): Promise<{ raw: RawRec[]; threw: boolean }> {
-  for (let i = 0; i < models.length; i++) {
-    const { label, model } = models[i];
-    console.log(
-      `[recommendations:${category}] round ${round} model ${i + 1}/${models.length}: ${label}`,
-    );
-    const res = await getAIRecommendations(args, model);
-    if (res.success && res.data) {
-      // LLM may still emit the other category despite the prompt —
-      // filter to this side only.
-      const raw = res.data.recommendations.filter(
-        (r): r is RawRec => r.category === category,
-      );
-      console.log(
-        `[recommendations:${category}] round ${round} ${label} ok, raw=${raw.length}`,
-      );
-      return { raw, threw: false };
-    }
-    console.warn(
-      `[recommendations:${category}] round ${round} ${label} failed`,
-    );
-  }
-  return { raw: [], threw: true };
-}
-
 // Terminal status classification (acceptance criteria 4–6). Pure: maps the
 // pipeline's accumulated counters onto exactly one StreamStatus. Kept out
 // of backfillCategory so the rules are legible and unit-testable.
@@ -196,7 +155,6 @@ async function* backfillCategory(
   category: Category,
   loadPrefs: () => Promise<UserContent>,
   previousRecommendations: CategoryArgs["previousRecommendations"],
-  models: ModelEntry[],
 ): AsyncGenerator<StreamEvent> {
   let totalSurvivors = 0;
   let totalRawProduced = 0;
@@ -257,27 +215,63 @@ async function* backfillCategory(
 
       const ask = deficit + OVERASK_BUFFER;
       const ratingBar =
-        round <= STRICT_RATING_ROUNDS ? `strict(>${MIN_IMDB_RATING})` : "relaxed";
+        round <= STRICT_RATING_ROUNDS
+          ? `strict(>${MIN_IMDB_RATING})`
+          : "relaxed";
       console.log(
         `[recommendations:${category}] round ${round} deficit=${deficit} ask=${ask} ratingBar=${ratingBar} telling LLM to avoid ${localPrevRecs.length} titles: [${localPrevRecs.map((r) => r.title).join(", ")}]`,
       );
 
       yield progress("finding_titles", round);
 
-      const { raw, threw: roundThrew } = await fetchWithModelFallback(
-        {
-          ...baseArgs,
-          previousRecommendations: localPrevRecs,
-          requestedMovies: category === "movie" ? ask : 0,
-          requestedTvs: category === "tv" ? ask : 0,
-          onlyCategory: category,
-          minImdbRating:
-            round <= STRICT_RATING_ROUNDS ? MIN_IMDB_RATING : undefined,
-        },
-        models,
-        category,
-        round,
+      // Issue #131: model routing (gemini-3.8-flash → mistral-medium-latest)
+      // lives inside the Mastra agent — one call per round; Mastra's logger
+      // reports any model failover. `threw` maps to generation_failed, not
+      // exhausted (classifyStatus).
+      console.log(
+        `[recommendations:${category}] round ${round} agent generate`,
       );
+      const res = await getAIRecommendations({
+        ...baseArgs,
+        previousRecommendations: localPrevRecs,
+        requestedMovies: category === "movie" ? ask : 0,
+        requestedTvs: category === "tv" ? ask : 0,
+        onlyCategory: category,
+        minImdbRating:
+          round <= STRICT_RATING_ROUNDS ? MIN_IMDB_RATING : undefined,
+      });
+      // getAIRecommendations resolves {success:false} only when the WHOLE
+      // routed chain errored — Mastra already tried gemini-3.8-flash, then
+      // mistral-medium-latest, and both failed. That maps to roundThrew.
+      //
+      // Why roundThrew matters: an empty round has two causes with different
+      // terminal statuses (classifyStatus at the end of this generator):
+      //   - threw = true  → every model errored. allRoundsThrew stays true,
+      //     so with zero survivors the group ends generation_failed ("the
+      //     LLM is down" — retrying immediately won't help).
+      //   - threw = false → the LLM answered but emitted nothing usable
+      //     (e.g. round-1 empties hard-fail above; later empties break the
+      //     loop). With raw produced but nothing surviving, the group ends
+      //     enrichment_empty or exhausted instead — "generation worked,
+      //     TMDB/exclusions rejected the output".
+      const roundThrew = !res.success;
+      const raw =
+        res.success && res.data
+          ? // LLM may still emit the other category despite the prompt —
+            // filter to this side only.
+            res.data.recommendations.filter(
+              (r): r is RawRec => r.category === category,
+            )
+          : [];
+      if (roundThrew) {
+        console.warn(
+          `[recommendations:${category}] round ${round} agent failed (all routed models errored)`,
+        );
+      } else {
+        console.log(
+          `[recommendations:${category}] round ${round} agent ok, raw=${raw.length}`,
+        );
+      }
       if (!roundThrew) allRoundsThrew = false;
 
       // Criterion 6: round 1 returning 0 raw items (LLM emitted nothing)
@@ -479,21 +473,11 @@ export async function* runPipelines(input: {
     return cached;
   };
 
-  const models: ModelEntry[] = [
-    { label: "google", model: googleModel },
-    { label: "mistral", model: mistralModel },
-  ];
-
   // Build generator list only for requested categories. Generators are
   // lazy — they only progress as raceMerge drains them.
   const generators = requested.map((category) => ({
     category,
-    gen: backfillCategory(
-      category,
-      memoizedLoadPrefs,
-      previousRecommendations,
-      models,
-    ),
+    gen: backfillCategory(category, memoizedLoadPrefs, previousRecommendations),
   }));
 
   yield* raceMerge(generators, TARGET_PER_CATEGORY);
