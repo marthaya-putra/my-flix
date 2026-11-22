@@ -26,7 +26,8 @@
     "db:studio": "drizzle-kit studio",
     "db:push": "drizzle-kit push",
     "db:check": "drizzle-kit check",
-    "db:drop": "drizzle-kit drop"
+    "db:drop": "drizzle-kit drop",
+    "postinstall": "patch-package"
   },
   "keywords": [],
   "author": "",
@@ -109,6 +110,7 @@
     "dotenv": "^17.2.3",
     "drizzle-kit": "^0.31.7",
     "jsdom": "^25.0.1",
+    "patch-package": "^8.0.1",
     "typescript": "^5.9.3",
     "vite": "^7.2.4",
     "vite-tsconfig-paths": "^5.1.4",
