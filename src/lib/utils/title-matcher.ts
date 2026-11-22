@@ -16,13 +16,18 @@ export type TitleRef = {
   year: number;
 };
 
-// Ordered pipeline: lowercase → strip diacritics → remove non-alphanumeric
-// except spaces → drop leading article (the/a/an) → collapse whitespace.
+// Ordered pipeline: lowercase → strip diacritics → fold "&" to "and" →
+// replace non-alphanumeric (except spaces) with a space → drop leading
+// article (the/a/an) → collapse whitespace. Removed punctuation becomes a
+// space (not deleted), so "Spider-Man" ≡ "Spider Man" and
+// "Law & Order" ≡ "Law and Order"; the collapse absorbs the gaps.
 export function normalizeTitle(input: string): string {
   const lowered = input.toLowerCase();
   const unaccented = lowered.normalize("NFD").replace(/\p{M}/gu, "");
-  const cleaned = unaccented.replace(/[^\p{L}\p{N} ]/gu, "");
-  const dearticled = cleaned.replace(/^(?:the|a|an)\s+/u, "");
+  const spaced = unaccented
+    .replace(/&/g, " and ")
+    .replace(/[^\p{L}\p{N} ]/gu, " ");
+  const dearticled = spaced.replace(/^(?:the|a|an)\s+/u, "");
   return dearticled.replace(/\s+/g, " ").trim();
 }
 

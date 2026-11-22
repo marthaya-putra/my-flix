@@ -27,6 +27,18 @@ describe("normalizeTitle", () => {
     expect(normalizeTitle("Dune: Part Two")).toBe("dune part two");
   });
 
+  it("spaces removed punctuation so hyphen variants match", () => {
+    expect(normalizeTitle("Spider-Man: No Way Home")).toBe(
+      "spider man no way home",
+    );
+    expect(normalizeTitle("Spider-Man")).toBe(normalizeTitle("Spider Man"));
+  });
+
+  it("folds ampersand to and", () => {
+    expect(normalizeTitle("Law & Order")).toBe("law and order");
+    expect(normalizeTitle("Law & Order")).toBe(normalizeTitle("Law and Order"));
+  });
+
   it("strips diacritics", () => {
     expect(normalizeTitle("Amélie")).toBe("amelie");
     expect(normalizeTitle("Amélie")).toBe(normalizeTitle("Amelie"));
@@ -56,6 +68,18 @@ describe("isSameTitle", () => {
 
   it("matches diacritic variants", () => {
     expect(isSameTitle(movie("Amélie", 2001), movie("Amelie", 2001))).toBe(true);
+  });
+
+  it("matches hyphen and ampersand variants (regression: disliked title re-suggested)", () => {
+    expect(
+      isSameTitle(
+        movie("Spider-Man: No Way Home", 2021),
+        movie("Spider Man No Way Home", 2021),
+      ),
+    ).toBe(true);
+    expect(isSameTitle(tv("Law & Order", 1990), tv("Law and Order", 1990))).toBe(
+      true,
+    );
   });
 
   it("matches remakes within year ±1", () => {
