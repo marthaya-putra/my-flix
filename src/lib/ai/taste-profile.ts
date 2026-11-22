@@ -1,12 +1,16 @@
-import { generateObject } from "ai";
 import { z } from "zod";
-import { callWithFallback } from "./call-with-fallback";
-import { googleModel, mistralModel } from "./models";
+import { tasteProfileAgent } from "./agents";
+import { safePromise } from "../utils/safe-promise";
 
 // Per-run taste profile (design doc Components §2). One small LLM call
 // distills the user's liked titles + favorite people into themes, tones,
 // plot affinities, and a summary. Computed fresh each run, never stored;
 // every failure path resolves null so the reco prompt stays as today's.
+//
+// Model routing is the same Mastra chain as the reco call (#131/#135);
+// the profile adds its own 8s total budget via abortSignal — one timer
+// across the whole fallback loop, replacing the pre-merge
+// call-with-fallback helper.
 
 // Bounds from the design: each array ≤6 items, each item ≤40 chars and
 // anchored to a liked title where possible; summary ≤300 chars.
@@ -47,10 +51,11 @@ const RECENT_LIKED_LIMIT = 100;
 // ~1050 chars, this guards any future field growth.
 const MAX_PROFILE_TEXT_CHARS = 1_200;
 
-const PROFILE_MODELS = [
-  { label: "google", model: googleModel },
-  { label: "mistral", model: mistralModel },
-];
+const PROFILE_INSTRUCTIONS = `You distill a viewer's taste pattern. Output ONLY the schema fields.
+Rules:
+- Each array item is at most 40 characters and names a pattern, anchored to a liked title where possible (e.g. "cerebral sci-fi — Inception, Arrival").
+- At most 6 items per array. Omit an array (empty) when the data does not support it.
+- The summary is at most 300 characters and states what the user consistently gravitates toward.`;
 
 const timeOf = (d?: Date | null) => (d ? d.getTime() : 0);
 
@@ -100,9 +105,9 @@ ${genreCounts.length ? genreCounts.map((g) => `- ${g.genre}: ${g.count}`).join("
 `;
 }
 
-// Generate the profile via the shared fallback helper. Resolves null on
-// total failure, timeout, schema rejection, or empty input (nothing to
-// distill — fail open to today's prompt).
+// Generate the profile via the taste-profile agent. Resolves null on
+// chain failure, the 8s total budget elapsing, schema rejection, or
+// empty input (nothing to distill — fail open to today's prompt).
 export async function generateTasteProfile(
   content: TasteProfileContent,
 ): Promise<TasteProfile | null> {
@@ -112,33 +117,36 @@ export async function generateTasteProfile(
 
   const genreCounts = genreCountsOf(liked);
 
-  return callWithFallback(
-    async (model, signal) => {
-      const { object } = await generateObject({
-        model,
-        schema: TasteProfileSchema,
-        maxRetries: 0,
-        abortSignal: signal,
-        system: `You distill a viewer's taste pattern. Output ONLY the schema fields.
-Rules:
-- Each array item is at most 40 characters and names a pattern, anchored to a liked title where possible (e.g. "cerebral sci-fi — Inception, Arrival").
-- At most 6 items per array. Omit an array (empty) when the data does not support it.
-- The summary is at most 300 characters and states what the user consistently gravitates toward.`,
-        prompt: buildProfilePrompt(liked, favoritePeople, genreCounts),
-      });
-      // Re-validate: enforce the bounds deterministically even when a
-      // provider response slips past the SDK's own schema check.
-      const parsed = TasteProfileSchema.safeParse(object);
-      if (!parsed.success) {
-        throw new Error(
-          `taste profile output rejected: ${parsed.error.message}`,
-        );
-      }
-      return parsed.data;
-    },
-    PROFILE_MODELS,
-    { timeoutMs: PROFILE_TOTAL_TIMEOUT_MS },
+  const [result, error] = await safePromise(
+    tasteProfileAgent.generate(buildProfilePrompt(liked, favoritePeople, genreCounts), {
+      instructions: PROFILE_INSTRUCTIONS,
+      structuredOutput: { schema: TasteProfileSchema },
+      modelSettings: { maxRetries: 0 },
+      // One timer across the whole fallback loop — Mastra aborts the
+      // in-flight model call and the loop on it.
+      abortSignal: AbortSignal.timeout(PROFILE_TOTAL_TIMEOUT_MS),
+    }),
   );
+
+  if (error) {
+    console.warn(
+      "[taste-profile] agent call failed (budget elapsed or chain failed) — proceeding without profile:",
+      error.message,
+    );
+    return null;
+  }
+
+  // Re-validate: enforce the bounds deterministically even when a
+  // provider response slips past the SDK's own schema check.
+  const parsed = TasteProfileSchema.safeParse(result.object);
+  if (!parsed.success) {
+    console.warn(
+      "[taste-profile] output rejected by schema — proceeding without profile:",
+      parsed.error.message,
+    );
+    return null;
+  }
+  return parsed.data;
 }
 
 // Single render template for the prompt's TASTE PROFILE section.

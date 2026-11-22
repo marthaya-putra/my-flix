@@ -1,15 +1,15 @@
-// Unit tests for the taste-profile module (design doc item 5): schema
-// rejection, model fallback, total failure, render bounds, and the
-// createdAt-desc recent-100 window. LLM edge mocked; callWithFallback real.
+// Unit tests for the taste-profile module (design doc item 5, adapted to
+// the Mastra agent edge from #135): agent success, chain failure → null,
+// schema rejection, empty input, the createdAt-desc recent-100 window,
+// the 8s total-budget abort wiring, and render bounds. The agents module
+// is mocked; model routing inside the agent is not under test here.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { generateTasteProfile, renderProfileText } from "./taste-profile";
 
-const googleModel = vi.hoisted(() => ({ id: "google" }));
-const mistralModel = vi.hoisted(() => ({ id: "mistral" }));
-vi.mock("./models", () => ({ googleModel, mistralModel }));
-
-const generateObject = vi.hoisted(() => vi.fn());
-vi.mock("ai", () => ({ generateObject }));
+const generate = vi.hoisted(() => vi.fn());
+vi.mock("./agents", () => ({
+  tasteProfileAgent: { generate },
+}));
 
 const validProfile = {
   themes: ["cerebral sci-fi — Inception, Arrival"],
@@ -37,60 +37,44 @@ function content(overrides?: {
 }
 
 afterEach(() => {
-  generateObject.mockReset();
+  generate.mockReset();
 });
 
 describe("generateTasteProfile", () => {
-  it("returns the profile on the first model", async () => {
-    generateObject.mockResolvedValue({ object: validProfile });
+  it("returns the validated profile from the agent", async () => {
+    generate.mockResolvedValue({ object: validProfile });
 
     const profile = await generateTasteProfile(content());
 
     expect(profile).toEqual(validProfile);
-    expect(generateObject).toHaveBeenCalledTimes(1);
-    expect(generateObject.mock.calls[0][0].model).toBe(googleModel);
+    expect(generate).toHaveBeenCalledTimes(1);
   });
 
-  it("falls to model 2 when model 1 throws", async () => {
-    generateObject
-      .mockRejectedValueOnce(new Error("google down"))
-      .mockResolvedValueOnce({ object: validProfile });
-
-    const profile = await generateTasteProfile(content());
-
-    expect(profile).toEqual(validProfile);
-    expect(generateObject).toHaveBeenCalledTimes(2);
-    expect(generateObject.mock.calls[1][0].model).toBe(mistralModel);
-  });
-
-  it("resolves null when every model fails", async () => {
-    generateObject.mockRejectedValue(new Error("down"));
+  it("resolves null when the agent chain fails", async () => {
+    generate.mockRejectedValue(new Error("all models down"));
 
     expect(await generateTasteProfile(content())).toBeNull();
-    expect(generateObject).toHaveBeenCalledTimes(2);
   });
 
-  it("rejects over-long output and resolves null when both models misbehave", async () => {
+  it("rejects over-long output and resolves null", async () => {
     const overLong = {
       ...validProfile,
       themes: ["x".repeat(41)], // item beyond the 40-char bound
     };
-    generateObject.mockResolvedValue({ object: overLong });
+    generate.mockResolvedValue({ object: overLong });
 
-    // Both models return the over-long shape → schema rejects both → null.
     expect(await generateTasteProfile(content())).toBeNull();
-    expect(generateObject).toHaveBeenCalledTimes(2);
   });
 
   it("resolves null on empty input (nothing to distill)", async () => {
     expect(
       await generateTasteProfile(content({ movies: [], tvs: [] })),
     ).toBeNull();
-    expect(generateObject).not.toHaveBeenCalled();
+    expect(generate).not.toHaveBeenCalled();
   });
 
   it("sends only the last 100 liked titles, newest first, to the prompt", async () => {
-    generateObject.mockResolvedValue({ object: validProfile });
+    generate.mockResolvedValue({ object: validProfile });
     const movies = Array.from({ length: 120 }, (_, i) => ({
       title: `Movie ${i}`,
       year: 2000 + (i % 30),
@@ -101,12 +85,23 @@ describe("generateTasteProfile", () => {
 
     await generateTasteProfile(content({ movies, tvs: [] }));
 
-    const prompt = generateObject.mock.calls[0][0].prompt as string;
+    const prompt = generate.mock.calls[0][0] as string;
     const listed = prompt.match(/- Movie (\d+) \(/g) ?? [];
     expect(listed).toHaveLength(100);
     // Newest (Movie 119) leads; oldest sent is Movie 20.
     expect(prompt).toContain("- Movie 119 (");
     expect(prompt).not.toContain("- Movie 19 (");
+  });
+
+  it("wires the 8s total-budget abortSignal and maxRetries 0", async () => {
+    generate.mockResolvedValue({ object: validProfile });
+
+    await generateTasteProfile(content());
+
+    const options = generate.mock.calls[0][1];
+    expect(options.abortSignal).toBeInstanceOf(AbortSignal);
+    expect(options.abortSignal.aborted).toBe(false);
+    expect(options.modelSettings).toEqual({ maxRetries: 0 });
   });
 });
 

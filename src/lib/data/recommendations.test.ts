@@ -1,21 +1,20 @@
 // src/lib/data/recommendations.test.ts
 // Issue #130 — StreamEvent contract lock. Drives runPipelines end-to-end
-// with the AI model chain (../ai/models + ../ai/recommendations) and the
-// TMDB edge (./search) mocked, then asserts the exact client-facing event
-// sequence. Title-first shape (docs/designs/title-first-recommendations.md):
-// items carry LLM fields only, poster lookups patch in afterwards, one LLM
-// round with overask, matcher-based exclusion, optional taste profile.
+// with the Mastra agent edge (../ai/recommendations) and the TMDB edge
+// (./search) mocked, then asserts the exact client-facing event sequence.
+// Title-first shape (docs/designs/title-first-recommendations.md): items
+// carry LLM fields only, poster lookups patch in afterwards, one LLM round
+// with overask, matcher-based exclusion, optional taste profile.
 import { describe, expect, it, vi } from "vitest";
 import type { FilmInfo } from "@/lib/types";
 import type { UserContent } from "./preferences";
 import { runPipelines } from "./recommendations";
 import type { StreamCategory, StreamEvent } from "./stream-events";
 
-// Mock the external edges only. The model objects are opaque to the
-// pipeline (passed through to getAIRecommendations), so plain objects do.
+// Mock the external edges only. Model routing (gemini → mistral) is
+// internal to the agent, so the pipeline sees one call per round.
 const getAIRecommendations = vi.hoisted(() => vi.fn());
 vi.mock("../ai/recommendations", () => ({ getAIRecommendations }));
-vi.mock("../ai/models", () => ({ googleModel: {}, mistralModel: {} }));
 
 const searchMoviesAPI = vi.hoisted(() => vi.fn());
 const searchTVsAPI = vi.hoisted(() => vi.fn());
@@ -222,8 +221,9 @@ describe("runPipelines StreamEvent contract", () => {
 
     const events = await run({ categories: ["movie"] });
 
-    // google + mistral both attempted before giving up.
-    expect(getAIRecommendations).toHaveBeenCalledTimes(2);
+    // One call per round — the google→mistral chain is internal to the
+    // agent and surfaces here as a single failed call.
+    expect(getAIRecommendations).toHaveBeenCalledTimes(1);
     expect(eventsFor(events, "movie").filter((e) => e.type === "item")).toEqual([]);
     expect(tokens(eventsFor(events, "movie"))).toEqual([
       "groupStart",
@@ -316,7 +316,6 @@ describe("runPipelines StreamEvent contract", () => {
     expect(searchTVsAPI).not.toHaveBeenCalled();
     expect(getAIRecommendations).toHaveBeenCalledWith(
       expect.objectContaining({ onlyCategory: "movie", requestedTvs: 0 }),
-      expect.anything(),
     );
   });
 
@@ -335,7 +334,6 @@ describe("runPipelines StreamEvent contract", () => {
     // Overask: the single round requests 6 movies.
     expect(getAIRecommendations).toHaveBeenCalledWith(
       expect.objectContaining({ onlyCategory: "movie", requestedMovies: 6 }),
-      expect.anything(),
     );
     // Inverted from the blocking-enrichment era: the missed lookup still
     // emits its item; only its patch is null.
@@ -367,7 +365,6 @@ describe("runPipelines taste profile", () => {
 
     expect(getAIRecommendations).toHaveBeenCalledWith(
       expect.objectContaining({ tasteProfile: "Themes: cerebral sci-fi" }),
-      expect.anything(),
     );
   });
 

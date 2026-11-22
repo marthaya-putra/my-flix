@@ -1,6 +1,6 @@
-import { LanguageModelV2 } from "@ai-sdk/provider";
-import { generateObject } from "ai";
 import { z } from "zod";
+import { recommendationAgent } from "./agents";
+import { safePromise } from "../utils/safe-promise";
 
 // Plain function type
 type GetRecommendationsInput = z.infer<typeof RecommendationInput>;
@@ -82,48 +82,46 @@ const RecommendationSchema = z.object({
 });
 
 // Plain AI recommendation function
-export async function getAIRecommendations(
-  input: GetRecommendationsInput,
-  model: LanguageModelV2,
-) {
-  try {
-    // Spec 0005: translate to a category-flat shape here so buildPrompt is
-    // a dumb template. Wrong-category liked/disliked lists are dropped
-    // (token + focus win); favoriteActors/Directors/genres are category-
-    // agnostic, kept on both. previousRecommendations scoped to same
-    // category — cross-category dedup is enforced server-side by the ID
-    // filter at survivor resolution.
-    const isMovie = input.onlyCategory === "movie";
-    const cleanData: PromptData = {
-      role: isMovie ? "movie" : "TV series",
-      likedLabel: isMovie ? "Liked movies" : "Liked TV shows",
-      dislikedLabel: isMovie ? "User dislike movies" : "User dislike TV shows",
-      liked: simplifyWatched(
-        isMovie ? input.previouslyLikedMovies : input.previouslyLikedTvs,
-      ),
-      disliked: simplifyWatched(
-        isMovie ? input.dislikedMovies : input.dislikedTvs,
-      ),
-      previousRecommendations: simplifyPrevRecs(input.previousRecommendations)
-        .filter((r) => r.category === input.onlyCategory)
-        .map(({ category, ...rest }) => rest),
-      favoriteActors: input.favoriteActors ?? [],
-      favoriteDirectors: input.favoriteDirectors ?? [],
-      genres: input.genres ?? [],
-      tasteProfile: input.tasteProfile,
-    };
+export async function getAIRecommendations(input: GetRecommendationsInput) {
+  // Spec 0005: translate to a category-flat shape here so buildPrompt is
+  // a dumb template. Wrong-category liked/disliked lists are dropped
+  // (token + focus win); favoriteActors/Directors/genres are category-
+  // agnostic, kept on both. previousRecommendations scoped to same
+  // category — cross-category dedup is enforced server-side by the
+  // exclusion matcher at survivor resolution.
+  const isMovie = input.onlyCategory === "movie";
+  const cleanData: PromptData = {
+    role: isMovie ? "movie" : "TV series",
+    likedLabel: isMovie ? "Liked movies" : "Liked TV shows",
+    dislikedLabel: isMovie ? "User dislike movies" : "User dislike TV shows",
+    liked: simplifyWatched(
+      isMovie ? input.previouslyLikedMovies : input.previouslyLikedTvs,
+    ),
+    disliked: simplifyWatched(
+      isMovie ? input.dislikedMovies : input.dislikedTvs,
+    ),
+    previousRecommendations: simplifyPrevRecs(input.previousRecommendations)
+      .filter((r) => r.category === input.onlyCategory)
+      .map(({ category, ...rest }) => rest),
+    favoriteActors: input.favoriteActors ?? [],
+    favoriteDirectors: input.favoriteDirectors ?? [],
+    genres: input.genres ?? [],
+    tasteProfile: input.tasteProfile,
+  };
 
-    const prompt = buildPrompt(cleanData);
-    const { object } = await generateObject({
-      model,
-      providerOptions: {
-        gateway: {
-          models: [],
-        },
-      },
-      schema: RecommendationSchema,
-      maxRetries: 0,
-      system: `You are a ${cleanData.role} recommendation expert. Your PRIMARY DUTY is to analyze the user's viewing history and preferences to make PERSONALIZED recommendations.
+  const prompt = buildPrompt(cleanData);
+
+  // Per-round system prompt stays the prompt's single source: passed as
+  // per-call instructions (which fully replace any agent default) so the
+  // dynamic rating-bar / category rules are always in force.
+  // maxRetries: 0 disables ai-sdk-level retries — the Mastra fallback chain
+  // owns all retry/failover. The old generateObject call's
+  // providerOptions.gateway directive went with the Vercel AI Gateway;
+  // routing now calls the providers directly, so there is no gateway to
+  // configure.
+  const [result, error] = await safePromise(
+    recommendationAgent.generate(prompt, {
+      instructions: `You are a ${cleanData.role} recommendation expert. Your PRIMARY DUTY is to analyze the user's viewing history and preferences to make PERSONALIZED recommendations.
 
         CRITICAL RULES:
         - User's previously liked content and favorite actors/directors are YOUR GUIDE - use these patterns religiously
@@ -160,25 +158,25 @@ export async function getAIRecommendations(
               }`
             : `Return exactly ${input.requestedTvs} TV SERIES`
         }`,
-      prompt,
-    });
+      structuredOutput: { schema: RecommendationSchema },
+      modelSettings: { maxRetries: 0 },
+    }),
+  );
 
-    return { success: true, data: object };
-  } catch (error) {
+  if (error) {
     console.error("AI Recommendation Error:", error);
     return {
       success: false,
-      error:
-        error instanceof Error
-          ? {
-              name: error.name,
-              message: error.message,
-              stack: error.stack,
-              cause: error.cause as any,
-            }
-          : "Unknown error occurred",
+      error: {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        cause: error.cause as any,
+      },
     };
   }
+
+  return { success: true, data: result.object };
 }
 
 function simplifyWatched(items?: Array<{ title: string; year: number }>) {
@@ -207,7 +205,7 @@ function simplifyPrevRecs(
 // Spec 0005: buildPrompt takes a single flat, category-resolved shape —
 // no branching inside. All category translation lives in cleanData above.
 // Exported (with PromptData) so tests assert the TASTE PROFILE section
-// directly (design doc item 6).
+// directly (title-first design item 6).
 export type PromptData = {
   role: string;
   likedLabel: string;

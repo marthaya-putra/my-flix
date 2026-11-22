@@ -307,4 +307,22 @@ New optional param `deriveProfile?: (content: UserContent) => Promise<string | n
 
 --------------------------------------------------------------------------------
 
+## Merge Notes (2026-11-22)
+
+Merged on top of #135 (Mastra Agent with model routing), which landed after
+this design was approved and supersedes part of it:
+
+*   Model routing (google gemini-3.8-flash → mistral) lives in Mastra's
+    fallback chain, shared by `recommendationAgent` and `tasteProfileAgent`
+    in `src/lib/ai/agents.ts` — not in a hand-rolled loop.
+*   `src/lib/ai/call-with-fallback.ts` (design item 3) was superseded and
+    deleted. The taste profile keeps its 8s total budget via the agent
+    call's `abortSignal`; the reco call has no call-site timeout (matching
+    #135; the pre-merge 120s safety bound went with the helper).
+*   `getAIRecommendations` is single-arg (agent internal routing); the
+    pipeline's `fetchRawOnce` maps `{ success: false }` → null →
+    `generation_failed`, matching #135's threw semantics.
+
+--------------------------------------------------------------------------------
+
 *Drafted with EGM*

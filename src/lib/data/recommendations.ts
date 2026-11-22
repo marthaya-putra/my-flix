@@ -1,6 +1,4 @@
 import { z } from "zod";
-import { googleModel, mistralModel } from "../ai/models";
-import { callWithFallback, type FallbackModel } from "../ai/call-with-fallback";
 import { getAIRecommendations } from "../ai/recommendations";
 import { FilmInfo } from "../types";
 import type { UserContent } from "./preferences";
@@ -40,11 +38,6 @@ const MIN_IMDB_RATING = 7.5;
 
 // Per-lookup poster timeout (CUJ 1: the wait is bounded per lookup).
 const POSTER_LOOKUP_TIMEOUT_MS = 10_000;
-
-// Safety bound for the single reco LLM round shared across the
-// google→mistral chain. Today's pipeline had no timeout; this only stops a
-// fully hung chain from pinning the stream open.
-const RECO_CHAIN_TIMEOUT_MS = 120_000;
 
 // Baseline (recorded before this rework, per the design's verification
 // plan): the old blocking-enrichment pipeline logged one line per round —
@@ -139,33 +132,28 @@ async function searchTitleWithYearFallback(
   return scored[0].r;
 }
 
-// Single LLM round via the shared fallback chain (google → mistral).
-// Returns this category's raw recs — possibly fewer than asked, possibly
-// empty — or null when every model failed (→ generation_failed).
+// Single LLM round through the Mastra agent edge. Model routing
+// (gemini-3.8-flash → mistral, advancing on any step failure) is internal
+// to the agent (#131/#135); getAIRecommendations never throws — it maps a
+// total chain failure to { success: false }. Returns this category's raw
+// recs — possibly fewer than asked, possibly empty — or null when the
+// chain failed (→ generation_failed).
 async function fetchRawOnce(
   args: Parameters<typeof getAIRecommendations>[0],
-  models: FallbackModel[],
   category: Category,
 ): Promise<RawRec[] | null> {
-  return callWithFallback(
-    async (model) => {
-      const res = await getAIRecommendations(args, model);
-      if (!res.success || !res.data) {
-        throw new Error(
-          `reco model call failed: ${JSON.stringify(res.error ?? "unknown")}`,
-        );
-      }
-      // LLM may still emit the other category despite the prompt —
-      // filter to this side only.
-      const raw = res.data.recommendations.filter(
-        (r): r is RawRec => r.category === category,
-      );
-      console.log(`[recommendations:${category}] model ok, raw=${raw.length}`);
-      return raw;
-    },
-    models,
-    { timeoutMs: RECO_CHAIN_TIMEOUT_MS },
+  const res = await getAIRecommendations(args);
+  if (!res.success || !res.data) {
+    console.warn(`[recommendations:${category}] reco agent call failed`);
+    return null;
+  }
+  // LLM may still emit the other category despite the prompt —
+  // filter to this side only.
+  const raw = res.data.recommendations.filter(
+    (r): r is RawRec => r.category === category,
   );
+  console.log(`[recommendations:${category}] model ok, raw=${raw.length}`);
+  return raw;
 }
 
 // Terminal status classification: survivors were emitted → ok; anything
@@ -200,7 +188,6 @@ type CategoryRun = {
   // Memoized profile thunk — resolves null when absent/failed (fail-open).
   profileFor: (content: UserContent) => Promise<string | null>;
   previousRecommendations: CategoryArgs["previousRecommendations"];
-  models: FallbackModel[];
   /** Route request signal — client disconnect cancels in-flight lookups. */
   signal?: AbortSignal;
   runId: string;
@@ -298,7 +285,6 @@ async function* backfillCategory(run: CategoryRun): AsyncGenerator<StreamEvent> 
           minImdbRating: MIN_IMDB_RATING,
           ...(tasteProfile ? { tasteProfile } : {}),
         },
-        run.models,
         category,
       )) ?? [];
 
@@ -568,11 +554,6 @@ export async function* runPipelines(input: {
     return profileCache;
   };
 
-  const models: FallbackModel[] = [
-    { label: "google", model: googleModel },
-    { label: "mistral", model: mistralModel },
-  ];
-
   const runId = crypto.randomUUID();
 
   // Build generator list only for requested categories. Generators are
@@ -584,7 +565,6 @@ export async function* runPipelines(input: {
       loadPrefs: memoizedLoadPrefs,
       profileFor: memoizedProfile,
       previousRecommendations,
-      models,
       signal,
       runId,
     }),
